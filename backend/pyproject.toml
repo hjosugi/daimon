@@ -14,7 +14,7 @@ dependencies = [
     "sqlalchemy==2.0.25",
     "psycopg2-binary==2.9.9",
     "spacy==3.7.2",
-    "bcrypt==4.1.2",
+    "bcrypt==5.0.0",
     "alembic==1.13.1",
 ]
 
