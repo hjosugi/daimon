@@ -276,7 +276,6 @@ def suggest_povs(query: str = "", db: Session = Depends(get_db)):
                         break
         return TagGenerationResponse(tags=popular_povs[:5])
     
-    # Filter POVs that match the query (case-insensitive, supports spaces)
     matching_povs = []
     for pov, count in sorted_povs:
         pov_lower = pov.lower()
@@ -649,22 +648,18 @@ async def search_posts(request: SearchRequest, current_user_id: Optional[str] = 
         
         for db_post in db_posts:
             post_id = db_post.id
-            # Get POVs from povs table
             povs_query = db.query(POVModel.pov).filter(POVModel.post_id == post_id).all()
             post_povs = set([pov[0] for pov in povs_query])
             post_povs_list = [pov[0] for pov in povs_query]
             post_user_id = db_post.user_id
             is_own_post = post_user_id == current_user_id
             
-            # Get likes and comments count from PostgreSQL
             likes_count = db.query(LikeModel).filter(LikeModel.post_id == post_id).count()
             liked = db.query(LikeModel).filter(LikeModel.post_id == post_id, LikeModel.user_id == current_user_id).first() is not None if current_user_id else False
             comment_count = db.query(CommentModel).filter(CommentModel.post_id == post_id).count()
             
-            # Calculate match reason (only for other users' posts)
             match_reason = None
             if not is_own_post:
-                # Get post vector from Qdrant
                 post_vector = None
                 try:
                     retrieved = qdrant_service.client.retrieve(
@@ -688,10 +683,8 @@ async def search_posts(request: SearchRequest, current_user_id: Optional[str] = 
                     user_post_vectors=user_post_vectors if user_post_vectors else []
                 )
             
-            # Get username from database
             username = db_post.username
             if not username and post_user_id:
-                # Fallback: get from users table
                 user = db.query(UserModel).filter(UserModel.id == post_user_id).first()
                 username = user.username if user else f"User_{post_user_id[:8]}"
             
@@ -708,27 +701,21 @@ async def search_posts(request: SearchRequest, current_user_id: Optional[str] = 
                 created_at=db_post.created_at.isoformat() if db_post.created_at else None,
             ))
     
-    # Pattern A: Qdrantで候補を取って、Postgresで仕上げる
-    # If only query text is provided, use vector search
     elif request.query:
-        # Step 1: Qdrantで候補を取得（System of Search）
         vector = await embedding_service.embed_text_async(request.query)
-        candidate_limit = min(request.limit * 3, 200)  # Get more candidates
+        candidate_limit = min(request.limit * 3, 200)
         hits = qdrant_service.search_similar(
             vector,
             limit=candidate_limit,
             required_tags=None,
         )
         
-        # Step 2: Postgresで詳細を取得（System of Record）
         post_ids = [hit.id for hit in hits]
         if not post_ids:
             return []
         
-        # Batch fetch from PostgreSQL
         db_posts_dict = {post.id: post for post in db.query(PostModel).filter(PostModel.id.in_(post_ids)).all()}
         
-        # Batch fetch likes and comments counts
         post_ids_list = list(db_posts_dict.keys())
         
         likes_counts = {
@@ -758,25 +745,20 @@ async def search_posts(request: SearchRequest, current_user_id: Optional[str] = 
             post_user_id = payload.get("user_id")
             is_own_post = post_user_id == current_user_id
             
-            # Get post data from PostgreSQL (System of Record)
             db_post = db_posts_dict.get(post_id)
             if not db_post:
-                continue  # Skip if post not found in PostgreSQL
+                continue
             
-            # Get POVs from povs table
             povs_query = db.query(POVModel.pov).filter(POVModel.post_id == post_id).all()
             post_povs = set([pov[0] for pov in povs_query])
             post_povs_list = [pov[0] for pov in povs_query]
             
-            # Get likes and comments count from batch results
             likes_count = likes_counts.get(post_id, 0)
             liked = post_id in user_liked_posts
             comment_count = comment_counts.get(post_id, 0)
             
-            # Calculate match reason (only for other users' posts)
             match_reason = None
             if not is_own_post:
-                # Get post vector from Qdrant
                 post_vector = None
                 try:
                     retrieved = qdrant_service.client.retrieve(
@@ -799,10 +781,8 @@ async def search_posts(request: SearchRequest, current_user_id: Optional[str] = 
                     user_post_vectors=user_post_vectors if user_post_vectors else []
                 )
             
-            # Get username from database
             username = db_post.username
             if not username and post_user_id:
-                # Fallback: get from users table
                 user = db.query(UserModel).filter(UserModel.id == post_user_id).first()
                 username = user.username if user else f"User_{post_user_id[:8]}"
             
@@ -829,22 +809,18 @@ async def search_posts(request: SearchRequest, current_user_id: Optional[str] = 
 
 @router.post("/povs/{pov}/like", response_model=LikeResponse)
 def like_pov(pov: str, user_id: str = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Like a POV (tag)"""
-    # Check if already liked
     existing_like = db.query(POVLikeModel).filter(
         POVLikeModel.pov == pov,
         POVLikeModel.user_id == user_id
     ).first()
     
     if existing_like:
-        # Already liked
         likes_count = db.query(POVLikeModel).filter(POVLikeModel.pov == pov).count()
         return LikeResponse(
             liked=True,
             likes=likes_count
         )
     
-    # Create new like
     new_like = POVLikeModel(
         id=str(uuid.uuid4()),
         pov=pov,

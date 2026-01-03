@@ -1,6 +1,4 @@
-# Cloud Build configuration for automated deployment
 steps:
-  # Pull latest image for cache (non-blocking)
   - name: 'gcr.io/cloud-builders/docker'
     entrypoint: 'bash'
     args:
@@ -10,7 +8,6 @@ steps:
     dir: 'backend'
     id: 'pull-cache'
 
-  # Build Docker image with cache
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
@@ -25,7 +22,6 @@ steps:
     waitFor: ['pull-cache']
     timeout: '1200s'
 
-  # Push to Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
@@ -33,7 +29,6 @@ steps:
       - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/daimon-api'
     dir: 'backend'
 
-  # Deploy to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
     args:
