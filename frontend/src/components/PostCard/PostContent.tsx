@@ -44,7 +44,7 @@ export const PostContent: React.FC<PostContentProps> = ({
   return (
     <div className="p-4 sm:p-5 bg-white">
       <p className="text-sm sm:text-base text-slate-800 mb-3 sm:mb-4 leading-relaxed whitespace-pre-wrap break-words">
-        {renderTextWithHashtags(post.text, onTagClick)}
+        {renderTextWithHashtags(post.text)}
       </p>
 
       <POVList

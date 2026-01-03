@@ -1,5 +1,4 @@
 import React, { useRef, useState, useEffect } from "react"
-import { X } from "lucide-react"
 import { suggestPOVs } from "../../api/client"
 import { validatePOV } from "../../utils/security"
 import { POV_CONSTRAINTS, DEBOUNCE_DELAYS } from "../../types/enums"
@@ -13,7 +12,7 @@ interface POVInputProps {
 export const POVInput: React.FC<POVInputProps> = ({
   manualPOVs,
   onAddPOV,
-  onRemovePOV,
+  onRemovePOV: _onRemovePOV,
 }) => {
   const [manualPOVInput, setManualPOVInput] = useState<string>("")
   const [povSuggestions, setPOVSuggestions] = useState<string[]>([])
@@ -109,7 +108,7 @@ export const POVInput: React.FC<POVInputProps> = ({
                 setShowPOVSuggestions(true)
               } else {
                 try {
-                  const suggestions = await suggestTags("")
+                  const suggestions = await suggestPOVs("")
                   setPOVSuggestions(suggestions)
                   setShowPOVSuggestions(suggestions.length > 0)
                 } catch (error) {
