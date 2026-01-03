@@ -1,0 +1,58 @@
+# Cloud Build configuration for automated deployment
+steps:
+  # Build Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/daimon-backend:${SHORT_SHA}'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/daimon-backend:latest'
+      - '.'
+    dir: 'backend'
+
+  # Push to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '--all-tags'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/daimon-backend'
+    dir: 'backend'
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'daimon-backend'
+      - '--image'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/daimon-backend:${SHORT_SHA}'
+      - '--platform'
+      - 'managed'
+      - '--region'
+      - '${_REGION}'
+      - '--allow-unauthenticated'
+      - '--memory'
+      - '512Mi'
+      - '--cpu'
+      - '1'
+      - '--min-instances'
+      - '0'
+      - '--max-instances'
+      - '10'
+      - '--timeout'
+      - '300'
+      - '--set-secrets'
+      - 'DATABASE_URL=database-url:latest,QDRANT_API_KEY=qdrant-api-key:latest'
+      - '--set-env-vars'
+      - 'QDRANT_URL=${_QDRANT_URL},CORS_ORIGINS=${_CORS_ORIGINS}'
+
+substitutions:
+  _REGION: 'asia-northeast1'  # 東京リージョン
+  _REPO: 'daimon'  # Artifact Registry のリポジトリ名
+  _QDRANT_URL: ''  # Cloud Build の変数で設定
+  _CORS_ORIGINS: ''  # Cloud Build の変数で設定
+
+options:
+  logging: CLOUD_LOGGING_ONLY
