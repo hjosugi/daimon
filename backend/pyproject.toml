@@ -1,5 +1,5 @@
 [project]
-name = "daimon-backend"
+name = "daimon-api"
 version = "0.1.0"
 description = "Daimon backend API"
 requires-python = ">=3.10"

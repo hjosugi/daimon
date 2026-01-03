@@ -1,20 +1,37 @@
-name: Deploy to Cloud Run
+name: Deploy
 
 on:
   push:
     branches:
       - main
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - '.github/workflows/deploy.yml'
   workflow_dispatch:
+    inputs:
+      deploy_backend:
+        description: 'Deploy backend'
+        required: false
+        default: true
+        type: boolean
+      deploy_frontend:
+        description: 'Deploy frontend'
+        required: false
+        default: true
+        type: boolean
 
 env:
-  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   REGION: asia-northeast1
-  SERVICE_NAME: daimon-backend
+  BACKEND_SERVICE: daimon-backend
+  REPO: daimon
 
 jobs:
-  deploy:
+  deploy-backend:
+    name: Deploy Backend to Cloud Run
     runs-on: ubuntu-latest
-    
+    if: ${{ github.event.inputs.deploy_backend != false }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -24,28 +41,99 @@ jobs:
         with:
           service_account_key: ${{ secrets.GCP_SA_KEY }}
           project_id: ${{ secrets.GCP_PROJECT_ID }}
+          export_default_credentials: true
 
-      - name: Configure Docker for Artifact Registry
+      - name: Submit build to Cloud Build
         run: |
-          gcloud auth configure-docker ${REGION}-docker.pkg.dev
+          gcloud builds submit \
+            --project=${GCP_PROJECT_ID} \
+            --config=backend/cloudbuild.yaml \
+            --substitutions=_REGION=${REGION},_REPO=${REPO},_QDRANT_URL="${{ secrets.QDRANT_URL }}",_CORS_ORIGINS="${{ secrets.CORS_ORIGINS }}" \
+            --region=${REGION} \
+            backend
 
-      - name: Build and push Docker image
+      - name: Get service URL
+        id: service-url
         run: |
-          cd backend
-          docker build -t ${REGION}-docker.pkg.dev/${PROJECT_ID}/daimon/daimon-backend:${{ github.sha }} .
-          docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/daimon/daimon-backend:${{ github.sha }}
-
-      - name: Deploy to Cloud Run
-        run: |
-          gcloud run deploy ${SERVICE_NAME} \
-            --image ${REGION}-docker.pkg.dev/${PROJECT_ID}/daimon/daimon-backend:${{ github.sha }} \
+          URL=$(gcloud run services describe ${BACKEND_SERVICE} \
+            --project=${GCP_PROJECT_ID} \
             --platform managed \
             --region ${REGION} \
-            --allow-unauthenticated \
-            --memory 512Mi \
-            --cpu 1 \
-            --min-instances 0 \
-            --max-instances 10 \
-            --timeout 300 \
-            --set-secrets DATABASE_URL=database-url:latest,QDRANT_API_KEY=qdrant-api-key:latest \
-            --set-env-vars QDRANT_URL="${{ secrets.QDRANT_URL }}",CORS_ORIGINS="${{ secrets.CORS_ORIGINS }}"
+            --format 'value(status.url)')
+          echo "url=${URL}" >> $GITHUB_OUTPUT
+          echo "Backend deployed to: ${URL}"
+
+      - name: Deployment summary
+        run: |
+          echo "## 🚀 Backend Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Service**: ${BACKEND_SERVICE}" >> $GITHUB_STEP_SUMMARY
+          echo "- **URL**: ${{ steps.service-url.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Region**: ${REGION}" >> $GITHUB_STEP_SUMMARY
+
+  deploy-frontend:
+    name: Deploy Frontend to Vercel
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.deploy_frontend != false }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          pnpm install --frozen-lockfile
+
+      - name: Type check
+        run: |
+          cd frontend
+          pnpm exec tsc --noEmit
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+
+      - name: Build
+        run: |
+          cd frontend
+          pnpm build
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+
+      - name: Verify build output
+        run: |
+          if [ ! -d "frontend/dist" ]; then
+            echo "Error: Build output directory 'dist' not found"
+            exit 1
+          fi
+          if [ -z "$(ls -A frontend/dist)" ]; then
+            echo "Error: Build output directory 'dist' is empty"
+            exit 1
+          fi
+          echo "Build output verified successfully"
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: frontend
+          scope: ${{ secrets.VERCEL_ORG_ID }}
+
+      - name: Deployment summary
+        run: |
+          echo "## 🎨 Frontend Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Platform**: Vercel" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: Deployed successfully" >> $GITHUB_STEP_SUMMARY

@@ -149,6 +149,52 @@ gcloud builds triggers run daimon-backend-deploy \
 
 これ以降、`main`ブランチにプッシュするたびに自動的にデプロイされます。
 
+#### 3.3.3 GitHub Actions を使用したデプロイ（代替方法）
+
+Cloud Build Triggerの代わりに、GitHub Actionsを使用してCloud Buildをトリガーすることもできます。
+
+**必要なシークレットの設定**:
+
+1. GitHubリポジトリの **Settings** > **Secrets and variables** > **Actions** に移動
+2. 以下のシークレットを追加:
+
+   - `GCP_PROJECT_ID`: GCPプロジェクトID（例: `my-project-123456`）
+   - `GCP_SA_KEY`: GCPサービスアカウントのJSONキー
+     ```bash
+     # サービスアカウントキーを生成
+     gcloud iam service-accounts create github-actions \
+       --display-name="GitHub Actions Service Account"
+     
+     # 必要な権限を付与
+     gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+       --member="serviceAccount:github-actions@${PROJECT_ID}.iam.gserviceaccount.com" \
+       --role="roles/run.admin"
+     
+     gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+       --member="serviceAccount:github-actions@${PROJECT_ID}.iam.gserviceaccount.com" \
+       --role="roles/artifactregistry.writer"
+     
+     gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+       --member="serviceAccount:github-actions@${PROJECT_ID}.iam.gserviceaccount.com" \
+       --role="roles/cloudbuild.builds.editor"
+     
+     # キーを生成
+     gcloud iam service-accounts keys create key.json \
+       --iam-account=github-actions@${PROJECT_ID}.iam.gserviceaccount.com
+     
+     # key.jsonの内容をGitHubシークレットにコピー
+     ```
+   
+   - `QDRANT_URL`: Qdrant Cloud のURL（例: `https://xxx.qdrant.io`）
+   - `CORS_ORIGINS`: フロントエンドのURL（カンマ区切り、例: `https://daimon.vercel.app`）
+
+3. `.github/workflows/deploy.yml` が自動的に使用されます
+
+**ワークフローの動作**:
+- `main`ブランチへのプッシュ時に自動実行
+- `backend/` ディレクトリの変更時のみ実行（パフォーマンス最適化）
+- 手動実行も可能（GitHub Actions UIから）
+
 ### 3.4 手動デプロイ（オプション）
 
 Cloud Build を使わずに手動でデプロイする場合:

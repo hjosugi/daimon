@@ -1,7 +1,6 @@
 import React from "react"
 import { Heart, Sparkles } from "lucide-react"
 import type { Post, User } from "../../api/client"
-import { POVType } from "../../types/enums"
 
 interface POVListProps {
   post: Post

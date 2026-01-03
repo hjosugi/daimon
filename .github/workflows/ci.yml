@@ -247,10 +247,27 @@ jobs:
           cd frontend
           pnpm install --frozen-lockfile
       
+      - name: Type check
+        run: |
+          cd frontend
+          pnpm exec tsc --noEmit
+      
       - name: Build
         run: |
           cd frontend
           pnpm build
+      
+      - name: Verify build output
+        run: |
+          if [ ! -d "frontend/dist" ]; then
+            echo "Error: Build output directory 'dist' not found"
+            exit 1
+          fi
+          if [ -z "$(ls -A frontend/dist)" ]; then
+            echo "Error: Build output directory 'dist' is empty"
+            exit 1
+          fi
+          echo "Build output verified successfully"
       
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -288,14 +305,32 @@ jobs:
       
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            image=moby/buildkit:latest
+            network=host
+      
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
       
       - name: Validate docker-compose.yml
         run: |
           docker compose config
       
-      - name: Build services
-        run: |
-          docker compose build --no-cache || true
+      - name: Build services with cache
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: false
+          tags: daimon-api:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          load: true
 
   all-checks:
     name: All Checks Status
