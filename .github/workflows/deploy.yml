@@ -46,6 +46,7 @@ jobs:
       - name: Submit build to Cloud Build
         run: |
           gcloud builds submit \
+            --project=${GCP_PROJECT_ID} \
             --config=backend/cloudbuild.yaml \
             --substitutions=_REGION=${REGION},_REPO=${REPO},_QDRANT_URL="${{ secrets.QDRANT_URL }}",_CORS_ORIGINS="${{ secrets.CORS_ORIGINS }}" \
             --region=${REGION} \
@@ -55,6 +56,7 @@ jobs:
         id: service-url
         run: |
           URL=$(gcloud run services describe ${BACKEND_SERVICE} \
+            --project=${GCP_PROJECT_ID} \
             --platform managed \
             --region ${REGION} \
             --format 'value(status.url)')

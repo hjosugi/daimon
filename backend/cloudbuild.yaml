@@ -5,9 +5,9 @@ steps:
     args:
       - 'build'
       - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/daimon-backend:${SHORT_SHA}'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/daimon-api:${SHORT_SHA}'
       - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/daimon-backend:latest'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/daimon-api:latest'
       - '.'
     dir: 'backend'
 
@@ -16,7 +16,7 @@ steps:
     args:
       - 'push'
       - '--all-tags'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/daimon-backend'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/daimon-api'
     dir: 'backend'
 
   # Deploy to Cloud Run
@@ -25,9 +25,9 @@ steps:
     args:
       - 'run'
       - 'deploy'
-      - 'daimon-backend'
+      - 'daimon-api'
       - '--image'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/daimon-backend:${SHORT_SHA}'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/daimon-api:${SHORT_SHA}'
       - '--platform'
       - 'managed'
       - '--region'
@@ -44,15 +44,15 @@ steps:
       - '--timeout'
       - '300'
       - '--set-secrets'
-      - 'DATABASE_URL=database-url:latest,QDRANT_API_KEY=qdrant-api-key:latest'
+      - 'DATABASE_URL=database-url:latest'
       - '--set-env-vars'
       - 'QDRANT_URL=${_QDRANT_URL},CORS_ORIGINS=${_CORS_ORIGINS}'
 
 substitutions:
-  _REGION: 'asia-northeast1'  # 東京リージョン
-  _REPO: 'daimon'  # Artifact Registry のリポジトリ名
-  _QDRANT_URL: ''  # Cloud Build の変数で設定
-  _CORS_ORIGINS: ''  # Cloud Build の変数で設定
+  _REGION: 'asia-northeast1'
+  _REPO: 'daimon'
+  _QDRANT_URL: ''
+  _CORS_ORIGINS: ''
 
 options:
   logging: CLOUD_LOGGING_ONLY
