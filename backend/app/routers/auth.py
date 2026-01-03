@@ -20,7 +20,6 @@ router = APIRouter(
     tags=["auth"]
 )
 
-# Session expiration: 30 days
 SESSION_EXPIRY_DAYS = 30
 
 def hash_password(password: str) -> str:
@@ -45,7 +44,6 @@ def get_current_user(
     
     token = authorization.replace("Bearer ", "")
     
-    # Get session from database
     session = db.query(SessionModel).filter(
         SessionModel.id == token,
         SessionModel.expires_at > datetime.utcnow()
@@ -63,13 +61,11 @@ def get_current_user_optional(
     authorization: Optional[str] = Header(None),
     db: Session = Depends(get_db)
 ) -> Optional[str]:
-    """Get current user from token (optional - returns None if not authenticated)"""
     if not authorization or not authorization.startswith("Bearer "):
         return None
     
     token = authorization.replace("Bearer ", "")
     
-    # Get session from database
     session = db.query(SessionModel).filter(
         SessionModel.id == token,
         SessionModel.expires_at > datetime.utcnow()
@@ -82,8 +78,6 @@ def get_current_user_optional(
 
 @router.post("/register", response_model=UserResponse)
 def register(user_data: UserRegister, db: Session = Depends(get_db)):
-    """Register a new user"""
-    # Check if username or email already exists
     existing_user = db.query(UserModel).filter(
         or_(
             UserModel.username == user_data.username,
@@ -103,14 +97,12 @@ def register(user_data: UserRegister, db: Session = Depends(get_db)):
                 detail="Email already exists"
             )
     
-    # Hash password with bcrypt
     password_hash = hash_password(user_data.password)
     
-    # Create user
     user = UserModel(
         id=str(uuid.uuid4()),
         username=user_data.username,
-        email=user_data.email.lower(),  # Store email in lowercase for consistency
+        email=user_data.email.lower(),
         password_hash=password_hash,
         avatar_url=None,
         created_at=datetime.utcnow(),
@@ -121,7 +113,6 @@ def register(user_data: UserRegister, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
     
-    # Generate session token
     token = str(uuid.uuid4())
     expires_at = datetime.utcnow() + timedelta(days=SESSION_EXPIRY_DAYS)
     
@@ -145,8 +136,6 @@ def register(user_data: UserRegister, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=UserResponse)
 def login(credentials: UserLogin, db: Session = Depends(get_db)):
-    """Login user"""
-    # Find user by email or username (case-insensitive for email)
     email_or_username_lower = credentials.email_or_username.lower()
     user = db.query(UserModel).filter(
         or_(
@@ -161,14 +150,12 @@ def login(credentials: UserLogin, db: Session = Depends(get_db)):
             detail="Invalid credentials"
         )
     
-    # Verify password
     if not verify_password(credentials.password, user.password_hash):
         raise HTTPException(
             status_code=HTTPStatus.UNAUTHORIZED,
             detail="Invalid credentials"
         )
     
-    # Generate session token
     token = str(uuid.uuid4())
     expires_at = datetime.utcnow() + timedelta(days=SESSION_EXPIRY_DAYS)
     
@@ -227,7 +214,6 @@ def update_profile(
     if profile_data.avatar_url:
         user.avatar_url = profile_data.avatar_url
     if profile_data.username:
-        # Check if username is already taken
         existing_user = db.query(UserModel).filter(
             UserModel.username == profile_data.username,
             UserModel.id != current_user_id
@@ -263,14 +249,11 @@ def delete_account(
             detail="User not found"
         )
     
-    # Delete user's posts from Qdrant (if needed)
-    # Note: Posts are deleted via CASCADE in PostgreSQL, but we should also clean Qdrant
     try:
         from app.services.qdrant_service import qdrant_service, COLLECTION_NAME
         from app.database import Post as PostModel
         from qdrant_client.models import PointIdsList
         
-        # Get all post IDs for this user
         user_posts = db.query(PostModel.id).filter(PostModel.user_id == current_user_id).all()
         post_ids = [post[0] for post in user_posts]
         
@@ -280,10 +263,8 @@ def delete_account(
                 points_selector=PointIdsList(points=post_ids)
             )
     except Exception as e:
-        # Log error but continue with deletion (Qdrant is regenerable)
         logger.warning(f"Error deleting posts from Qdrant: {e}")
     
-    # Delete user (CASCADE will delete posts, likes, comments, sessions, etc.)
     db.delete(user)
     db.commit()
     
@@ -304,7 +285,6 @@ def logout(
     
     token = authorization.replace("Bearer ", "")
     
-    # Delete session
     session = db.query(SessionModel).filter(SessionModel.id == token).first()
     if session:
         db.delete(session)

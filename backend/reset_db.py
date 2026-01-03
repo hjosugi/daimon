@@ -1,43 +1,45 @@
 #!/usr/bin/env python3
 """
-データベースとQdrantを完全にリセットして再作成するスクリプト
-全てのテーブルとコレクションを削除してから、1から作成します
+Script to completely reset and recreate database and Qdrant
+Deletes all tables and collections, then recreates from scratch
 """
 import sys
 from sqlalchemy import create_engine, text
 from app.database import DATABASE_URL
-from app.services.qdrant_service import QDRANT_HOST, QDRANT_PORT, COLLECTION_NAME, VECTOR_SIZE
+from app.services.qdrant_service import (
+    QDRANT_HOST,
+    QDRANT_PORT,
+    COLLECTION_NAME,
+    VECTOR_SIZE,
+)
 from qdrant_client import QdrantClient
 from qdrant_client.models import VectorParams, Distance
 from alembic.config import Config
 from alembic import command
 
+
 def main():
     print("=" * 60)
-    print("データベースとQdrantをリセットして再作成します")
+    print("Resetting and recreating database and Qdrant")
     print("=" * 60)
     print()
-    print("⚠️  警告: 全てのデータが削除されます！")
-    print("   - PostgreSQL: 全てのテーブル")
-    print("   - Qdrant: postsコレクション")
+    print("⚠️  WARNING: All data will be deleted!")
     print()
-    
-    confirm = input("続行しますか？ (yes/no): ")
+
+    confirm = input("Continue? (yes/no): ")
     if confirm.lower() != "yes":
-        print("キャンセルしました")
+        print("Cancelled")
         sys.exit(0)
-    
+
     print()
-    
-    # PostgreSQLのリセット
-    print("1. PostgreSQL: データベースに接続中...")
+
+    print("1. PostgreSQL: Connecting to database...")
     engine = create_engine(DATABASE_URL)
-    
+
     try:
         with engine.begin() as conn:
-            print("2. PostgreSQL: 既存のテーブルを削除中...")
-            
-            # 外部キー制約を無効化してから削除
+            print("2. PostgreSQL: Deleting existing tables...")
+
             conn.execute(text("DROP TABLE IF EXISTS alembic_version CASCADE"))
             conn.execute(text("DROP TABLE IF EXISTS pov_likes CASCADE"))
             conn.execute(text("DROP TABLE IF EXISTS comments CASCADE"))
@@ -46,52 +48,54 @@ def main():
             conn.execute(text("DROP TABLE IF EXISTS posts CASCADE"))
             conn.execute(text("DROP TABLE IF EXISTS sessions CASCADE"))
             conn.execute(text("DROP TABLE IF EXISTS users CASCADE"))
-            
-            print("   ✓ PostgreSQLテーブルを削除しました")
-        
+
+            print("   ✓ PostgreSQL tables deleted")
+
         print()
-        print("3. PostgreSQL: Migrationでテーブルを再作成中...")
+        print("3. PostgreSQL: Recreating tables with migration...")
         alembic_cfg = Config("alembic.ini")
         command.upgrade(alembic_cfg, "head")
-        print("   ✓ PostgreSQLテーブルを再作成しました")
-        
-        # Qdrantのリセット
+        print("   ✓ PostgreSQL tables recreated")
+
         print()
-        print("4. Qdrant: 接続中...")
+        print("4. Qdrant: Connecting...")
         qdrant_client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
-        
-        print("5. Qdrant: 既存のコレクションを削除中...")
+
+        print("5. Qdrant: Deleting existing collection...")
         try:
             qdrant_client.delete_collection(collection_name=COLLECTION_NAME)
-            print(f"   ✓ コレクション '{COLLECTION_NAME}' を削除しました")
+            print(f"   ✓ Collection '{COLLECTION_NAME}' deleted")
         except Exception as e:
-            # コレクションが存在しない場合は無視
-            if "doesn't exist" not in str(e).lower() and "not found" not in str(e).lower():
+            if (
+                "doesn't exist" not in str(e).lower()
+                and "not found" not in str(e).lower()
+            ):
                 raise
-            print(f"   ℹ コレクション '{COLLECTION_NAME}' は存在しませんでした")
-        
+            print(f"   ℹ Collection '{COLLECTION_NAME}' did not exist")
+
         print()
-        print("6. Qdrant: コレクションを再作成中...")
+        print("6. Qdrant: Recreating collection...")
         qdrant_client.create_collection(
             collection_name=COLLECTION_NAME,
             vectors_config=VectorParams(size=VECTOR_SIZE, distance=Distance.COSINE),
         )
-        print(f"   ✓ コレクション '{COLLECTION_NAME}' を再作成しました")
-        
+        print(f"   ✓ Collection '{COLLECTION_NAME}' recreated")
+
         print()
         print("=" * 60)
-        print("✓ データベースとQdrantのリセットが完了しました")
+        print("DONE")
         print("=" * 60)
         print()
-        print("FastAPIサーバーを再起動してください。")
-        
+
     except Exception as e:
         print()
-        print("✗ エラーが発生しました:")
+        print("✗ Error occurred:")
         print(f"   {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

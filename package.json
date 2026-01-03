@@ -1,0 +1,8 @@
+{
+  "name": "daimon",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "build": "cd frontend && pnpm install && pnpm run build"
+  }
+}

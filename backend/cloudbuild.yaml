@@ -1,40 +1,49 @@
-# Cloud Build configuration for automated deployment
 steps:
-  # Build Docker image
   - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
     args:
-      - 'build'
-      - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/daimon-backend:${SHORT_SHA}'
-      - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/daimon-backend:latest'
-      - '.'
+      - '-c'
+      - |
+        docker pull ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/daimon-api:latest || true
     dir: 'backend'
+    id: 'pull-cache'
 
-  # Push to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        DOCKER_BUILDKIT=1 docker build \
+          --cache-from ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/daimon-api:latest \
+          -t ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/daimon-api:${SHORT_SHA} \
+          -t ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/daimon-api:latest \
+          .
+    dir: 'backend'
+    waitFor: ['pull-cache']
+    timeout: '1200s'
+
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
       - '--all-tags'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/daimon-backend'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/daimon-api'
     dir: 'backend'
 
-  # Deploy to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
     args:
       - 'run'
       - 'deploy'
-      - 'daimon-backend'
+      - 'daimon-api'
       - '--image'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/daimon-backend:${SHORT_SHA}'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/daimon-api:${SHORT_SHA}'
       - '--platform'
       - 'managed'
       - '--region'
       - '${_REGION}'
       - '--allow-unauthenticated'
       - '--memory'
-      - '512Mi'
+      - '2Gi'
       - '--cpu'
       - '1'
       - '--min-instances'
@@ -43,16 +52,24 @@ steps:
       - '10'
       - '--timeout'
       - '300'
+      - '--startup-cpu-boost'
       - '--set-secrets'
-      - 'DATABASE_URL=database-url:latest,QDRANT_API_KEY=qdrant-api-key:latest'
+      - 'DATABASE_URL=database-url:latest'
       - '--set-env-vars'
       - 'QDRANT_URL=${_QDRANT_URL},CORS_ORIGINS=${_CORS_ORIGINS}'
 
 substitutions:
-  _REGION: 'asia-northeast1'  # 東京リージョン
-  _REPO: 'daimon'  # Artifact Registry のリポジトリ名
-  _QDRANT_URL: ''  # Cloud Build の変数で設定
-  _CORS_ORIGINS: ''  # Cloud Build の変数で設定
+  _REGION: 'asia-northeast1'
+  _REPO: 'daimon'
+  _QDRANT_URL: ''
+  _CORS_ORIGINS: 'https://daimon-sandy.vercel.app'
 
 options:
   logging: CLOUD_LOGGING_ONLY
+  machineType: 'E2_STANDARD_4'
+  volumes:
+    - name: uv-cache
+      path: /root/.cache/uv
+  substitution_option: 'ALLOW_LOOSE'
+  diskSizeGb: 10
+  timeout: '1800s'

@@ -51,7 +51,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
       return await deleteAccount()
     },
     onSuccess: () => {
-      queryClient.clear() // Clear all queries
+      queryClient.clear()
       onDelete()
       onClose()
     },
@@ -99,18 +99,18 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-3 sm:p-4"
       onClick={onClose}
     >
       <div 
-        className="bg-white rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-md mx-auto overflow-hidden max-h-[90vh] overflow-y-auto"
+        className="bg-[#0f0f1f] rounded-lg border border-cyan-500/18 w-full max-w-md mx-auto overflow-hidden max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="bg-gradient-to-r from-blue-500 to-purple-500 p-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-white">Edit Profile</h2>
+        <div className="bg-[#1f1f3a] border-b border-cyan-500/12 p-4 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-cyan-200/95 font-mono">EDIT PROFILE</h2>
           <button
             onClick={onClose}
-            className="text-white hover:bg-white/20 rounded-full p-1 transition-colors"
+            className="text-cyan-300/90 hover:text-cyan-400 hover:bg-cyan-900/10 rounded p-1 transition-colors"
           >
             <X size={20} />
           </button>
@@ -121,7 +121,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           <div className="flex flex-col items-center gap-3">
             <label className="cursor-pointer">
               <div className="relative">
-                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-br from-blue-400 to-purple-400 flex items-center justify-center overflow-hidden border-4 border-white shadow-lg">
+                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-br from-cyan-400/80 to-fuchsia-400/80 flex items-center justify-center overflow-hidden border-2 border-cyan-500/18">
                   {avatarPreview ? (
                     <img
                       src={avatarPreview}
@@ -129,10 +129,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <UserIcon size={40} className="text-white" />
+                    <UserIcon size={40} className="text-black" />
                   )}
                 </div>
-                <div className="absolute bottom-0 right-0 bg-blue-600 text-white rounded-full p-2 shadow-lg hover:bg-blue-700 transition-colors">
+                <div className="absolute bottom-0 right-0 bg-cyan-500/90 text-black rounded-full p-2 hover:bg-cyan-400 transition-colors border border-cyan-400/50">
                   <ImageIcon size={16} />
                 </div>
               </div>
@@ -147,70 +147,70 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               <button
                 type="button"
                 onClick={handleRemoveAvatar}
-                className="text-xs text-slate-500 hover:text-slate-700 px-3 py-1.5 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+                className="text-xs text-cyan-300/80 hover:text-cyan-300/95 px-3 py-1.5 bg-cyan-900/10 border border-cyan-500/12 rounded hover:bg-cyan-900/20 transition-colors font-mono"
               >
-                Remove Image
+                REMOVE IMAGE
               </button>
             </div>
-            <span className="text-xs text-slate-500 text-center">
-              Change profile picture (optional)
+            <span className="text-xs text-cyan-300/70 text-center font-mono">
+              CHANGE PROFILE PICTURE (OPTIONAL)
             </span>
           </div>
 
           {/* Username */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Username
+            <label className="block text-xs font-medium text-cyan-300/95 mb-2 font-mono">
+              USERNAME
             </label>
             <div className="relative">
-              <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-300/70" size={18} />
               <input
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Username"
+                className="w-full pl-10 pr-4 py-2.5 bg-[#1f1f3a] border border-cyan-500/12 rounded focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/40 text-cyan-200/95 placeholder:text-cyan-500/30 font-mono transition-all"
+                placeholder="USERNAME"
               />
             </div>
           </div>
 
           {/* Email (Read-only) */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Email
+            <label className="block text-xs font-medium text-cyan-300/95 mb-2 font-mono">
+              EMAIL
             </label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-300/70" size={18} />
               <input
                 type="email"
                 value={email}
                 disabled
-                className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg bg-slate-50 text-slate-500 cursor-not-allowed"
-                placeholder="email@example.com"
+                className="w-full pl-10 pr-4 py-2.5 bg-[#0f0f1f] border border-cyan-500/15 rounded text-cyan-300/70 cursor-not-allowed font-mono"
+                placeholder="EMAIL@EXAMPLE.COM"
               />
             </div>
-            <p className="text-xs text-slate-500 mt-1">
-              Email cannot be changed
+            <p className="text-xs text-cyan-300/70 mt-1 font-mono">
+              EMAIL CANNOT BE CHANGED
             </p>
           </div>
 
           {/* Submit Button */}
-          <div className="pt-4 border-t border-slate-200 space-y-3">
+          <div className="pt-4 border-t border-cyan-500/15 space-y-3">
             <button
               type="submit"
               disabled={updateProfileMutation.isPending || !username.trim()}
-              className="w-full py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+              className="w-full py-3 bg-gradient-to-r from-cyan-500/90 to-fuchsia-500/90 text-black rounded font-semibold hover:from-cyan-400 hover:to-fuchsia-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 font-mono font-bold"
             >
               {updateProfileMutation.isPending ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Saving...</span>
+                  <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                  <span>SAVING...</span>
                 </>
               ) : (
                 <>
                   <Save size={18} />
-                  <span>Save</span>
+                  <span>SAVE</span>
                 </>
               )}
             </button>
@@ -220,55 +220,55 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               type="button"
               onClick={() => setShowDeleteConfirm(true)}
               disabled={deleteAccountMutation.isPending}
-              className="w-full py-2.5 bg-red-50 text-red-600 rounded-lg font-medium hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-red-200 flex items-center justify-center gap-2"
+              className="w-full py-2.5 bg-red-900/20 text-red-400/90 rounded font-medium hover:bg-red-900/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-red-500/30 hover:border-red-500/50 flex items-center justify-center gap-2 font-mono"
             >
               <Trash2 size={16} />
-              <span>Delete Account</span>
+              <span>DELETE ACCOUNT</span>
             </button>
           </div>
         </form>
 
         {/* Delete Confirmation Dialog */}
         {showDeleteConfirm && (
-          <div className="absolute inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 space-y-4">
+          <div className="absolute inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+            <div className="bg-[#0f0f1f] rounded-lg border border-red-500/30 w-full max-w-md p-6 space-y-4">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
-                  <AlertTriangle className="text-red-600" size={24} />
+                <div className="w-12 h-12 rounded-full bg-red-900/30 border border-red-500/30 flex items-center justify-center">
+                  <AlertTriangle className="text-red-400/90" size={24} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900">Delete Account</h3>
-                  <p className="text-sm text-slate-600">This action cannot be undone</p>
+                  <h3 className="text-lg font-bold text-red-400/90 font-mono">DELETE ACCOUNT</h3>
+                  <p className="text-sm text-red-400/60 font-mono">THIS ACTION CANNOT BE UNDONE</p>
                 </div>
               </div>
-              <p className="text-sm text-slate-700">
-                Deleting your account will permanently delete all your posts, comments, and likes.
-                This action cannot be undone.
+              <p className="text-sm text-cyan-300/80 font-mono">
+                DELETING YOUR ACCOUNT WILL PERMANENTLY DELETE ALL YOUR POSTS, COMMENTS, AND LIKES.
+                THIS ACTION CANNOT BE UNDONE.
               </p>
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowDeleteConfirm(false)}
                   disabled={deleteAccountMutation.isPending}
-                  className="flex-1 py-2.5 px-4 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 transition-colors disabled:opacity-50"
+                  className="flex-1 py-2.5 px-4 bg-[#1f1f3a] text-cyan-300/95 border border-cyan-500/12 rounded font-medium hover:bg-[#0f0f1f] hover:border-cyan-500/40 transition-colors disabled:opacity-50 font-mono"
                 >
-                  Cancel
+                  CANCEL
                 </button>
                 <button
                   type="button"
                   onClick={() => deleteAccountMutation.mutate()}
                   disabled={deleteAccountMutation.isPending}
-                  className="flex-1 py-2.5 px-4 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 py-2.5 px-4 bg-red-600/90 text-white rounded font-medium hover:bg-red-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-mono font-bold"
                 >
                   {deleteAccountMutation.isPending ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Deleting...</span>
+                      <span>DELETING...</span>
                     </>
                   ) : (
                     <>
                       <Trash2 size={16} />
-                      <span>Delete</span>
+                      <span>DELETE</span>
                     </>
                   )}
                 </button>

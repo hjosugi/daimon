@@ -1,8 +1,7 @@
 import React, { useRef, useState, useEffect } from "react"
-import { X } from "lucide-react"
 import { suggestPOVs } from "../../api/client"
 import { validatePOV } from "../../utils/security"
-import { POV_CONSTRAINTS, DEBOUNCE_DELAYS } from "../../types/enums"
+import { POV_CONSTRAINTS, DEBOUNCE_DELAYS } from "../../types/constants"
 
 interface POVInputProps {
   manualPOVs: string[]
@@ -13,7 +12,7 @@ interface POVInputProps {
 export const POVInput: React.FC<POVInputProps> = ({
   manualPOVs,
   onAddPOV,
-  onRemovePOV,
+  onRemovePOV: _onRemovePOV,
 }) => {
   const [manualPOVInput, setManualPOVInput] = useState<string>("")
   const [povSuggestions, setPOVSuggestions] = useState<string[]>([])
@@ -68,9 +67,9 @@ export const POVInput: React.FC<POVInputProps> = ({
   }
 
   return (
-    <div className="pt-2 border-t border-slate-100 relative">
+    <div className="pt-2 border-t border-cyan-500/15 relative">
       <div className="flex gap-2 items-center">
-        <span className="text-slate-400 text-sm">#</span>
+        <span className="text-fuchsia-300 text-sm font-mono">#</span>
         <div className="flex-1 relative">
           <input
             ref={povInputRef}
@@ -109,7 +108,7 @@ export const POVInput: React.FC<POVInputProps> = ({
                 setShowPOVSuggestions(true)
               } else {
                 try {
-                  const suggestions = await suggestTags("")
+                  const suggestions = await suggestPOVs("")
                   setPOVSuggestions(suggestions)
                   setShowPOVSuggestions(suggestions.length > 0)
                 } catch (error) {
@@ -120,23 +119,23 @@ export const POVInput: React.FC<POVInputProps> = ({
             onBlur={() => {
               setTimeout(() => setShowPOVSuggestions(false), 200)
             }}
-            placeholder="Add POV (Enter to add, max 300 chars)"
-            className="w-full px-2 py-1.5 bg-slate-50 rounded-lg border border-slate-200 focus:ring-2 focus:ring-blue-200 focus:border-blue-300 text-slate-700 placeholder:text-slate-400 text-sm"
+            placeholder="ADD POV (ENTER TO ADD, MAX 300 CHARS)"
+            className="w-full px-2 py-1.5 bg-[#2a2a50] rounded border border-fuchsia-500/25 focus:ring-1 focus:ring-fuchsia-500/30 focus:border-fuchsia-500/40 text-fuchsia-300 placeholder:text-fuchsia-400/60 text-xs font-mono transition-all"
           />
           {manualPOVInput.length > 250 && (
-            <div className="absolute top-full left-0 right-0 mt-1 text-xs text-slate-500 px-2">
-              {manualPOVInput.length}/{POV_CONSTRAINTS.MAX_LENGTH} characters
+            <div className="absolute top-full left-0 right-0 mt-1 text-xs text-fuchsia-400/60 px-2 font-mono">
+              {manualPOVInput.length}/{POV_CONSTRAINTS.MAX_LENGTH} CHARACTERS
             </div>
           )}
           {showPOVSuggestions && povSuggestions.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
+            <div className="absolute top-full left-0 right-0 mt-1 bg-[#1f1f35] border border-fuchsia-500/18 rounded-lg z-50 max-h-48 overflow-y-auto">
               {manualPOVInput.trim() ? (
-                <div className="px-3 py-2 text-xs text-slate-500 border-b border-slate-100">
-                  Suggestions for &quot;{manualPOVInput}&quot;
+                <div className="px-3 py-2 text-xs text-fuchsia-400/60 border-b border-fuchsia-500/12 font-mono">
+                  SUGGESTIONS FOR &quot;{manualPOVInput}&quot;
                 </div>
               ) : (
-                <div className="px-3 py-2 text-xs text-slate-500 border-b border-slate-100">
-                  Popular POVs
+                <div className="px-3 py-2 text-xs text-fuchsia-400/60 border-b border-fuchsia-500/12 font-mono">
+                  POPULAR POVS
                 </div>
               )}
               {povSuggestions.map((pov) => (
@@ -147,9 +146,9 @@ export const POVInput: React.FC<POVInputProps> = ({
                   onMouseDown={(e) => {
                     e.preventDefault()
                   }}
-                  className="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-blue-50 transition-colors flex items-center gap-2"
+                  className="w-full px-3 py-2 text-left text-sm text-fuchsia-300 hover:bg-fuchsia-900/20 transition-colors flex items-center gap-2 font-mono"
                 >
-                  <span className="text-blue-600">#</span>
+                  <span className="text-fuchsia-400">#</span>
                   <span className="flex-1">{pov}</span>
                 </button>
               ))}

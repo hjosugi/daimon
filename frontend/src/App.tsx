@@ -60,7 +60,11 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 text-slate-900 font-sans">
+    <div className="min-h-screen bg-[#151520] text-cyan-200 font-mono relative overflow-hidden">
+      {/* Scanline effect */}
+      <div className="fixed inset-0 pointer-events-none z-50 opacity-5">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-500 to-transparent h-[2px] animate-[scanline_8s_linear_infinite]"></div>
+      </div>
       <Header
         user={user}
         currentPage={currentPage}

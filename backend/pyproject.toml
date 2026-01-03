@@ -1,5 +1,5 @@
 [project]
-name = "daimon-backend"
+name = "daimon-api"
 version = "0.1.0"
 description = "Daimon backend API"
 requires-python = ">=3.10"
@@ -17,6 +17,3 @@ dependencies = [
     "bcrypt==4.1.2",
     "alembic==1.13.1",
 ]
-
-[tool.uv.scripts]
-reset-db = "python reset_db.py"

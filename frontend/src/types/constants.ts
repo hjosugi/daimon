@@ -1,10 +1,7 @@
-/**
- * Enums and constants for type safety and code organization
- */
-
+// enum constants
 export enum MatchType {
   TAG = "tag",
-  BOTH = "both",  // Matched by both POVs and content similarity
+  BOTH = "both",
 }
 
 export enum QueryKey {

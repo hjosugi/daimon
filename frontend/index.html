@@ -2,9 +2,25 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Daimon</title>
+    <style>
+      /* Critical CSS to prevent layout shift */
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: #151520;
+        color: #7dd3fc;
+        font-family: 'Courier New', 'Monaco', 'Menlo', monospace;
+        min-height: 100vh;
+      }
+      #root {
+        min-height: 100vh;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

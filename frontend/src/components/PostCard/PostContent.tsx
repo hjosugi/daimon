@@ -24,7 +24,7 @@ function renderTextWithHashtags(text: string): React.ReactNode {
   return parts.map((part, index) => {
     if (part.startsWith("#")) {
       return (
-        <span key={index} className="text-blue-600 font-medium">
+        <span key={index} className="text-fuchsia-300 font-mono">
           {part}
         </span>
       )
@@ -39,12 +39,12 @@ export const PostContent: React.FC<PostContentProps> = ({
   onPOVClick,
   onPOVLike,
   povLikes,
-  onTagClick,
+  onTagClick: _onTagClick,
 }) => {
   return (
-    <div className="p-4 sm:p-5 bg-white">
-      <p className="text-sm sm:text-base text-slate-800 mb-3 sm:mb-4 leading-relaxed whitespace-pre-wrap break-words">
-        {renderTextWithHashtags(post.text, onTagClick)}
+    <div className="p-4 sm:p-5 bg-[#1f1f35]">
+      <p className="text-sm sm:text-base text-cyan-200 mb-3 sm:mb-4 leading-relaxed whitespace-pre-wrap break-words">
+        {renderTextWithHashtags(post.text)}
       </p>
 
       <POVList

@@ -29,3 +29,11 @@ dmypy.json
 .DS_Store
 tests/
 alembic/versions/*.pyc
+uv.lock
+*.md
+docs/
+*.txt
+!requirements.txt
+.env.example
+.env.local
+.env.*.local

@@ -6,7 +6,7 @@ from app.utils.security import validate_pov, validate_post_text
 
 class PostCreate(BaseModel):
     text: str
-    povs: List[str] = Field(default=[], max_length=100)  # Max 100 POVs per post
+    povs: List[str] = Field(default=[], max_length=100)
     
     @field_validator('text')
     @classmethod
@@ -38,25 +38,24 @@ class SimilarUserPost(BaseModel):
     similarity_score: Optional[float] = None  # Similarity score with the matched post
 
 class MatchReason(BaseModel):
-    """Why this post was matched"""
-    pov_matches: List[str] = []  # POVs that matched (from search query or user's posts)
-    common_povs: List[str] = []  # POVs in common with user's posts
-    pov_match_rate: Optional[float] = None  # POV match rate (0.0 to 1.0)
-    matched_by: MatchType = MatchType.TAG  # Match type enum (TAG or BOTH)
-    similar_to_user_posts: Optional[List[SimilarUserPost]] = None  # User's posts that contributed to the POV match (max 3)
+    pov_matches: List[str] = []
+    common_povs: List[str] = []
+    pov_match_rate: Optional[float] = None
+    matched_by: MatchType = MatchType.TAG
+    similar_to_user_posts: Optional[List[SimilarUserPost]] = None
 
 class PostResponse(BaseModel):
     id: str
     text: str
-    povs: List[str]  # POVs (Points of View) for this post
-    user_id: Optional[str] = None  # User who created this post
-    username: Optional[str] = None  # Username of the post author
-    score: Optional[float] = None  # Similarity score
+    povs: List[str]
+    user_id: Optional[str] = None
+    username: Optional[str] = None
+    score: Optional[float] = None
     likes: Optional[int] = 0
     liked: Optional[bool] = False
     commentCount: Optional[int] = 0
-    match_reason: Optional[MatchReason] = None  # Why this post was recommended
-    created_at: Optional[str] = None  # ISO format timestamp
+    match_reason: Optional[MatchReason] = None
+    created_at: Optional[str] = None
 
 class TimelineRequest(BaseModel):
     query_text: str  # Simulates "User Context" or "Current Thought"
@@ -88,7 +87,7 @@ class CommentResponse(BaseModel):
     id: str
     text: str
     authorId: str
-    username: Optional[str] = None  # Username of the comment author
+    username: Optional[str] = None
     createdAt: Optional[datetime] = None
 
 class LikeResponse(BaseModel):
@@ -97,7 +96,7 @@ class LikeResponse(BaseModel):
 
 class SearchRequest(BaseModel):
     query: Optional[str] = None
-    povs: Optional[List[str]] = None  # POVs to filter by
+    povs: Optional[List[str]] = None
     limit: int = 20
 
 class UserRegister(BaseModel):

@@ -321,7 +321,7 @@ wheels = [
 ]
 
 [[package]]
-name = "daimon-backend"
+name = "daimon-api"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
