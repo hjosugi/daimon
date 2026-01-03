@@ -34,7 +34,7 @@ jobs:
     if: ${{ github.event.inputs.deploy_backend != false }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
@@ -75,7 +75,7 @@ jobs:
     if: ${{ github.event.inputs.deploy_frontend != false }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
