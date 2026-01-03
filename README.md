@@ -154,10 +154,16 @@ GitHub Actions workflows are located in `.github/workflows/`:
 - **`dependabot.yml`**: Auto-merge for dependency updates
 
 ### Continuous Deployment (CD)
-- **`cd.yml`**: Deployment pipeline (triggered on main branch or version tags)
-  - Builds Docker images
-  - Tests Docker Compose setup
-  - Creates GitHub releases for version tags
+- **`deploy.yml`**: Cloud Buildを使用したバックエンドデプロイ
+  - `main`ブランチへのプッシュ時に自動実行
+  - Cloud BuildをトリガーしてCloud Runにデプロイ
+  - `backend/` ディレクトリの変更時のみ実行
+- **`deploy-full.yml`**: フルデプロイメントパイプライン
+  - バックエンド（Cloud Run）とフロントエンド（Vercel）の両方をデプロイ
+  - 手動実行時に選択可能
+- **`cd.yml`**: Docker Composeテスト用パイプライン
+  - Docker Composeのビルドとテスト
+  - バージョンタグ時にGitHubリリースを作成
 
 ### Dependabot
 Automated dependency updates configured in `.github/dependabot.yml`:

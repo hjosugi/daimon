@@ -1,15 +1,28 @@
-name: Deploy to Cloud Run
+name: Deploy to Cloud Run via Cloud Build
 
 on:
   push:
     branches:
       - main
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy.yml'
   workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: false
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   REGION: asia-northeast1
   SERVICE_NAME: daimon-backend
+  REPO: daimon
 
 jobs:
   deploy:
@@ -24,28 +37,17 @@ jobs:
         with:
           service_account_key: ${{ secrets.GCP_SA_KEY }}
           project_id: ${{ secrets.GCP_PROJECT_ID }}
+          export_default_credentials: true
 
-      - name: Configure Docker for Artifact Registry
+      - name: Submit build to Cloud Build
         run: |
-          gcloud auth configure-docker ${REGION}-docker.pkg.dev
+          gcloud builds submit \
+            --config=backend/cloudbuild.yaml \
+            --substitutions=_REGION=${REGION},_REPO=${REPO},_QDRANT_URL="${{ secrets.QDRANT_URL }}",_CORS_ORIGINS="${{ secrets.CORS_ORIGINS }}" \
+            --region=${REGION} \
+            backend
 
-      - name: Build and push Docker image
+      - name: Verify deployment
         run: |
-          cd backend
-          docker build -t ${REGION}-docker.pkg.dev/${PROJECT_ID}/daimon/daimon-backend:${{ github.sha }} .
-          docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/daimon/daimon-backend:${{ github.sha }}
-
-      - name: Deploy to Cloud Run
-        run: |
-          gcloud run deploy ${SERVICE_NAME} \
-            --image ${REGION}-docker.pkg.dev/${PROJECT_ID}/daimon/daimon-backend:${{ github.sha }} \
-            --platform managed \
-            --region ${REGION} \
-            --allow-unauthenticated \
-            --memory 512Mi \
-            --cpu 1 \
-            --min-instances 0 \
-            --max-instances 10 \
-            --timeout 300 \
-            --set-secrets DATABASE_URL=database-url:latest,QDRANT_API_KEY=qdrant-api-key:latest \
-            --set-env-vars QDRANT_URL="${{ secrets.QDRANT_URL }}",CORS_ORIGINS="${{ secrets.CORS_ORIGINS }}"
+          echo "Deployment completed successfully!"
+          echo "Service URL: https://${SERVICE_NAME}-$(echo ${PROJECT_ID} | cut -d'-' -f1)-${REGION}.a.run.app"
