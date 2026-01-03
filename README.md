@@ -63,49 +63,49 @@ uv run uvicorn app.main:app --reload --port 8000
 
 ### 3. Database Migration
 
-データベーススキーマの管理にはAlembicを使用します。
+Database schema is managed using Alembic.
 
-**初回セットアップ（データベースが空の場合）:**
+**Initial Setup (when database is empty):**
 ```bash
 cd backend
 alembic upgrade head
 ```
 
-**モデル変更後のマイグレーション作成:**
+**Creating migrations after model changes:**
 ```bash
 cd backend
-# モデルを変更した後、自動検出でマイグレーションを作成
+# After modifying models, create migration with auto-detection
 alembic revision --autogenerate -m "Description of changes"
 
-# マイグレーションを適用
+# Apply migrations
 alembic upgrade head
 ```
 
-**マイグレーションの確認:**
+**Checking migration status:**
 ```bash
-# 現在のマイグレーション状態を確認
+# Check current migration state
 alembic current
 
-# マイグレーション履歴を確認
+# View migration history
 alembic history
 
-# 特定のリビジョンの詳細を確認
+# View details of a specific revision
 alembic show <revision>
 ```
 
-**マイグレーションのロールバック:**
+**Rolling back migrations:**
 ```bash
-# 1つ前のマイグレーションに戻す
+# Rollback to previous migration
 alembic downgrade -1
 
-# すべてのマイグレーションを元に戻す
+# Rollback all migrations
 alembic downgrade base
 ```
 
-**データベースをリセット（全データ削除）:**
+**Resetting database (delete all data):**
 ```bash
 cd backend
-# すべてのテーブルをTRUNCATE
+# TRUNCATE all tables
 docker compose exec -T db psql -U daimon -d daimon << 'SQL'
 TRUNCATE TABLE pov_likes CASCADE;
 TRUNCATE TABLE povs CASCADE;
@@ -117,12 +117,12 @@ TRUNCATE TABLE users CASCADE;
 TRUNCATE TABLE alembic_version CASCADE;
 SQL
 
-# マイグレーションを再適用
+# Reapply migrations
 alembic stamp base
 alembic upgrade head
 ```
 
-詳細は `backend/alembic/README.md` を参照してください。
+See `backend/alembic/README.md` for details.
 
 ### 4. Frontend Setup
 ```bash
@@ -154,15 +154,15 @@ GitHub Actions workflows are located in `.github/workflows/`:
 - **`dependabot.yml`**: Auto-merge for dependency updates
 
 ### Continuous Deployment (CD)
-- **`deploy.yml`**: フルデプロイメントパイプライン
-  - バックエンド（Cloud Run）とフロントエンド（Vercel）の両方をデプロイ
-  - `main`ブランチへのプッシュ時に自動実行
-  - `backend/` または `frontend/` ディレクトリの変更時のみ実行
-  - 手動実行時にバックエンド/フロントエンドを個別に選択可能
-  - Cloud Buildを使用してCloud Runにデプロイ
-- **`cd.yml`**: Docker Composeテスト用パイプライン
-  - Docker Composeのビルドとテスト
-  - バージョンタグ時にGitHubリリースを作成
+- **`deploy.yml`**: Full deployment pipeline
+  - Deploys both backend (Cloud Run) and frontend (Vercel)
+  - Automatically runs on push to `main` branch
+  - Only runs when `backend/` or `frontend/` directories change
+  - Allows individual selection of backend/frontend during manual execution
+  - Uses Cloud Build to deploy to Cloud Run
+- **`cd.yml`**: Docker Compose testing pipeline
+  - Builds and tests Docker Compose
+  - Creates GitHub releases on version tags
 
 ### Dependabot
 Automated dependency updates configured in `.github/dependabot.yml`:

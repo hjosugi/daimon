@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from "react"
 import { suggestPOVs } from "../../api/client"
 import { validatePOV } from "../../utils/security"
-import { POV_CONSTRAINTS, DEBOUNCE_DELAYS } from "../../types/enums"
+import { POV_CONSTRAINTS, DEBOUNCE_DELAYS } from "../../types/constants"
 
 interface POVInputProps {
   manualPOVs: string[]

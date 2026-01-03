@@ -1,5 +1,5 @@
 from sentence_transformers import SentenceTransformer
-from typing import List
+from typing import List, Optional
 import asyncio
 import os
 from concurrent.futures import ThreadPoolExecutor
@@ -7,17 +7,25 @@ from app.logger import logger
 
 class EmbeddingService:
     def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
-        device = os.getenv("EMBEDDING_DEVICE", "cpu")
-        logger.info(f"Initializing EmbeddingService with model '{model_name}' on device '{device}'")
-        self.model = SentenceTransformer(model_name, device=device)
+        self.model_name = model_name
+        self.device = os.getenv("EMBEDDING_DEVICE", "cpu")
+        self._model: Optional[SentenceTransformer] = None
         self.executor = ThreadPoolExecutor(max_workers=2)
-        logger.info(f"EmbeddingService initialized successfully (device: {device})")
+        self._initialized = False
+
+    def _ensure_initialized(self):
+        if not self._initialized:
+            logger.info(f"Initializing EmbeddingService with model '{self.model_name}' on device '{self.device}'")
+            self._model = SentenceTransformer(self.model_name, device=self.device)
+            self._initialized = True
+            logger.info(f"EmbeddingService initialized successfully (device: {self.device})")
 
     async def embed_text_async(self, text: str) -> List[float]:
+        self._ensure_initialized()
         loop = asyncio.get_event_loop()
         embedding = await loop.run_in_executor(
             self.executor,
-            self.model.encode,
+            self._model.encode,
             text
         )
         return embedding.tolist()

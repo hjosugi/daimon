@@ -51,7 +51,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
       return await deleteAccount()
     },
     onSuccess: () => {
-      queryClient.clear() // Clear all queries
+      queryClient.clear()
       onDelete()
       onClose()
     },

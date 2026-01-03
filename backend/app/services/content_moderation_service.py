@@ -1,17 +1,13 @@
-import os
 from typing import Dict, Optional, Tuple
 import re
 
 class ContentModerationService:
     def __init__(self):
-        self.blocked_keywords = self._load_blocked_keywords()
+        self.blocked_keywords = set()
         self.spam_patterns = [
             r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+",
             r"@\w+",
         ]
-        
-    def _load_blocked_keywords(self) -> set:
-        return set()
     
     def check_content(self, text: str) -> Tuple[bool, Optional[str], Dict]:
         """
@@ -54,8 +50,5 @@ class ContentModerationService:
             "spam_score": spam_score,
             "method": "basic_checks"
         }
-    
-    def check_with_perspective_api(self, text: str) -> Tuple[bool, Optional[str], Dict]:
-        return self.check_content(text)
 
 content_moderation_service = ContentModerationService()

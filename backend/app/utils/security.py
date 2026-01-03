@@ -14,10 +14,8 @@ def sanitize_text(text: str) -> str:
     if not text:
         return ""
     
-    # Remove control characters (except newlines and tabs)
     sanitized = re.sub(r'[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]', '', text)
     
-    # Normalize whitespace (keep single spaces, newlines, tabs)
     sanitized = re.sub(r'[ \t]+', ' ', sanitized)
     sanitized = re.sub(r'\n{3,}', '\n\n', sanitized)
     
@@ -37,7 +35,6 @@ def validate_pov(pov: str) -> Tuple[bool, Optional[str]]:
     if len(trimmed) > 300:
         return False, f"POV must be 300 characters or less, got {len(trimmed)} characters"
     
-    # Check for potentially dangerous patterns
     dangerous_patterns = [
         r'<script',
         r'javascript:',
@@ -65,7 +62,6 @@ def validate_post_text(text: str) -> Tuple[bool, Optional[str]]:
     if len(text) > 10000:
         return False, f"Post text must be 10,000 characters or less, got {len(text)} characters"
     
-    # Check for potentially dangerous patterns
     dangerous_patterns = [
         r'<script',
         r'javascript:',
@@ -88,14 +84,9 @@ def escape_html(text: str) -> str:
 
 
 def sanitize_sql_input(value: str) -> str:
-    """
-    Additional sanitization for SQL input (though SQLAlchemy ORM handles this).
-    This is a defense-in-depth measure.
-    """
     if not isinstance(value, str):
         return str(value)
     
-    # Remove SQL injection patterns
     dangerous_sql_patterns = [
         r"';?\s*--",
         r"';?\s*/\*",

@@ -332,9 +332,9 @@ def build_match_reason(
     return MatchReason(
         pov_matches=pov_matches,
         common_povs=list(common_povs),
-        pov_match_rate=content_match_rate,  # Use content match rate instead of POV match rate
+        pov_match_rate=content_match_rate,
         matched_by=matched_by,
-        similar_to_user_posts=similar_user_posts[:3]  # Limit to 3
+        similar_to_user_posts=similar_user_posts[:3]
     )
 
 

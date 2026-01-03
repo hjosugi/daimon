@@ -1,10 +1,10 @@
-# デプロイメントガイド
+# Deployment Guide
 
-## A案: Qdrant Cloud + Supabase + Cloud Run
+## Option A: Qdrant Cloud + Supabase + Cloud Run
 
-この構成は、GCPベースで運用しやすく、コスト効率が良いです。
+This configuration is easy to operate on GCP and cost-effective.
 
-### アーキテクチャ概要
+### Architecture Overview
 
 ```
 Frontend (Vercel/Cloudflare Pages)
@@ -16,69 +16,69 @@ PostgreSQL (Supabase)
 Vector DB (Qdrant Cloud)
 ```
 
-### 月額コスト見積もり（MVP/低トラフィック）
+### Monthly Cost Estimate (MVP/Low Traffic)
 
-- **Qdrant Cloud**: 無料枠内 → **0円**
-- **Supabase**: 無料枠内 → **0円**
-- **Cloud Run**: 無料枠 + 少量実行 → **0〜数百円**
-- **Frontend**: Vercel/Cloudflare Pages 無料枠 → **0円**
+- **Qdrant Cloud**: Within free tier → **$0**
+- **Supabase**: Within free tier → **$0**
+- **Cloud Run**: Free tier + minimal usage → **$0-$5**
+- **Frontend**: Vercel/Cloudflare Pages free tier → **$0**
 
-**合計: 0〜3000円程度**
+**Total: Approximately $0-$25**
 
 ---
 
-## 1. Supabase セットアップ
+## 1. Supabase Setup
 
-### 1.1 プロジェクト作成
+### 1.1 Create Project
 
-1. [Supabase](https://supabase.com/) にサインアップ
-2. 新しいプロジェクトを作成
-3. データベースパスワードを設定（後で使います）
+1. Sign up at [Supabase](https://supabase.com/)
+2. Create a new project
+3. Set database password (will be used later)
 
-### 1.2 接続情報の取得
+### 1.2 Get Connection Information
 
-1. Supabase Dashboard > Settings > Database
-2. Connection string をコピー
-   - 形式: `postgresql://postgres:[PASSWORD]@[PROJECT].supabase.co:5432/postgres`
-3. `.env` の `DATABASE_URL` に設定
+1. Go to Supabase Dashboard > Settings > Database
+2. Copy the connection string
+   - Format: `postgresql://postgres:[PASSWORD]@[PROJECT].supabase.co:5432/postgres`
+3. Set it in `.env` as `DATABASE_URL`
 
-### 1.3 データベースマイグレーション
+### 1.3 Database Migration
 
 ```bash
 cd backend
 
-# .env ファイルに DATABASE_URL を設定（まだ設定していない場合）
-# .env ファイルを編集して以下を追加:
+# Set DATABASE_URL in .env file (if not already set)
+# Edit .env file and add:
 # DATABASE_URL=postgresql://postgres:[PASSWORD]@[PROJECT].supabase.co:5432/postgres
 
-# マイグレーション実行（.env から自動的に DATABASE_URL を読み込みます）
+# Run migration (automatically reads DATABASE_URL from .env)
 uv run alembic upgrade head
 ```
 
-**注意**: `alembic/env.py` が自動的に `.env` ファイルから環境変数を読み込みます。`.env` ファイルに `DATABASE_URL` が設定されていれば、`export` コマンドは不要です。
+**Note**: `alembic/env.py` automatically reads environment variables from the `.env` file. If `DATABASE_URL` is set in the `.env` file, the `export` command is not needed.
 
 ---
 
-## 2. Qdrant Cloud セットアップ
+## 2. Qdrant Cloud Setup
 
-### 2.1 クラスター作成
+### 2.1 Create Cluster
 
-1. [Qdrant Cloud](https://cloud.qdrant.io/) にサインアップ
-2. 新しいクラスターを作成（Free tier を選択）
-3. クラスターIDとAPIキーを取得
+1. Sign up at [Qdrant Cloud](https://cloud.qdrant.io/)
+2. Create a new cluster (select Free tier)
+3. Get cluster ID and API key
 
-### 2.2 接続情報の設定
+### 2.2 Configure Connection Information
 
-`.env` に以下を設定:
+Set the following in `.env`:
 
 ```env
 QDRANT_URL=https://[CLUSTER-ID].qdrant.io
 QDRANT_API_KEY=[YOUR-API-KEY]
 ```
 
-### 2.3 コレクション作成
+### 2.3 Create Collection
 
-アプリケーション起動時に自動的に作成されますが、手動で確認:
+Collections are automatically created when the application starts, but you can verify manually:
 
 ```python
 from qdrant_client import QdrantClient
@@ -88,84 +88,84 @@ client = QdrantClient(
     api_key="[YOUR-API-KEY]"
 )
 
-# コレクション一覧を確認
+# Check collection list
 collections = client.get_collections()
 print(collections)
 ```
 
 ---
 
-## 3. Cloud Run デプロイ
+## 3. Cloud Run Deployment
 
-### 3.1 前提条件
+### 3.1 Prerequisites
 
-- Google Cloud SDK (`gcloud`) がインストールされていること
-- GCPプロジェクトが作成されていること
-- Cloud Run API が有効化されていること
-- Cloud Build API が有効化されていること
-- Artifact Registry API が有効化されていること
+- Google Cloud SDK (`gcloud`) installed
+- GCP project created
+- Cloud Run API enabled
+- Cloud Build API enabled
+- Artifact Registry API enabled
 
-### 3.2 Artifact Registry のセットアップ
+### 3.2 Artifact Registry Setup
 
 ```bash
-# Artifact Registry リポジトリを作成（初回のみ）
+# Create Artifact Registry repository (first time only)
 gcloud artifacts repositories create daimon \
   --repository-format=docker \
   --location=[REGION] \
   --description="Daimon backend Docker images"
 
-# Artifact Registry に接続（初回のみ）
+# Connect to Artifact Registry (first time only)
 gcloud auth configure-docker [REGION]-docker.pkg.dev
 ```
 
-### 3.3 GitHub リポジトリから継続的にデプロイ（Cloud Build 推奨）
+### 3.3 Continuous Deployment from GitHub Repository (Cloud Build Recommended)
 
-#### 3.3.1 Cloud Build Trigger の作成
+#### 3.3.1 Create Cloud Build Trigger
 
-1. [Cloud Console](https://console.cloud.google.com) にアクセス
-2. **Cloud Build** > **Triggers** に移動
-3. **Create Trigger** をクリック
-4. 設定を入力:
+1. Go to [Cloud Console](https://console.cloud.google.com)
+2. Navigate to **Cloud Build** > **Triggers**
+3. Click **Create Trigger**
+4. Enter settings:
    - **Name**: `daimon-backend-deploy`
    - **Event**: `Push to a branch`
-   - **Source**: GitHub リポジトリを選択（初回は認証が必要）
-   - **Repository**: リポジトリを選択
-   - **Branch**: `^main$` (mainブランチへのプッシュ時に実行)
+   - **Source**: Select GitHub repository (authentication required for first time)
+   - **Repository**: Select repository
+   - **Branch**: `^main$` (runs on push to main branch)
    - **Configuration**: `Cloud Build configuration file (yaml or json)`
    - **Location**: `backend/cloudbuild.yaml`
-5. **Substitution variables** を設定:
-   - `_QDRANT_URL`: Qdrant Cloud のURL
-   - `_CORS_ORIGINS`: フロントエンドのURL（カンマ区切り）
-6. **Create** をクリック
+5. Set **Substitution variables**:
+   - `_QDRANT_URL`: Qdrant Cloud URL
+   - `_CORS_ORIGINS`: Frontend URL (comma-separated)
+6. Click **Create**
 
-#### 3.3.2 初回デプロイの実行
+#### 3.3.2 Run Initial Deployment
 
 ```bash
-# Cloud Build Trigger を手動で実行
+# Manually run Cloud Build Trigger
 gcloud builds triggers run daimon-backend-deploy \
   --branch=main \
   --region=[REGION]
 ```
 
-これ以降、`main`ブランチにプッシュするたびに自動的にデプロイされます。
+After this, deployments will run automatically on every push to the `main` branch.
 
-#### 3.3.3 GitHub Actions を使用したデプロイ（代替方法）
+#### 3.3.3 Deploy Using GitHub Actions (Alternative Method)
 
-Cloud Build Triggerの代わりに、GitHub Actionsを使用してCloud Buildをトリガーすることもできます。
+Instead of Cloud Build Trigger, you can also trigger Cloud Build using GitHub Actions.
 
-**必要なシークレットの設定**:
+**Required Secret Configuration**:
 
-1. GitHubリポジトリの **Settings** > **Secrets and variables** > **Actions** に移動
-2. 以下のシークレットを追加:
+1. Go to GitHub repository **Settings** > **Secrets and variables** > **Actions**
+2. Add the following secrets:
 
-   - `GCP_PROJECT_ID`: GCPプロジェクトID（例: `my-project-123456`）
-   - `GCP_SA_KEY`: GCPサービスアカウントのJSONキー
+   - `GCP_PROJECT_ID`: GCP project ID (e.g., `my-project-123456`)
+   - `GCP_SA_KEY`: GCP service account JSON key
      ```bash
-     # サービスアカウントキーを生成
+     # Generate service account key
      gcloud iam service-accounts create github-actions \
        --display-name="GitHub Actions Service Account"
      
-     # 必要な権限を付与
+     # Grant required permissions
      gcloud projects add-iam-policy-binding ${PROJECT_ID} \
        --member="serviceAccount:github-actions@${PROJECT_ID}.iam.gserviceaccount.com" \
        --role="roles/run.admin"
@@ -178,40 +178,40 @@ Cloud Build Triggerの代わりに、GitHub Actionsを使用してCloud Buildを
        --member="serviceAccount:github-actions@${PROJECT_ID}.iam.gserviceaccount.com" \
        --role="roles/cloudbuild.builds.editor"
      
-     # キーを生成
+     # Generate key
      gcloud iam service-accounts keys create key.json \
        --iam-account=github-actions@${PROJECT_ID}.iam.gserviceaccount.com
      
-     # key.jsonの内容をGitHubシークレットにコピー
+     # Copy key.json content to GitHub secret
      ```
    
-   - `QDRANT_URL`: Qdrant Cloud のURL（例: `https://xxx.qdrant.io`）
-   - `CORS_ORIGINS`: フロントエンドのURL（カンマ区切り、例: `https://daimon.vercel.app`）
+   - `QDRANT_URL`: Qdrant Cloud URL (e.g., `https://xxx.qdrant.io`)
+   - `CORS_ORIGINS`: Frontend URL (comma-separated, e.g., `https://daimon.vercel.app`)
 
-3. `.github/workflows/deploy.yml` が自動的に使用されます
+3. `.github/workflows/deploy.yml` will be used automatically
 
-**ワークフローの動作**:
-- `main`ブランチへのプッシュ時に自動実行
-- `backend/` ディレクトリの変更時のみ実行（パフォーマンス最適化）
-- 手動実行も可能（GitHub Actions UIから）
+**Workflow Behavior**:
+- Automatically runs on push to `main` branch
+- Only runs when `backend/` directory changes (performance optimization)
+- Manual execution also available (from GitHub Actions UI)
 
-### 3.4 手動デプロイ（オプション）
+### 3.4 Manual Deployment (Optional)
 
-Cloud Build を使わずに手動でデプロイする場合:
+To deploy manually without Cloud Build:
 
 ```bash
 cd backend
 
-# GCP Artifact Registry に接続（初回のみ）
+# Connect to GCP Artifact Registry (first time only)
 gcloud auth configure-docker [REGION]-docker.pkg.dev
 
-# イメージをビルド
+# Build image
 docker build -t [REGION]-docker.pkg.dev/[PROJECT-ID]/[REPO]/daimon-backend:latest .
 
-# イメージをプッシュ
+# Push image
 docker push [REGION]-docker.pkg.dev/[PROJECT-ID]/[REPO]/daimon-backend:latest
 
-# Cloud Run にデプロイ
+# Deploy to Cloud Run
 gcloud run deploy daimon-backend \
   --image [REGION]-docker.pkg.dev/[PROJECT-ID]/[REPO]/daimon-backend:latest \
   --platform managed \
@@ -225,16 +225,16 @@ gcloud run deploy daimon-backend \
   --timeout 300
 ```
 
-### 3.5 環境変数の管理（推奨）
+### 3.5 Environment Variable Management (Recommended)
 
-Secret Manager を使用して機密情報を管理:
+Use Secret Manager to manage sensitive information:
 
 ```bash
-# Secret を作成
+# Create secrets
 echo -n "[YOUR-DATABASE-URL]" | gcloud secrets create database-url --data-file=-
 echo -n "[YOUR-QDRANT-API-KEY]" | gcloud secrets create qdrant-api-key --data-file=-
 
-# Cloud Run に Secret をマウント
+# Mount secrets to Cloud Run
 gcloud run services update daimon-backend \
   --update-secrets DATABASE_URL=database-url:latest,QDRANT_API_KEY=qdrant-api-key:latest \
   --region [REGION]
@@ -242,123 +242,123 @@ gcloud run services update daimon-backend \
 
 ---
 
-## 4. フロントエンドデプロイ
+## 4. Frontend Deployment
 
-### 4.1 Vercel の場合
+### 4.1 Vercel
 
-#### 方法1: GitHub連携（推奨）
+#### Method 1: GitHub Integration (Recommended)
 
-1. [Vercel Dashboard](https://vercel.com) にログイン
-2. "Add New Project" をクリック
-3. GitHubリポジトリを選択
-4. プロジェクト設定:
-   - **Root Directory**: `frontend` を選択
+1. Log in to [Vercel Dashboard](https://vercel.com)
+2. Click "Add New Project"
+3. Select GitHub repository
+4. Configure project:
+   - **Root Directory**: Select `frontend`
    - **Framework Preset**: Vite
    - **Build Command**: `pnpm install && pnpm build`
    - **Output Directory**: `dist`
    - **Install Command**: `pnpm install`
-5. 環境変数を設定:
-   - **Environment Variables** セクションで以下を追加:
-     - `VITE_API_URL`: Cloud Run のバックエンドURL（例: `https://daimon-backend-xxx.run.app`）
-6. "Deploy" をクリック
+5. Set environment variables:
+   - In **Environment Variables** section, add:
+     - `VITE_API_URL`: Cloud Run backend URL (e.g., `https://daimon-backend-xxx.run.app`)
+6. Click "Deploy"
 
-#### 方法2: Vercel CLI
+#### Method 2: Vercel CLI
 
 ```bash
 cd frontend
 
-# Vercel CLI でログイン（初回のみ）
+# Login with Vercel CLI (first time only)
 vercel login
 
-# プロジェクトをリンク
+# Link project
 vercel link
 
-# 環境変数を設定
+# Set environment variables
 vercel env add VITE_API_URL production
-# プロンプトで Cloud Run のURLを入力
+# Enter Cloud Run URL when prompted
 
-# 本番環境にデプロイ
+# Deploy to production
 vercel --prod
 ```
 
-#### デプロイメントの確認
+#### Deployment Verification
 
-デプロイ後、以下のURLでアクセス可能:
-- 本番環境: `https://daimon-[YOUR-PROJECT].vercel.app`
-- プレビュー環境: 各プッシュごとに自動生成されるURL
+After deployment, accessible at:
+- Production: `https://daimon-[YOUR-PROJECT].vercel.app`
+- Preview: Auto-generated URL for each push
 
-デプロイメントの詳細は [Vercel Dashboard](https://vercel.com) で確認できます。
+Deployment details can be viewed in [Vercel Dashboard](https://vercel.com).
 
 
-## 5. ローカル開発環境
+## 5. Local Development Environment
 
-### 5.1 環境変数の設定
+### 5.1 Environment Variable Configuration
 
 ```bash
 cd backend
 cp .env.example .env
-# .env を編集して必要な値を設定
+# Edit .env and set required values
 ```
 
-### 5.2 ローカル実行
+### 5.2 Local Execution
 
 ```bash
-# PostgreSQL と Qdrant は Docker Compose で起動
+# PostgreSQL and Qdrant are started with Docker Compose
 docker compose up -d
 
-# バックエンドを起動
+# Start backend
 cd backend
 uv run uvicorn app.main:app --reload --port 8000
 ```
 
 ---
 
-## 6. トラブルシューティング
+## 6. Troubleshooting
 
-### データベース接続エラー
+### Database Connection Error
 
-- Supabase の接続文字列が正しいか確認
-- IPアドレスの許可設定を確認（Supabase Dashboard > Settings > Database > Connection pooling）
+- Verify Supabase connection string is correct
+- Check IP address allowlist settings (Supabase Dashboard > Settings > Database > Connection pooling)
 
-### Qdrant 接続エラー
+### Qdrant Connection Error
 
-- `QDRANT_URL` が正しい形式か確認（`https://` で始まる必要がある）
-- APIキーが正しいか確認
-- クラスターが起動しているか確認
+- Verify `QDRANT_URL` is in correct format (must start with `https://`)
+- Verify API key is correct
+- Verify cluster is running
 
-### Cloud Run デプロイエラー
+### Cloud Run Deployment Error
 
-- ログを確認: `gcloud run services logs read daimon-backend --region [REGION]`
-- メモリ不足の場合は `--memory` を増やす（例: `1Gi`）
+- Check logs: `gcloud run services logs read daimon-backend --region [REGION]`
+- If out of memory, increase `--memory` (e.g., `1Gi`)
 
 ---
 
-## 7. コスト最適化のヒント
+## 7. Cost Optimization Tips
 
 1. **Cloud Run**:
-   - `--min-instances 0` でアイドル時は課金なし
-   - `--cpu 1` で最小構成から開始
-   - タイムアウトを適切に設定（`--timeout 300`）
+   - Set `--min-instances 0` for no billing when idle
+   - Start with minimal configuration `--cpu 1`
+   - Set appropriate timeout (`--timeout 300`)
 
 2. **Supabase**:
-   - Free tier の制限内で運用
-   - 不要な接続を閉じる
+   - Operate within free tier limits
+   - Close unused connections
 
 3. **Qdrant Cloud**:
-   - Free tier の制限内で運用
-   - 不要なベクトルを定期的に削除
+   - Operate within free tier limits
+   - Regularly delete unused vectors
 
 ---
 
-## 8. セキュリティ
+## 8. Security
 
-- 環境変数は Secret Manager で管理
-- CORS 設定を適切に設定（本番環境のURLのみ許可）
-- Supabase の Row Level Security (RLS) を検討
+- Manage environment variables with Secret Manager
+- Configure CORS appropriately (only allow production URLs)
+- Consider Supabase Row Level Security (RLS)
 
 ---
 
-## 参考リンク
+## Reference Links
 
 - [Supabase Documentation](https://supabase.com/docs)
 - [Qdrant Cloud Documentation](https://qdrant.tech/documentation/cloud/)

@@ -507,10 +507,10 @@ async def search_posts(request: SearchRequest, current_user_id: Optional[str] = 
     """
     Search posts by text query and/or tags.
     
-    Pattern A: Qdrantで候補を取って、Postgresで仕上げる（王道）
-    1) Qdrantで候補を取得（System of Search）
-    2) Postgresで詳細をJOIN（System of Record）
-    3) Postgres側で最終ソート
+    Pattern: Get candidates from Qdrant, finish with Postgres
+    1) Get candidates from Qdrant (System of Search)
+    2) Join details in Postgres (System of Record)
+    3) Final sort in Postgres
     
     - If query is provided: uses vector similarity search
     - If tags are provided: filters by tags in PostgreSQL
@@ -800,11 +800,8 @@ async def search_posts(request: SearchRequest, current_user_id: Optional[str] = 
                 created_at=db_post.created_at.isoformat() if db_post.created_at else None,
             ))
     
-    # Sort by created_at (newest first) for search results
-    # Use ranking service (can be swapped with different algorithms)
     results = rank_posts(results, sort_by="created_at", reverse=True)
     
-    # If neither query nor tags, return empty
     return results
 
 @router.post("/povs/{pov}/like", response_model=LikeResponse)
@@ -844,14 +841,12 @@ def unlike_pov(pov: str, user_id: str = Depends(get_current_user), db: Session =
     ).first()
     
     if not existing_like:
-        # Not liked
         likes_count = db.query(POVLikeModel).filter(POVLikeModel.pov == pov).count()
         return LikeResponse(
             liked=False,
             likes=likes_count
         )
     
-    # Delete like
     db.delete(existing_like)
     db.commit()
     
@@ -877,8 +872,6 @@ def get_pov_like_status(pov: str, user_id: str = Depends(get_current_user), db: 
 
 @router.post("/{post_id}/comments", response_model=CommentResponse)
 def add_comment(post_id: str, comment: CommentCreate, user_id: str = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Add a comment to a post"""
-    # Verify post exists
     post = db.query(PostModel).filter(PostModel.id == post_id).first()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")

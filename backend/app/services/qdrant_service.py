@@ -2,7 +2,6 @@ import os
 from qdrant_client import QdrantClient
 from qdrant_client.models import PointStruct, Distance, VectorParams, Filter, FieldCondition, MatchValue
 from typing import List, Dict, Optional, Any
-import uuid
 
 QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
 QDRANT_PORT = int(os.getenv("QDRANT_PORT", 6333))
@@ -13,14 +12,23 @@ VECTOR_SIZE = 384
 
 class QdrantService:
     def __init__(self):
-        if QDRANT_URL:
-            self.client = QdrantClient(
-                url=QDRANT_URL,
-                api_key=QDRANT_API_KEY,
-            )
-        else:
-            self.client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
-        self._ensure_collection()
+        self._client = None
+        self._initialized = False
+
+    @property
+    def client(self):
+        if self._client is None:
+            if QDRANT_URL:
+                self._client = QdrantClient(
+                    url=QDRANT_URL,
+                    api_key=QDRANT_API_KEY,
+                )
+            else:
+                self._client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
+            if not self._initialized:
+                self._ensure_collection()
+                self._initialized = True
+        return self._client
 
     def _ensure_collection(self):
         collections = self.client.get_collections()
@@ -57,8 +65,6 @@ class QdrantService:
         return post_id
 
     def get_user_posts(self, user_id: str) -> List[Dict[str, Any]]:
-        from qdrant_client.models import ScrollRequest, Filter, FieldCondition, MatchValue
-        
         query_filter = Filter(
             must=[
                 FieldCondition(key="user_id", match=MatchValue(value=user_id))
@@ -92,8 +98,5 @@ class QdrantService:
             limit=limit
         )
         return hits
-
-    def search_by_tags(self, tags: List[str], limit: int = 20):
-        return []
 
 qdrant_service = QdrantService()

@@ -150,14 +150,12 @@ def login(credentials: UserLogin, db: Session = Depends(get_db)):
             detail="Invalid credentials"
         )
     
-    # Verify password
     if not verify_password(credentials.password, user.password_hash):
         raise HTTPException(
             status_code=HTTPStatus.UNAUTHORIZED,
             detail="Invalid credentials"
         )
     
-    # Generate session token
     token = str(uuid.uuid4())
     expires_at = datetime.utcnow() + timedelta(days=SESSION_EXPIRY_DAYS)
     
@@ -216,7 +214,6 @@ def update_profile(
     if profile_data.avatar_url:
         user.avatar_url = profile_data.avatar_url
     if profile_data.username:
-        # Check if username is already taken
         existing_user = db.query(UserModel).filter(
             UserModel.username == profile_data.username,
             UserModel.id != current_user_id
@@ -288,7 +285,6 @@ def logout(
     
     token = authorization.replace("Bearer ", "")
     
-    # Delete session
     session = db.query(SessionModel).filter(SessionModel.id == token).first()
     if session:
         db.delete(session)
