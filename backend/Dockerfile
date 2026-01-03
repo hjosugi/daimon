@@ -41,10 +41,9 @@ RUN uv pip install --system -r requirements.txt
 # Copy application code
 COPY . .
 
-# Install spaCy models (required for POV generation)
-# This must be done after dependencies are installed
-RUN python -m spacy download ja_core_news_sm && \
-    python -m spacy download en_core_web_sm
+# Note: spaCy models are not downloaded during build to avoid pydantic v1 compatibility issues
+# Models will be downloaded on first use by the application, or can be downloaded manually
+# The application code handles missing models gracefully with fallback extraction
 
 # Expose port
 EXPOSE 8080
