@@ -247,10 +247,27 @@ jobs:
           cd frontend
           pnpm install --frozen-lockfile
       
+      - name: Type check
+        run: |
+          cd frontend
+          pnpm exec tsc --noEmit
+      
       - name: Build
         run: |
           cd frontend
           pnpm build
+      
+      - name: Verify build output
+        run: |
+          if [ ! -d "frontend/dist" ]; then
+            echo "Error: Build output directory 'dist' not found"
+            exit 1
+          fi
+          if [ -z "$(ls -A frontend/dist)" ]; then
+            echo "Error: Build output directory 'dist' is empty"
+            exit 1
+          fi
+          echo "Build output verified successfully"
       
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4

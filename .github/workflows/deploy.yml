@@ -96,12 +96,31 @@ jobs:
           cd frontend
           pnpm install --frozen-lockfile
 
+      - name: Type check
+        run: |
+          cd frontend
+          pnpm exec tsc --noEmit
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+
       - name: Build
         run: |
           cd frontend
           pnpm build
         env:
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
+
+      - name: Verify build output
+        run: |
+          if [ ! -d "frontend/dist" ]; then
+            echo "Error: Build output directory 'dist' not found"
+            exit 1
+          fi
+          if [ -z "$(ls -A frontend/dist)" ]; then
+            echo "Error: Build output directory 'dist' is empty"
+            exit 1
+          fi
+          echo "Build output verified successfully"
 
       - name: Deploy to Vercel
         uses: amondnet/vercel-action@v25

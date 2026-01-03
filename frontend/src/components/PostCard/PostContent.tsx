@@ -39,7 +39,7 @@ export const PostContent: React.FC<PostContentProps> = ({
   onPOVClick,
   onPOVLike,
   povLikes,
-  onTagClick,
+  onTagClick: _onTagClick,
 }) => {
   return (
     <div className="p-4 sm:p-5 bg-white">
