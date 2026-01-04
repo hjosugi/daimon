@@ -44,18 +44,18 @@ else:
 logger.info(f"CORS origins: {origins} (environment: {environment})")
 
 # Add logging middleware for CORS debugging (development only)
-if environment == "development":
-    class CORSDebugMiddleware(BaseHTTPMiddleware):
-        async def dispatch(self, request: Request, call_next):
-            if request.method == "OPTIONS":
-                origin = request.headers.get("origin")
-                logger.info(f"OPTIONS preflight request - Origin: {origin}, Path: {request.url.path}, Allowed origins: {origins}")
-            response = await call_next(request)
-            if request.method == "OPTIONS":
-                logger.info(f"OPTIONS response status: {response.status_code}")
-            return response
+# if environment == "development":
+#     class CORSDebugMiddleware(BaseHTTPMiddleware):
+#         async def dispatch(self, request: Request, call_next):
+#             if request.method == "OPTIONS":
+#                 origin = request.headers.get("origin")
+#                 logger.info(f"OPTIONS preflight request - Origin: {origin}, Path: {request.url.path}, Allowed origins: {origins}")
+#             response = await call_next(request)
+#             if request.method == "OPTIONS":
+#                 logger.info(f"OPTIONS response status: {response.status_code}")
+#             return response
     
-    app.add_middleware(CORSDebugMiddleware)
+#     app.add_middleware(CORSDebugMiddleware)
 
 # CORS
 # app.add_middleware(
