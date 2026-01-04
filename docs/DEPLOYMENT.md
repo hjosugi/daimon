@@ -134,9 +134,15 @@ gcloud auth configure-docker [REGION]-docker.pkg.dev
    - **Configuration**: `Cloud Build configuration file (yaml or json)`
    - **Location**: `backend/cloudbuild.yaml`
 5. Set **Substitution variables**:
-   - `_QDRANT_URL`: Qdrant Cloud URL
-   - `_CORS_ORIGINS`: Frontend URL (comma-separated)
+   - Click **Add substitution variable**
+   - **Key**: `_QDRANT_URL`
+   - **Value**: `https://[YOUR-CLUSTER-ID].qdrant.io` (e.g., `https://abc123.qdrant.io`)
+   - Click **Add substitution variable** again
+   - **Key**: `_CORS_ORIGINS`
+   - **Value**: Frontend URL (e.g., `https://daimon-sandy.vercel.app`) or comma-separated if multiple (e.g., `https://app1.vercel.app,https://app2.vercel.app`)
 6. Click **Create**
+
+**Note**: `DATABASE_URL` should be managed via Secret Manager (see section 3.5.1), not as a substitution variable.
 
 #### 3.3.2 Run Initial Deployment
 
@@ -225,20 +231,100 @@ gcloud run deploy daimon-backend \
   --timeout 300
 ```
 
-### 3.5 Environment Variable Management (Recommended)
+### 3.5 Connection Information Registration
 
-Use Secret Manager to manage sensitive information:
+#### 3.5.1 Using Secret Manager (Recommended for Production)
+
+Secret Manager is the recommended way to securely store sensitive connection information.
+
+**Step 1: Create Secrets**
 
 ```bash
-# Create secrets
-echo -n "[YOUR-DATABASE-URL]" | gcloud secrets create database-url --data-file=-
-echo -n "[YOUR-QDRANT-API-KEY]" | gcloud secrets create qdrant-api-key --data-file=-
+# Create DATABASE_URL secret
+echo -n "postgresql://postgres:[YOUR-PASSWORD]@[YOUR-PROJECT].supabase.co:5432/postgres" | \
+  gcloud secrets create database-url --data-file=-
 
-# Mount secrets to Cloud Run
-gcloud run services update daimon-backend \
+# Create QDRANT_API_KEY secret
+echo -n "[YOUR-QDRANT-API-KEY]" | \
+  gcloud secrets create qdrant-api-key --data-file=-
+```
+
+**Step 2: Grant Cloud Run Access to Secrets**
+
+```bash
+# Get Cloud Run service account email
+PROJECT_NUMBER=$(gcloud projects describe $(gcloud config get-value project) --format="value(projectNumber)")
+SERVICE_ACCOUNT="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+
+# Grant secret accessor role
+gcloud secrets add-iam-policy-binding database-url \
+  --member="serviceAccount:${SERVICE_ACCOUNT}" \
+  --role="roles/secretmanager.secretAccessor"
+
+gcloud secrets add-iam-policy-binding qdrant-api-key \
+  --member="serviceAccount:${SERVICE_ACCOUNT}" \
+  --role="roles/secretmanager.secretAccessor"
+```
+
+**Step 3: Mount Secrets to Cloud Run**
+
+```bash
+gcloud run services update daimon-api \
   --update-secrets DATABASE_URL=database-url:latest,QDRANT_API_KEY=qdrant-api-key:latest \
   --region [REGION]
 ```
+
+**Step 4: Set Non-Sensitive Environment Variables**
+
+```bash
+gcloud run services update daimon-api \
+  --set-env-vars QDRANT_URL="https://[YOUR-CLUSTER-ID].qdrant.io",CORS_ORIGINS="https://[YOUR-FRONTEND-URL]" \
+  --region [REGION]
+```
+
+#### 3.5.2 Using Cloud Build Trigger Substitution Variables
+
+If using Cloud Build Trigger for continuous deployment, set substitution variables:
+
+**Step 1: Access Cloud Build Trigger Settings**
+
+1. Go to [Cloud Console](https://console.cloud.google.com)
+2. Navigate to **Cloud Build** > **Triggers**
+3. Click on your trigger (e.g., `daimon-backend-deploy`)
+4. Click **Edit**
+
+**Step 2: Set Substitution Variables**
+
+In the **Substitution variables** section, add:
+
+- `_QDRANT_URL`: `https://[YOUR-CLUSTER-ID].qdrant.io`
+- `_CORS_ORIGINS`: `https://[YOUR-FRONTEND-URL]` (comma-separated if multiple)
+
+**Note**: `DATABASE_URL` should be managed via Secret Manager (see 3.5.1), not as a substitution variable.
+
+**Step 3: Update cloudbuild.yaml**
+
+The `cloudbuild.yaml` file should reference these variables:
+
+```yaml
+--set-env-vars QDRANT_URL=${_QDRANT_URL},CORS_ORIGINS=${_CORS_ORIGINS}
+```
+
+#### 3.5.3 Manual Environment Variable Setting (Alternative)
+
+For quick testing or development, you can set environment variables directly:
+
+```bash
+gcloud run services update daimon-api \
+  --set-env-vars \
+    DATABASE_URL="postgresql://postgres:[PASSWORD]@[PROJECT].supabase.co:5432/postgres",\
+    QDRANT_URL="https://[CLUSTER-ID].qdrant.io",\
+    QDRANT_API_KEY="[YOUR-API-KEY",\
+    CORS_ORIGINS="https://[YOUR-FRONTEND-URL]" \
+  --region [REGION]
+```
+
+**⚠️ Security Warning**: This method exposes sensitive information in command history. Use Secret Manager for production.
 
 ---
 
@@ -258,8 +344,11 @@ gcloud run services update daimon-backend \
    - **Output Directory**: `dist`
    - **Install Command**: `pnpm install`
 5. Set environment variables:
-   - In **Environment Variables** section, add:
-     - `VITE_API_URL`: Cloud Run backend URL (e.g., `https://daimon-backend-xxx.run.app`)
+   - In **Environment Variables** section, click **Add** and add:
+     - **Name**: `VITE_API_URL`
+     - **Value**: Cloud Run backend URL (e.g., `https://daimon-api-xxx.asia-northeast1.run.app`)
+     - **Environment**: Select `Production`, `Preview`, and `Development` (or as needed)
+   - Click **Save** after adding each variable
 6. Click "Deploy"
 
 #### Method 2: Vercel CLI
@@ -275,11 +364,30 @@ vercel link
 
 # Set environment variables
 vercel env add VITE_API_URL production
-# Enter Cloud Run URL when prompted
+# Enter Cloud Run URL when prompted (e.g., https://daimon-api-xxx.asia-northeast1.run.app)
+
+# Set for all environments (optional)
+vercel env add VITE_API_URL preview
+vercel env add VITE_API_URL development
 
 # Deploy to production
 vercel --prod
 ```
+
+#### Method 3: Vercel Dashboard (After Initial Setup)
+
+To update environment variables after initial deployment:
+
+1. Go to [Vercel Dashboard](https://vercel.com/dashboard)
+2. Select your project
+3. Go to **Settings** > **Environment Variables**
+4. Click **Add New** or edit existing variables
+5. Set:
+   - **Key**: `VITE_API_URL`
+   - **Value**: Your Cloud Run backend URL
+   - **Environment**: Select applicable environments
+6. Click **Save**
+7. Redeploy the project for changes to take effect
 
 #### Deployment Verification
 
