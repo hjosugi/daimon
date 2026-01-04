@@ -344,8 +344,13 @@ async def get_timeline(request: TimelineRequest, user_id: Optional[str] = Depend
                     logger.warning(f"Error getting user posts from Qdrant: {e}")
         
         candidate_limit = 200 if request.include_far_posts else 100
-        hits = qdrant_service.search_similar(vector, limit=candidate_limit)
-        logger.debug(f"Found {len(hits)} candidate posts from Qdrant")
+        try:
+            hits = qdrant_service.search_similar(vector, limit=candidate_limit)
+            logger.debug(f"Found {len(hits)} candidate posts from Qdrant")
+        except Exception as qdrant_error:
+            logger.error(f"Qdrant search failed: {qdrant_error}", exc_info=True)
+            # Return empty result if Qdrant is unavailable
+            return []
         
         post_ids = [hit.id for hit in hits]
         if not post_ids:

@@ -65,38 +65,52 @@ class QdrantService:
         return post_id
 
     def get_user_posts(self, user_id: str) -> List[Dict[str, Any]]:
-        query_filter = Filter(
-            must=[
-                FieldCondition(key="user_id", match=MatchValue(value=user_id))
-            ]
-        )
-        
-        scroll_result = self.client.scroll(
-            collection_name=COLLECTION_NAME,
-            scroll_filter=query_filter,
-            limit=100,
-            with_payload=True,
-            with_vectors=True,
-        )
-        
-        return scroll_result[0] if scroll_result else []
+        try:
+            query_filter = Filter(
+                must=[
+                    FieldCondition(key="user_id", match=MatchValue(value=user_id))
+                ]
+            )
+            
+            scroll_result = self.client.scroll(
+                collection_name=COLLECTION_NAME,
+                scroll_filter=query_filter,
+                limit=100,
+                with_payload=True,
+                with_vectors=True,
+            )
+            
+            return scroll_result[0] if scroll_result else []
+        except Exception as e:
+            # Log error and return empty list if Qdrant is unavailable
+            import logging
+            logger = logging.getLogger("daimon")
+            logger.warning(f"Qdrant get_user_posts failed: {e}")
+            return []
 
     def search_similar(self, vector: List[float], limit: int = 10, required_tags: Optional[List[str]] = None):
-        query_filter = None
-        if required_tags:
-            conditions = [
-                FieldCondition(key="tags", match=MatchValue(value=tag))
-                for tag in required_tags
-            ]
-            if conditions:
-                query_filter = Filter(should=conditions)
+        try:
+            query_filter = None
+            if required_tags:
+                conditions = [
+                    FieldCondition(key="tags", match=MatchValue(value=tag))
+                    for tag in required_tags
+                ]
+                if conditions:
+                    query_filter = Filter(should=conditions)
 
-        hits = self.client.search(
-            collection_name=COLLECTION_NAME,
-            query_vector=vector,
-            query_filter=query_filter,
-            limit=limit
-        )
-        return hits
+            hits = self.client.search(
+                collection_name=COLLECTION_NAME,
+                query_vector=vector,
+                query_filter=query_filter,
+                limit=limit
+            )
+            return hits
+        except Exception as e:
+            # Log error and re-raise to be handled by caller
+            import logging
+            logger = logging.getLogger("daimon")
+            logger.error(f"Qdrant search_similar failed: {e}", exc_info=True)
+            raise
 
 qdrant_service = QdrantService()
