@@ -127,13 +127,65 @@ async def general_exception_handler(request: Request, exc: Exception):
     return response
 
 @app.get("/health")
-def health_check():
-    return {"status": "ok"}
+async def health_check():
+    """Health check endpoint that verifies database connectivity"""
+    try:
+        from app.database import get_db
+        from sqlalchemy import text
+        
+        # Test database connection
+        db = next(get_db())
+        try:
+            db.execute(text("SELECT 1"))
+            db_status = "connected"
+        except Exception as db_error:
+            logger.error(f"Database connection failed: {db_error}")
+            db_status = "error"
+        finally:
+            db.close()
+        
+        # Test Qdrant connection if configured
+        qdrant_status = "not_checked"
+        try:
+            from app.services.qdrant_service import qdrant_service
+            # Simple check - just verify the service is initialized
+            if hasattr(qdrant_service, 'client') and qdrant_service.client is not None:
+                qdrant_status = "available"
+            else:
+                qdrant_status = "not_configured"
+        except Exception as e:
+            logger.warning(f"Qdrant health check failed: {e}")
+            qdrant_status = "error"
+        
+        if db_status == "error":
+            response = JSONResponse(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                content={"status": "error", "database": db_status, "qdrant": qdrant_status}
+            )
+            # Add CORS headers even for health check errors
+            response.headers["Access-Control-Allow-Origin"] = "*"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD"
+            response.headers["Access-Control-Allow-Headers"] = "*"
+            return response
+        
+        return {"status": "ok", "database": db_status, "qdrant": qdrant_status}
+    except Exception as e:
+        logger.error(f"Health check failed: {e}", exc_info=True)
+        response = JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"status": "error", "detail": str(e)}
+        )
+        # Add CORS headers even for health check errors
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+        return response
 
 try:
     from app.routers import posts, auth
     app.include_router(posts.router)
     app.include_router(auth.router)
+    logger.info("Routers loaded successfully")
 except Exception as e:
     logger.error(f"Failed to import routers: {e}", exc_info=True)
     raise
@@ -176,8 +228,35 @@ def download_spacy_models_if_needed():
 
 @app.on_event("startup")
 async def startup_event():
+    """Startup event handler - initializes services and downloads models"""
+    logger.info("Application startup - initializing services...")
     try:
+        # Test database connection
+        from app.database import get_db
+        from sqlalchemy import text
+        db = next(get_db())
+        try:
+            db.execute(text("SELECT 1"))
+            logger.info("Database connection successful")
+        except Exception as db_error:
+            logger.error(f"Database connection failed during startup: {db_error}", exc_info=True)
+        finally:
+            db.close()
+        
+        # Test Qdrant connection if configured
+        try:
+            from app.services.qdrant_service import qdrant_service
+            if hasattr(qdrant_service, 'client') and qdrant_service.client is not None:
+                logger.info("Qdrant connection available")
+            else:
+                logger.warning("Qdrant not configured")
+        except Exception as qdrant_error:
+            logger.warning(f"Qdrant connection check failed: {qdrant_error}")
+        
+        # Start spaCy model download in background
         thread = threading.Thread(target=download_spacy_models_if_needed, daemon=True)
         thread.start()
+        logger.info("Application startup completed")
     except Exception as e:
-        logger.warning(f"Could not start model download thread: {e}")
+        logger.error(f"Startup event failed: {e}", exc_info=True)
+        # Don't raise - allow app to start even if some services fail
