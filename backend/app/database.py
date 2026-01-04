@@ -18,11 +18,21 @@ DATABASE_URL = os.getenv(
     "postgresql://daimon:daimon@localhost:5432/daimon"
 )
 
+# Flag to prevent duplicate error messages
+_validation_error_shown = False
+
 # Validate DATABASE_URL format
 def validate_database_url(url: str) -> bool:
-    """Validate that DATABASE_URL contains password"""
+    """Validate that DATABASE_URL contains password and no placeholders.
+    Returns True if valid, False otherwise. Does not log errors."""
     try:
+        # Check for placeholders
+        placeholders = ['YOUR-PROJECT', 'YOUR-PASSWORD', '[YOUR-PROJECT]', '[YOUR-PASSWORD]', '[PASSWORD]']
+        if any(placeholder in url for placeholder in placeholders):
+            return False
+        
         parsed = urlparse(url)
+        
         # Check if password is present (netloc format: user:password@host:port)
         if parsed.netloc:
             parts = parsed.netloc.split('@')
@@ -30,24 +40,71 @@ def validate_database_url(url: str) -> bool:
                 auth = parts[0]
                 if ':' in auth:
                     user, password = auth.split(':', 1)
-                    if password:
+                    if password and password.strip():
+                        # Additional check: password should not be empty or just whitespace
                         return True
-        logger.error(
-            f"DATABASE_URL validation failed: password missing. "
-            f"Expected format: postgresql://user:password@host:port/database. "
-            f"Host: {parsed.hostname or 'unknown'}"
-        )
+        
+        return False
+    except ValueError as e:
+        # Handle IPv6 addresses and other parsing issues
+        if 'Invalid IPv6 URL' in str(e) or 'IPv6' in str(e):
+            # Try to extract hostname manually for better error message
+            if '@' in url and '://' in url:
+                try:
+                    scheme_part = url.split('://', 1)[1]
+                    auth_part = scheme_part.split('@')[0]
+                    host_part = scheme_part.split('@')[1].split('/')[0]
+                    logger.error(
+                        f"DATABASE_URL validation failed: URL parsing error (possibly IPv6 address). "
+                        f"Please ensure the URL format is correct: postgresql://user:password@host:port/database"
+                    )
+                except:
+                    logger.error(
+                        f"DATABASE_URL validation failed: Invalid URL format. "
+                        f"Expected format: postgresql://user:password@host:port/database"
+                    )
+            else:
+                logger.error(
+                    f"DATABASE_URL validation failed: Invalid URL format. "
+                    f"Expected format: postgresql://user:password@host:port/database"
+                )
+        else:
+            logger.error(f"DATABASE_URL validation error: {e}")
         return False
     except Exception as e:
         logger.error(f"DATABASE_URL validation error: {e}")
         return False
 
+# Validate DATABASE_URL only once to avoid duplicate error messages
 if not validate_database_url(DATABASE_URL):
-    logger.warning(
-        "DATABASE_URL appears to be missing password. "
-        "Connection attempts may fail. "
-        "Please verify Secret Manager configuration."
-    )
+    if not _validation_error_shown:
+        _validation_error_shown = True
+        # Check if it's a placeholder or default value
+        if 'YOUR-PROJECT' in DATABASE_URL or '[YOUR-PROJECT]' in DATABASE_URL or 'YOUR-PASSWORD' in DATABASE_URL or '[YOUR-PASSWORD]' in DATABASE_URL:
+            logger.error(
+                "\n" + "="*70 + "\n"
+                "DATABASE_URL is not properly configured!\n"
+                "\n"
+                "Please edit backend/.env file and set DATABASE_URL with your actual Supabase credentials:\n"
+                "\n"
+                "1. Go to Supabase Dashboard > Settings > Database\n"
+                "2. Copy the connection string (URI format)\n"
+                "3. Edit backend/.env and replace the DATABASE_URL line with:\n"
+                "   DATABASE_URL=postgresql://postgres:YOUR_ACTUAL_PASSWORD@YOUR_PROJECT.supabase.co:5432/postgres\n"
+                "\n"
+                "Example:\n"
+                "   DATABASE_URL=postgresql://postgres:mypassword123@db.abc123xyz.supabase.co:5432/postgres\n"
+                "\n"
+                "Note: If your password contains special characters, URL-encode them:\n"
+                "   @ → %40, # → %23, % → %25\n"
+                "="*70 + "\n"
+            )
+        else:
+            logger.warning(
+                "DATABASE_URL appears to be missing password or has invalid format. "
+                "Connection attempts may fail. "
+                "Please verify your .env file or Secret Manager configuration."
+            )
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
