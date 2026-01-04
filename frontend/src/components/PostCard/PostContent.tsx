@@ -42,7 +42,7 @@ export const PostContent: React.FC<PostContentProps> = ({
   onTagClick: _onTagClick,
 }) => {
   return (
-    <div className="p-4 sm:p-5 bg-[#1a1a2e]">
+    <div className="p-4 sm:p-5 bg-[#1f1f35]">
       <p className="text-sm sm:text-base text-cyan-200 mb-3 sm:mb-4 leading-relaxed whitespace-pre-wrap break-words">
         {renderTextWithHashtags(post.text)}
       </p>

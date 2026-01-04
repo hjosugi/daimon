@@ -106,16 +106,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       onClick={onClose}
     >
       <div 
-        className="bg-[#0f0f1f] rounded-lg border border-cyan-500/30 w-full max-w-md mx-auto overflow-hidden max-h-[90vh] overflow-y-auto"
+        className="bg-[#0f0f1f] rounded-lg border border-cyan-500/18 w-full max-w-md mx-auto overflow-hidden max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="bg-[#252540] border-b border-cyan-500/25 p-4 flex items-center justify-between">
+        <div className="bg-[#2a2a50] border-b border-cyan-500/15 p-4 flex items-center justify-between">
           <h2 className="text-xl font-bold text-cyan-300 font-mono">
             {mode === "login" ? "LOGIN" : "SIGN UP"}
           </h2>
           <button
             onClick={onClose}
-            className="text-cyan-400/70 hover:text-cyan-400 hover:bg-cyan-900/10 rounded p-1 transition-colors"
+            className="text-cyan-300/90 hover:text-cyan-400 hover:bg-cyan-900/10 rounded p-1 transition-colors"
           >
             <X size={20} />
           </button>
@@ -133,7 +133,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               {/* Avatar Upload */}
               <div className="flex flex-col items-center gap-2">
                 <label className="cursor-pointer">
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-cyan-400/80 to-fuchsia-400/80 flex items-center justify-center overflow-hidden border-2 border-cyan-500/30">
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-cyan-400/80 to-fuchsia-400/80 flex items-center justify-center overflow-hidden border-2 border-cyan-500/18">
                     {avatarPreview ? (
                       <img
                         src={avatarPreview}
@@ -151,16 +151,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     className="hidden"
                   />
                 </label>
-                <span className="text-xs text-cyan-400/60 font-mono">PROFILE PICTURE (OPTIONAL)</span>
+                <span className="text-xs text-cyan-300/80 font-mono">PROFILE PICTURE (OPTIONAL)</span>
               </div>
 
               {/* Username */}
               <div>
-                <label className="block text-xs font-medium text-cyan-400/80 mb-1 font-mono">
+                <label className="block text-xs font-medium text-cyan-300/95 mb-1 font-mono">
                   USERNAME
                 </label>
                 <div className="relative">
-                  <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-400/50" size={18} />
+                  <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-300/70" size={18} />
                   <input
                     type="text"
                     value={formData.username}
@@ -168,7 +168,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       setFormData({ ...formData, username: e.target.value })
                     }
                     required={mode === "register"}
-                    className="w-full pl-10 pr-4 py-2 bg-[#252540] border border-cyan-500/25 rounded focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/40 text-cyan-300 placeholder:text-cyan-400/60 font-mono transition-all"
+                    className="w-full pl-10 pr-4 py-2 bg-[#2a2a50] border border-cyan-500/15 rounded focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/40 text-cyan-300 placeholder:text-cyan-300/80 font-mono transition-all"
                     placeholder="USERNAME"
                   />
                 </div>
@@ -178,11 +178,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
           {/* Email */}
           <div>
-            <label className="block text-xs font-medium text-cyan-400/80 mb-1 font-mono">
+            <label className="block text-xs font-medium text-cyan-300/95 mb-1 font-mono">
               {mode === "login" ? "EMAIL OR USERNAME" : "EMAIL"}
             </label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-400/50" size={18} />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-300/70" size={18} />
               <input
                 type={mode === "login" ? "text" : "email"}
                 value={formData.email}
@@ -190,7 +190,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   setFormData({ ...formData, email: e.target.value })
                 }
                 required
-                className="w-full pl-10 pr-4 py-2 bg-[#252540] border border-cyan-500/25 rounded focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/40 text-cyan-300 placeholder:text-cyan-400/60 font-mono transition-all"
+                className="w-full pl-10 pr-4 py-2 bg-[#2a2a50] border border-cyan-500/15 rounded focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/40 text-cyan-300 placeholder:text-cyan-300/80 font-mono transition-all"
                 placeholder={mode === "login" ? "EMAIL OR USERNAME" : "EMAIL@EXAMPLE.COM"}
               />
             </div>
@@ -198,11 +198,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
           {/* Password */}
           <div>
-            <label className="block text-xs font-medium text-cyan-400/80 mb-1 font-mono">
+            <label className="block text-xs font-medium text-cyan-300/95 mb-1 font-mono">
               PASSWORD
             </label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-400/50" size={18} />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-300/70" size={18} />
               <input
                 type="password"
                 value={formData.password}
@@ -210,7 +210,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   setFormData({ ...formData, password: e.target.value })
                 }
                 required
-                className="w-full pl-10 pr-4 py-2 bg-[#252540] border border-cyan-500/25 rounded focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/40 text-cyan-300 placeholder:text-cyan-400/60 font-mono transition-all"
+                className="w-full pl-10 pr-4 py-2 bg-[#2a2a50] border border-cyan-500/15 rounded focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/40 text-cyan-300 placeholder:text-cyan-300/80 font-mono transition-all"
                 placeholder="PASSWORD"
               />
             </div>
@@ -218,11 +218,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
           {mode === "register" && (
             <div>
-              <label className="block text-xs font-medium text-cyan-400/80 mb-1 font-mono">
+              <label className="block text-xs font-medium text-cyan-300/95 mb-1 font-mono">
                 CONFIRM PASSWORD
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-400/50" size={18} />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-300/70" size={18} />
                 <input
                   type="password"
                   value={formData.confirmPassword}
@@ -230,7 +230,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     setFormData({ ...formData, confirmPassword: e.target.value })
                   }
                   required
-                  className="w-full pl-10 pr-4 py-2 bg-[#252540] border border-cyan-500/25 rounded focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/40 text-cyan-300 placeholder:text-cyan-400/60 font-mono transition-all"
+                  className="w-full pl-10 pr-4 py-2 bg-[#2a2a50] border border-cyan-500/15 rounded focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/40 text-cyan-300 placeholder:text-cyan-300/80 font-mono transition-all"
                   placeholder="CONFIRM PASSWORD"
                 />
               </div>
@@ -257,7 +257,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 setFormData({ username: "", email: "", password: "", confirmPassword: "" })
                 setAvatarPreview(null)
               }}
-              className="text-sm text-cyan-400/70 hover:text-cyan-400 font-medium font-mono"
+              className="text-sm text-cyan-300/90 hover:text-cyan-400 font-medium font-mono"
             >
               {mode === "login"
                 ? "DON'T HAVE AN ACCOUNT? SIGN UP"

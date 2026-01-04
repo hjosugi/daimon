@@ -7,11 +7,11 @@
   
   body {
     margin: 0;
-    background: #0f0f1a;
+    background: #151520;
     background-image: 
-      radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.06) 0%, transparent 50%),
-      radial-gradient(circle at 80% 80%, rgba(255, 0, 255, 0.06) 0%, transparent 50%),
-      linear-gradient(135deg, #0f0f1a 0%, #1a0f2a 100%);
+      radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.04) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(255, 0, 255, 0.04) 0%, transparent 50%),
+      linear-gradient(135deg, #151520 0%, #1f152f 100%);
     color: #7dd3fc;
     font-family: 'Courier New', 'Monaco', 'Menlo', monospace;
     min-height: 100vh;

@@ -103,14 +103,14 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
       onClick={onClose}
     >
       <div 
-        className="bg-[#0f0f1f] rounded-lg border border-cyan-500/30 w-full max-w-md mx-auto overflow-hidden max-h-[90vh] overflow-y-auto"
+        className="bg-[#0f0f1f] rounded-lg border border-cyan-500/18 w-full max-w-md mx-auto overflow-hidden max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="bg-[#1a1a2f] border-b border-cyan-500/20 p-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-cyan-400/90 font-mono">EDIT PROFILE</h2>
+        <div className="bg-[#1f1f3a] border-b border-cyan-500/12 p-4 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-cyan-200/95 font-mono">EDIT PROFILE</h2>
           <button
             onClick={onClose}
-            className="text-cyan-400/70 hover:text-cyan-400 hover:bg-cyan-900/10 rounded p-1 transition-colors"
+            className="text-cyan-300/90 hover:text-cyan-400 hover:bg-cyan-900/10 rounded p-1 transition-colors"
           >
             <X size={20} />
           </button>
@@ -121,7 +121,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           <div className="flex flex-col items-center gap-3">
             <label className="cursor-pointer">
               <div className="relative">
-                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-br from-cyan-400/80 to-fuchsia-400/80 flex items-center justify-center overflow-hidden border-2 border-cyan-500/30">
+                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-br from-cyan-400/80 to-fuchsia-400/80 flex items-center justify-center overflow-hidden border-2 border-cyan-500/18">
                   {avatarPreview ? (
                     <img
                       src={avatarPreview}
@@ -147,50 +147,50 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               <button
                 type="button"
                 onClick={handleRemoveAvatar}
-                className="text-xs text-cyan-400/60 hover:text-cyan-400/80 px-3 py-1.5 bg-cyan-900/10 border border-cyan-500/20 rounded hover:bg-cyan-900/20 transition-colors font-mono"
+                className="text-xs text-cyan-300/80 hover:text-cyan-300/95 px-3 py-1.5 bg-cyan-900/10 border border-cyan-500/12 rounded hover:bg-cyan-900/20 transition-colors font-mono"
               >
                 REMOVE IMAGE
               </button>
             </div>
-            <span className="text-xs text-cyan-400/50 text-center font-mono">
+            <span className="text-xs text-cyan-300/70 text-center font-mono">
               CHANGE PROFILE PICTURE (OPTIONAL)
             </span>
           </div>
 
           {/* Username */}
           <div>
-            <label className="block text-xs font-medium text-cyan-400/80 mb-2 font-mono">
+            <label className="block text-xs font-medium text-cyan-300/95 mb-2 font-mono">
               USERNAME
             </label>
             <div className="relative">
-              <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-400/50" size={18} />
+              <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-300/70" size={18} />
               <input
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                className="w-full pl-10 pr-4 py-2.5 bg-[#1a1a2f] border border-cyan-500/20 rounded focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/40 text-cyan-400/90 placeholder:text-cyan-500/30 font-mono transition-all"
-                placeholder="> USERNAME"
+                className="w-full pl-10 pr-4 py-2.5 bg-[#1f1f3a] border border-cyan-500/12 rounded focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/40 text-cyan-200/95 placeholder:text-cyan-500/30 font-mono transition-all"
+                placeholder="USERNAME"
               />
             </div>
           </div>
 
           {/* Email (Read-only) */}
           <div>
-            <label className="block text-xs font-medium text-cyan-400/80 mb-2 font-mono">
+            <label className="block text-xs font-medium text-cyan-300/95 mb-2 font-mono">
               EMAIL
             </label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-400/50" size={18} />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-300/70" size={18} />
               <input
                 type="email"
                 value={email}
                 disabled
-                className="w-full pl-10 pr-4 py-2.5 bg-[#0f0f1f] border border-cyan-500/15 rounded text-cyan-400/50 cursor-not-allowed font-mono"
+                className="w-full pl-10 pr-4 py-2.5 bg-[#0f0f1f] border border-cyan-500/15 rounded text-cyan-300/70 cursor-not-allowed font-mono"
                 placeholder="EMAIL@EXAMPLE.COM"
               />
             </div>
-            <p className="text-xs text-cyan-400/50 mt-1 font-mono">
+            <p className="text-xs text-cyan-300/70 mt-1 font-mono">
               EMAIL CANNOT BE CHANGED
             </p>
           </div>
@@ -250,7 +250,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                   type="button"
                   onClick={() => setShowDeleteConfirm(false)}
                   disabled={deleteAccountMutation.isPending}
-                  className="flex-1 py-2.5 px-4 bg-[#1a1a2f] text-cyan-400/80 border border-cyan-500/20 rounded font-medium hover:bg-[#0f0f1f] hover:border-cyan-500/40 transition-colors disabled:opacity-50 font-mono"
+                  className="flex-1 py-2.5 px-4 bg-[#1f1f3a] text-cyan-300/95 border border-cyan-500/12 rounded font-medium hover:bg-[#0f0f1f] hover:border-cyan-500/40 transition-colors disabled:opacity-50 font-mono"
                 >
                   CANCEL
                 </button>

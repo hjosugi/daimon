@@ -19,10 +19,10 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
   const isOwnPost = currentUser && post.user_id === currentUser.id
 
   return (
-    <div className="p-3 sm:p-4 border-b border-cyan-500/25 bg-[#1f1f35]">
+    <div className="p-3 sm:p-4 border-b border-cyan-500/15 bg-[#1f1f35]">
       <div className="flex items-center gap-2 sm:gap-3">
         {/* Avatar */}
-        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-cyan-400/90 via-fuchsia-400/90 to-cyan-500/90 flex items-center justify-center text-black font-bold text-sm sm:text-base border border-cyan-500/30 flex-shrink-0 font-mono">
+        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-cyan-400/90 via-fuchsia-400/90 to-cyan-500/90 flex items-center justify-center text-black font-bold text-sm sm:text-base border border-cyan-500/18 flex-shrink-0 font-mono">
           {post.username ? post.username.slice(0, 1).toUpperCase() : post.id.slice(0, 1).toUpperCase()}
         </div>
         
@@ -32,7 +32,7 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
             {post.username || `USER_${post.user_id?.slice(0, 8) || post.id.slice(0, 8)}`}
           </div>
           {post.created_at && (
-            <div className="text-xs text-cyan-400/70 font-mono">
+            <div className="text-xs text-cyan-300/90 font-mono">
               {formatRelativeDate(post.created_at)}
             </div>
           )}
@@ -43,7 +43,7 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
           {isOwnPost && (
             <button
               onClick={onDelete}
-              className="p-2 text-cyan-400/60 hover:text-red-300 hover:bg-red-900/15 border border-transparent hover:border-red-500/25 rounded transition-all active:scale-95"
+              className="p-2 text-cyan-300/80 hover:text-red-300 hover:bg-red-900/15 border border-transparent hover:border-red-500/25 rounded transition-all active:scale-95"
               title="Delete post"
             >
               <Trash2 size={18} />
@@ -57,8 +57,8 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
                   disabled={post.match_reason.pov_match_rate === 0}
                   className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded text-xs font-semibold whitespace-nowrap transition-all font-mono border ${
                     post.match_reason.pov_match_rate === 0
-                      ? "bg-[#1a1a2e] text-cyan-400/40 border-cyan-500/15 cursor-not-allowed"
-                      : "bg-fuchsia-900/25 text-fuchsia-300 border-fuchsia-500/30 hover:border-fuchsia-500/45 hover:bg-fuchsia-900/35 cursor-pointer active:scale-95"
+                      ? "bg-[#1f1f35] text-cyan-400/40 border-cyan-500/15 cursor-not-allowed"
+                      : "bg-fuchsia-900/25 text-fuchsia-300 border-fuchsia-500/18 hover:border-fuchsia-500/45 hover:bg-fuchsia-900/35 cursor-pointer active:scale-95"
                   }`}
                   title={
                     post.match_reason.pov_match_rate === 0

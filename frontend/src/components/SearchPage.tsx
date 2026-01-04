@@ -77,14 +77,14 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialTags = [], onTags
   }
 
   return (
-    <div className="min-h-screen bg-[#0f0f1a]">
+    <div className="min-h-screen bg-[#151520]">
       <div className="max-w-2xl mx-auto px-3 sm:px-4 py-3 sm:py-4 space-y-2">
         {/* Simple Search Input - Cyberpunk style */}
-        <div className="bg-[#1a1a2e] rounded border border-cyan-500/25">
+        <div className="bg-[#1f1f35] rounded border border-cyan-500/15">
           <div className="p-3 space-y-2">
             {/* Text Search */}
             <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-cyan-400/60" size={16} />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-cyan-300/80" size={16} />
               <input
                 type="text"
                 value={searchQuery}
@@ -95,13 +95,13 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialTags = [], onTags
                   }
                 }}
                 placeholder="SEARCH POSTS..."
-                className="w-full pl-9 pr-3 py-2 bg-[#252540] rounded border border-cyan-500/25 focus:border-cyan-500/45 focus:ring-1 focus:ring-cyan-500/30 text-cyan-300 placeholder:text-cyan-400/60 text-sm font-mono transition-all"
+                className="w-full pl-9 pr-3 py-2 bg-[#2a2a50] rounded border border-cyan-500/15 focus:border-cyan-500/35 focus:ring-1 focus:ring-cyan-500/20 text-cyan-200 placeholder:text-cyan-300/70 text-sm font-mono transition-all"
                 autoFocus
               />
               {(searchQuery.trim() || searchTags.length > 0) && (
                 <button
                   onClick={clearSearch}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-cyan-400/60 hover:text-red-300 p-1 transition-colors"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-cyan-300/80 hover:text-red-300 p-1 transition-colors"
                 >
                   <X size={14} />
                 </button>
@@ -125,7 +125,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialTags = [], onTags
                   {searchTags.map((tag) => (
                     <span
                       key={tag}
-                      className="px-1.5 py-0.5 bg-fuchsia-900/25 text-fuchsia-300 rounded text-[10px] font-mono flex items-center gap-0.5 border border-fuchsia-500/30"
+                      className="px-1.5 py-0.5 bg-fuchsia-900/25 text-fuchsia-300 rounded text-[10px] font-mono flex items-center gap-0.5 border border-fuchsia-500/18"
                     >
                       #{tag.length > 12 ? `${tag.slice(0, 12)}...` : tag}
                       <button
@@ -143,7 +143,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialTags = [], onTags
 
             {/* POV Input (collapsible) */}
             {showPOVSearch && (
-              <div className="pt-1 border-t border-fuchsia-500/20">
+              <div className="pt-1 border-t border-fuchsia-500/12">
                 <div className="flex gap-1.5 items-center">
                   <Hash className="text-fuchsia-300 flex-shrink-0" size={12} />
                   <input
@@ -167,7 +167,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialTags = [], onTags
                       }
                     }}
                     placeholder="ENTER POV (ENTER TO ADD)"
-                    className="flex-1 px-2 py-1.5 bg-[#252540] rounded border border-fuchsia-500/25 focus:ring-1 focus:ring-fuchsia-500/30 focus:border-fuchsia-500/40 text-fuchsia-300 placeholder:text-fuchsia-400/60 text-xs font-mono transition-all"
+                    className="flex-1 px-2 py-1.5 bg-[#2a2a50] rounded border border-fuchsia-500/25 focus:ring-1 focus:ring-fuchsia-500/30 focus:border-fuchsia-500/40 text-fuchsia-300 placeholder:text-fuchsia-400/60 text-xs font-mono transition-all"
                   />
                   <button
                     type="button"
@@ -188,7 +188,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialTags = [], onTags
           {searchQuery.trim() || searchTags.length > 0 ? (
             <>
               {(searchQuery.trim() || searchTags.length > 0) && (
-                <div className="bg-[#1a1a2e] border border-cyan-500/25 rounded p-2">
+                <div className="bg-[#1f1f35] border border-cyan-500/15 rounded p-2">
                   <div className="flex items-center gap-1.5 text-xs font-mono text-cyan-300">
                     <Search size={12} />
                     <span>
@@ -210,7 +210,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialTags = [], onTags
               ) : (
                 <>
                   {posts.length > 0 ? (
-                    <div className="bg-[#1a1a2e] rounded border border-cyan-500/25 overflow-hidden">
+                    <div className="bg-[#1f1f35] rounded border border-cyan-500/15 overflow-hidden">
                       {posts.map((post) => (
                         <SearchPostCard 
                           key={post.id} 
@@ -225,8 +225,8 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialTags = [], onTags
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center py-12 text-cyan-400/60">
-                      <div className="font-mono text-xs text-cyan-400/50 mb-2">[NO RESULTS]</div>
+                    <div className="text-center py-12 text-cyan-300/80">
+                      <div className="font-mono text-xs text-cyan-300/70 mb-2">[NO RESULTS]</div>
                       <p className="text-sm text-cyan-300 font-mono">TRY DIFFERENT KEYWORDS OR TAGS</p>
                     </div>
                   )}
@@ -234,10 +234,10 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialTags = [], onTags
               )}
             </>
           ) : (
-            <div className="text-center py-16 text-cyan-400/50">
+            <div className="text-center py-16 text-cyan-300/70">
               <Search size={64} className="mx-auto mb-6 opacity-20" />
               <p className="text-xl font-medium text-cyan-300 font-mono">START SEARCHING</p>
-              <p className="text-sm mt-2 text-cyan-400/60 font-mono">
+              <p className="text-sm mt-2 text-cyan-300/80 font-mono">
                 SEARCH POSTS BY KEYWORDS OR POVS
               </p>
             </div>

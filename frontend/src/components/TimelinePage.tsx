@@ -46,7 +46,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
       {/* Timeline */}
       <div className="space-y-4">
         {isLoading ? (
-          <div className="flex justify-center p-8 text-cyan-400/70">
+          <div className="flex justify-center p-8 text-cyan-300/90">
             <Loader2 size={32} className="animate-spin" />
           </div>
         ) : isError ? (
@@ -59,7 +59,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
               <PostCard key={post.id} post={post} onTagClick={onTagClick} currentUser={user} />
             ))}
             {posts.length === 0 && (
-              <div className="text-center py-12 text-cyan-400/50">
+              <div className="text-center py-12 text-cyan-300/70">
                 <p className="font-mono">NO POSTS YET. START A CONVERSATION!</p>
               </div>
             )}

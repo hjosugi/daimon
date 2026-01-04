@@ -36,13 +36,13 @@ export const POVList: React.FC<POVListProps> = ({
               onClick={() => onPOVClick?.(pov)}
               className={`px-2 py-1 rounded text-xs font-mono transition-all cursor-pointer border active:scale-95 flex items-center gap-1 ${
                 isAutoTag
-                  ? "bg-fuchsia-900/25 text-fuchsia-300 hover:bg-fuchsia-900/35 border-fuchsia-500/30 hover:border-fuchsia-500/45"
-                  : "bg-cyan-900/25 text-cyan-300 hover:bg-cyan-900/35 border-cyan-500/30 hover:border-cyan-500/45"
+                  ? "bg-fuchsia-900/25 text-fuchsia-300 hover:bg-fuchsia-900/35 border-fuchsia-500/18 hover:border-fuchsia-500/45"
+                  : "bg-cyan-900/25 text-cyan-300 hover:bg-cyan-900/35 border-cyan-500/18 hover:border-cyan-500/45"
               }`}
               title={isAutoTag ? "Auto-generated POV" : "Manual POV"}
             >
               {isAutoTag && (
-                <Sparkles size={10} className="text-fuchsia-400/80" />
+                <Sparkles size={10} className="text-fuchsia-300/95" />
               )}
               <span>#{pov}</span>
             </button>
@@ -53,7 +53,7 @@ export const POVList: React.FC<POVListProps> = ({
                 className={`p-1 rounded transition-all active:scale-95 border border-transparent ${
                   povLikeStatus.liked
                     ? "text-red-300 hover:text-red-300 hover:bg-red-900/15 hover:border-red-500/25"
-                    : "text-cyan-400/60 hover:text-red-300 hover:bg-red-900/10 hover:border-red-500/20"
+                    : "text-cyan-300/80 hover:text-red-300 hover:bg-red-900/10 hover:border-red-500/20"
                 }`}
                 title={povLikeStatus.liked ? "Unlike this POV" : "Like this POV"}
               >
@@ -64,7 +64,7 @@ export const POVList: React.FC<POVListProps> = ({
               </button>
             )}
             {povLikeStatus.likes > 0 && (
-              <span className="text-xs text-cyan-400/70 ml-0.5 font-mono">
+              <span className="text-xs text-cyan-300/90 ml-0.5 font-mono">
                 {povLikeStatus.likes}
               </span>
             )}

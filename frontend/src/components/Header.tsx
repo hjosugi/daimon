@@ -24,7 +24,7 @@ export const Header: React.FC<HeaderProps> = ({
   similarityWeight,
 }) => {
   return (
-    <header className="bg-[#0f0f1a]/95 backdrop-blur-sm border-b border-cyan-500/25 sticky top-0 z-20">
+    <header className="bg-[#151520]/95 backdrop-blur-sm border-b border-cyan-500/15 sticky top-0 z-20">
       <div className="max-w-2xl mx-auto px-3 sm:px-4 h-14 sm:h-16 flex items-center justify-between">
         <h1 className="text-lg sm:text-xl font-bold text-cyan-300 cyber-glow flex items-center gap-1 sm:gap-2 font-mono">
           DAIMON
@@ -35,8 +35,8 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={() => onPageChange("timeline")}
               className={`relative flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 transition-all text-xs sm:text-sm font-mono ${currentPage === "timeline"
-                  ? "bg-[#252540] text-cyan-300 rounded-t-lg -mb-[1px] z-10 border-t-2 border-l-2 border-r-2 border-cyan-500/40"
-                  : "text-cyan-400/60 hover:text-cyan-300 bg-[#1a1a2e] rounded-t-lg border-t border-l border-r border-cyan-500/25 hover:border-cyan-500/35"
+                  ? "bg-[#2a2a50] text-cyan-300 rounded-t-lg -mb-[1px] z-10 border-t-2 border-l-2 border-r-2 border-cyan-500/40"
+                  : "text-cyan-300/80 hover:text-cyan-300 bg-[#1f1f35] rounded-t-lg border-t border-l border-r border-cyan-500/15 hover:border-cyan-500/35"
                 }`}
             >
               {/* Bookmark notch */}
@@ -49,8 +49,8 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={() => onPageChange("search")}
               className={`relative flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 transition-all text-xs sm:text-sm font-mono ${currentPage === "search"
-                  ? "bg-[#252540] text-cyan-300 rounded-t-lg -mb-[1px] z-10 border-t-2 border-l-2 border-r-2 border-cyan-500/40"
-                  : "text-cyan-400/60 hover:text-cyan-300 bg-[#1a1a2e] rounded-t-lg border-t border-l border-r border-cyan-500/25 hover:border-cyan-500/35"
+                  ? "bg-[#2a2a50] text-cyan-300 rounded-t-lg -mb-[1px] z-10 border-t-2 border-l-2 border-r-2 border-cyan-500/40"
+                  : "text-cyan-300/80 hover:text-cyan-300 bg-[#1f1f35] rounded-t-lg border-t border-l border-r border-cyan-500/15 hover:border-cyan-500/35"
                 }`}
             >
               {currentPage === "search" && (
@@ -73,17 +73,17 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="flex items-center gap-1 sm:gap-2">
               <button
                 onClick={onProfileClick}
-                className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-[#1a1a2e] border border-cyan-500/25 hover:border-cyan-500/35 rounded transition-all cursor-pointer font-mono"
+                className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-[#1f1f35] border border-cyan-500/15 hover:border-cyan-500/35 rounded transition-all cursor-pointer font-mono"
                 title="Edit Profile"
               >
                 {user.avatar_url ? (
                   <img
                     src={user.avatar_url}
                     alt={user.username}
-                    className="w-5 h-5 sm:w-6 sm:h-6 rounded-full border border-cyan-500/30"
+                    className="w-5 h-5 sm:w-6 sm:h-6 rounded-full border border-cyan-500/18"
                   />
                 ) : (
-                  <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-gradient-to-br from-cyan-400/90 to-fuchsia-400/90 flex items-center justify-center text-black text-xs font-bold border border-cyan-500/30">
+                  <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-gradient-to-br from-cyan-400/90 to-fuchsia-400/90 flex items-center justify-center text-black text-xs font-bold border border-cyan-500/18">
                     {user.username[0].toUpperCase()}
                   </div>
                 )}
@@ -91,7 +91,7 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
               <button
                 onClick={onLogout}
-                className="p-1.5 sm:p-2 text-cyan-400/60 hover:text-red-300 hover:bg-red-900/15 border border-transparent hover:border-red-500/25 rounded transition-colors"
+                className="p-1.5 sm:p-2 text-cyan-300/80 hover:text-red-300 hover:bg-red-900/15 border border-transparent hover:border-red-500/25 rounded transition-colors"
                 title="Logout"
               >
                 <LogOut size={16} className="sm:w-[18px] sm:h-[18px]" />
