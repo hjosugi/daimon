@@ -2,9 +2,12 @@ import os
 import subprocess
 import sys
 import threading
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")
 os.environ.setdefault("EMBEDDING_DEVICE", "cpu")
@@ -43,23 +46,7 @@ else:
 
 logger.info(f"CORS origins: {origins} (environment: {environment})")
 
-# Add logging middleware for CORS debugging (added first, so runs last)
-class CORSDebugMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        if request.method == "OPTIONS":
-            origin = request.headers.get("origin")
-            logger.info(f"OPTIONS preflight request - Origin: {origin}, Path: {request.url.path}, Allowed origins: {origins if origins != ['*'] else 'ALL'}")
-        response = await call_next(request)
-        # Log CORS headers in response
-        cors_headers = {k: v for k, v in response.headers.items() if k.lower().startswith('access-control')}
-        if cors_headers or request.method == "OPTIONS":
-            logger.info(f"{request.method} {request.url.path} - Status: {response.status_code}, CORS headers: {cors_headers}")
-        return response
-
-app.add_middleware(CORSDebugMiddleware)
-
-# CORS - Temporarily disabled (allow all origins)
-# TODO: Re-enable proper CORS configuration for production
+# CORS - Allow all origins (temporary for production)
 # IMPORTANT: CORSMiddleware must be added LAST so it runs FIRST (middleware runs in reverse order)
 app.add_middleware(
     CORSMiddleware,
@@ -70,6 +57,74 @@ app.add_middleware(
     expose_headers=["*"],
     max_age=3600,  # Cache preflight requests for 1 hour
 )
+
+# Add logging middleware for CORS debugging (added after CORS, so runs before CORS)
+class CORSDebugMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        if request.method == "OPTIONS":
+            origin = request.headers.get("origin")
+            logger.info(f"OPTIONS preflight request - Origin: {origin}, Path: {request.url.path}")
+        try:
+            response = await call_next(request)
+            # Log CORS headers in response
+            cors_headers = {k: v for k, v in response.headers.items() if k.lower().startswith('access-control')}
+            if cors_headers or request.method == "OPTIONS":
+                logger.info(f"{request.method} {request.url.path} - Status: {response.status_code}, CORS headers: {cors_headers}")
+            return response
+        except Exception as e:
+            logger.error(f"Error in request: {e}", exc_info=True)
+            # Ensure CORS headers are added even on errors
+            error_response = JSONResponse(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content={"detail": "Internal server error"}
+            )
+            # Add CORS headers manually
+            error_response.headers["Access-Control-Allow-Origin"] = "*"
+            error_response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD"
+            error_response.headers["Access-Control-Allow-Headers"] = "*"
+            return error_response
+
+app.add_middleware(CORSDebugMiddleware)
+
+# Exception handlers to ensure CORS headers are always present
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    response = JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail}
+    )
+    # Add CORS headers
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    logger.error(f"HTTPException: {exc.status_code} - {exc.detail}")
+    return response
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    response = JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={"detail": exc.errors()}
+    )
+    # Add CORS headers
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    logger.error(f"ValidationError: {exc.errors()}")
+    return response
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    response = JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"detail": "Internal server error"}
+    )
+    # Add CORS headers
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    return response
 
 @app.get("/health")
 def health_check():
