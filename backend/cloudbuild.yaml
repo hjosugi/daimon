@@ -62,7 +62,7 @@ substitutions:
   _REGION: 'asia-northeast1'
   _REPO: 'daimon'
   _QDRANT_URL: ''
-  _CORS_ORIGINS: ''
+  _CORS_ORIGINS: 'https://daimon-sandy.vercel.app'
 
 options:
   logging: CLOUD_LOGGING_ONLY
