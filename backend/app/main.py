@@ -57,17 +57,16 @@ if environment == "development":
     
     app.add_middleware(CORSDebugMiddleware)
 
-# Configure CORS middleware
-# Note: allow_credentials=True requires explicit origins (no wildcards)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
-    allow_headers=["*"],
-    expose_headers=["*"],
-    max_age=3600,  # Cache preflight requests for 1 hour
-)
+# CORS
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=origins,
+#     allow_credentials=True,
+#     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
+#     allow_headers=["*"],
+#     expose_headers=["*"],
+#     max_age=3600,  # Cache preflight requests for 1 hour
+# )
 
 @app.get("/health")
 def health_check():
