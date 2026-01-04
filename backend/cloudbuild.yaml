@@ -43,7 +43,7 @@ steps:
       - '${_REGION}'
       - '--allow-unauthenticated'
       - '--memory'
-      - '1Gi'
+      - '2Gi'
       - '--cpu'
       - '1'
       - '--min-instances'
