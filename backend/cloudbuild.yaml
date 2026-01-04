@@ -67,6 +67,9 @@ substitutions:
 options:
   logging: CLOUD_LOGGING_ONLY
   machineType: 'E2_STANDARD_4'
+  volumes:
+    - name: uv-cache
+      path: /root/.cache/uv
   substitution_option: 'ALLOW_LOOSE'
   diskSizeGb: 10
   timeout: '1800s'
