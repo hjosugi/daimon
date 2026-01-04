@@ -319,96 +319,122 @@ def suggest_povs(query: str = "", db: Session = Depends(get_db)):
 
 @router.post("/timeline", response_model=List[PostResponse])
 async def get_timeline(request: TimelineRequest, user_id: Optional[str] = Depends(get_current_user_optional), db: Session = Depends(get_db)):
-    vector = await embedding_service.embed_text_async(request.query_text)
-    
-    user_posts_db = db.query(PostModel).filter(PostModel.user_id == user_id).all() if user_id else []
-    user_post_povs = set()
-    user_post_vectors = []
-    user_post_ids = []
-    for user_post_db in user_posts_db:
-        povs = db.query(POVModel.pov).filter(POVModel.post_id == user_post_db.id).all()
-        user_post_povs.update([pov[0] for pov in povs])
-        user_post_ids.append(user_post_db.id)
-        user_posts_qdrant = qdrant_service.get_user_posts(user_id)
-        for qp in user_posts_qdrant:
-            if str(qp.id) == user_post_db.id:
-                user_post_vectors.append((str(qp.id), qp.vector))
-                break
-    
-    candidate_limit = 200 if request.include_far_posts else 100
-    hits = qdrant_service.search_similar(vector, limit=candidate_limit)
-    
-    post_ids = [hit.id for hit in hits]
-    if not post_ids:
-        return []
-    
-    db_posts_dict = {post.id: post for post in db.query(PostModel).filter(PostModel.id.in_(post_ids)).all()}
-    
-    results = []
-    for hit in hits:
-        post_id = hit.id
-        payload = hit.payload
-        post_user_id = payload.get("user_id")
-        is_own_post = post_user_id == user_id
+    try:
+        logger.info(f"Timeline request: query_text={request.query_text[:50] if request.query_text else None}, user_id={user_id}, similarity_weight={request.similarity_weight}, boost_popular={request.boost_popular}, include_far_posts={request.include_far_posts}")
         
-        db_post = db_posts_dict.get(post_id)
-        if not db_post:
-            continue
+        vector = await embedding_service.embed_text_async(request.query_text)
+        logger.debug(f"Generated embedding vector of length {len(vector)}")
         
-        povs_query = db.query(POVModel.pov).filter(POVModel.post_id == post_id).all()
-        post_povs = set([pov[0] for pov in povs_query])
-        post_povs_list = [pov[0] for pov in povs_query]
+        user_posts_db = db.query(PostModel).filter(PostModel.user_id == user_id).all() if user_id else []
+        user_post_povs = set()
+        user_post_vectors = []
+        user_post_ids = []
+        for user_post_db in user_posts_db:
+            povs = db.query(POVModel.pov).filter(POVModel.post_id == user_post_db.id).all()
+            user_post_povs.update([pov[0] for pov in povs])
+            user_post_ids.append(user_post_db.id)
+            if user_id:
+                try:
+                    user_posts_qdrant = qdrant_service.get_user_posts(user_id)
+                    for qp in user_posts_qdrant:
+                        if str(qp.id) == user_post_db.id:
+                            user_post_vectors.append((str(qp.id), qp.vector))
+                            break
+                except Exception as e:
+                    logger.warning(f"Error getting user posts from Qdrant: {e}")
         
-        likes_count = db.query(LikeModel).filter(LikeModel.post_id == post_id).count()
-        liked = db.query(LikeModel).filter(LikeModel.post_id == post_id, LikeModel.user_id == user_id).first() is not None if user_id else False
-        comment_count = db.query(CommentModel).filter(CommentModel.post_id == post_id).count()
+        candidate_limit = 200 if request.include_far_posts else 100
+        hits = qdrant_service.search_similar(vector, limit=candidate_limit)
+        logger.debug(f"Found {len(hits)} candidate posts from Qdrant")
         
-        match_reason = None
-        if not is_own_post:
-            post_vector = None
+        post_ids = [hit.id for hit in hits]
+        if not post_ids:
+            logger.info("No posts found in Qdrant")
+            return []
+        
+        db_posts_dict = {post.id: post for post in db.query(PostModel).filter(PostModel.id.in_(post_ids)).all()}
+        logger.debug(f"Retrieved {len(db_posts_dict)} posts from database")
+        
+        results = []
+        for hit in hits:
             try:
-                retrieved = qdrant_service.client.retrieve(
-                    collection_name=COLLECTION_NAME,
-                    ids=[post_id],
-                    with_vectors=True
-                )
-                if retrieved and retrieved[0].vector:
-                    post_vector = retrieved[0].vector
-            except Exception:
-                pass
-            
-            match_reason = build_match_reason(
-                post_tags=post_povs,
-                user_post_tags=user_post_povs,
-                user_post_ids=user_post_ids,
-                db=db,
-                has_query=bool(request.query_text),
-                post_vector=post_vector,
-                user_post_vectors=user_post_vectors if user_post_vectors else []
-            )
+                post_id = hit.id
+                payload = hit.payload
+                post_user_id = payload.get("user_id")
+                is_own_post = post_user_id == user_id
+                
+                db_post = db_posts_dict.get(post_id)
+                if not db_post:
+                    logger.warning(f"Post {post_id} not found in database")
+                    continue
+                
+                povs_query = db.query(POVModel.pov).filter(POVModel.post_id == post_id).all()
+                post_povs = set([pov[0] for pov in povs_query])
+                post_povs_list = [pov[0] for pov in povs_query]
+                
+                likes_count = db.query(LikeModel).filter(LikeModel.post_id == post_id).count()
+                liked = db.query(LikeModel).filter(LikeModel.post_id == post_id, LikeModel.user_id == user_id).first() is not None if user_id else False
+                comment_count = db.query(CommentModel).filter(CommentModel.post_id == post_id).count()
+                
+                match_reason = None
+                if not is_own_post:
+                    post_vector = None
+                    try:
+                        retrieved = qdrant_service.client.retrieve(
+                            collection_name=COLLECTION_NAME,
+                            ids=[post_id],
+                            with_vectors=True
+                        )
+                        if retrieved and retrieved[0].vector:
+                            post_vector = retrieved[0].vector
+                    except Exception as e:
+                        logger.warning(f"Error retrieving vector for post {post_id}: {e}")
+                    
+                    try:
+                        match_reason = build_match_reason(
+                            post_tags=post_povs,
+                            user_post_tags=user_post_povs,
+                            user_post_ids=user_post_ids,
+                            db=db,
+                            has_query=bool(request.query_text),
+                            post_vector=post_vector,
+                            user_post_vectors=user_post_vectors if user_post_vectors else []
+                        )
+                    except Exception as e:
+                        logger.warning(f"Error building match reason for post {post_id}: {e}")
+                
+                username = db_post.username
+                if not username and post_user_id:
+                    user = db.query(UserModel).filter(UserModel.id == post_user_id).first()
+                    username = user.username if user else f"User_{post_user_id[:8]}"
+                
+                results.append(PostResponse(
+                    id=post_id,
+                    text=db_post.text,
+                    povs=post_povs_list,
+                    user_id=post_user_id,
+                    username=username,
+                    score=None if is_own_post else hit.score,
+                    likes=likes_count,
+                    liked=liked,
+                    commentCount=comment_count,
+                    match_reason=match_reason,
+                    created_at=db_post.created_at.isoformat() if db_post.created_at else None
+                ))
+            except Exception as e:
+                logger.error(f"Error processing post {hit.id if hasattr(hit, 'id') else 'unknown'}: {e}", exc_info=True)
+                continue
         
-        username = db_post.username
-        if not username and post_user_id:
-            user = db.query(UserModel).filter(UserModel.id == post_user_id).first()
-            username = user.username if user else f"User_{post_user_id[:8]}"
+        results = rank_posts(results, sort_by="combined", reverse=True)
+        logger.info(f"Returning {len(results[:10])} posts")
         
-        results.append(PostResponse(
-            id=post_id,
-            text=db_post.text,
-            povs=post_povs_list,
-            user_id=post_user_id,
-            username=username,
-            score=None if is_own_post else hit.score,
-            likes=likes_count,
-            liked=liked,
-            commentCount=comment_count,
-            match_reason=match_reason,
-            created_at=db_post.created_at.isoformat() if db_post.created_at else None
-        ))
-    
-    results = rank_posts(results, sort_by="combined", reverse=True)
-    
-    return results[:10]
+        return results[:10]
+    except Exception as e:
+        logger.error(f"Error in get_timeline: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get timeline: {str(e)}"
+        )
 
 @router.post("/{post_id}/like", response_model=LikeResponse)
 def like_post(post_id: str, user_id: str = Depends(get_current_user), db: Session = Depends(get_db)):
