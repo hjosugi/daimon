@@ -135,7 +135,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onTagClick, currentUse
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
-      className="bg-white rounded-xl sm:rounded-2xl shadow-md hover:shadow-lg transition-all border border-slate-200/50 overflow-hidden"
+      className="bg-[#1f1f35] rounded-lg border border-cyan-500/25 hover:border-cyan-500/35 transition-all overflow-hidden"
     >
       <PostHeader
         post={post}
@@ -147,29 +147,29 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onTagClick, currentUse
       {/* Match Reason Details Modal */}
       {showMatchReasonDetails && post.match_reason && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" 
           onClick={() => setShowMatchReasonDetails(false)}
         >
           <div 
-            className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col" 
+            className="bg-[#0f0f1f] rounded-lg border border-cyan-500/30 w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col" 
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="bg-gradient-to-r from-blue-500 to-purple-500 p-4 flex items-center justify-between">
+            <div className="bg-[#1a1a2f] border-b border-cyan-500/20 p-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-                  <span className="text-white text-lg">💡</span>
+                <div className="w-10 h-10 rounded-full bg-cyan-900/20 border border-cyan-500/30 flex items-center justify-center">
+                  <span className="text-cyan-400/90 text-lg">💡</span>
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-white">Why This Matched</h3>
-                  <p className="text-xs text-white/80">
-                    Match reason details
+                  <h3 className="text-lg font-bold text-cyan-400/90 font-mono">WHY THIS MATCHED</h3>
+                  <p className="text-xs text-cyan-400/60 font-mono">
+                    MATCH REASON DETAILS
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setShowMatchReasonDetails(false)}
-                className="text-white hover:bg-white/20 rounded-full p-1 transition-colors"
+                className="text-cyan-400/70 hover:text-cyan-400 hover:bg-cyan-900/10 rounded p-1 transition-colors"
               >
                 <X size={20} />
               </button>
@@ -178,14 +178,14 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onTagClick, currentUse
             {/* Content */}
             <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4">
               {post.match_reason.common_povs.length > 0 && (
-                <div className="p-3 bg-gradient-to-r from-blue-50/50 to-purple-50/50 rounded-lg border border-blue-100">
+                <div className="p-3 bg-cyan-900/20 rounded-lg border border-cyan-500/20">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-lg">🏷️</span>
-                    <span className="text-sm font-semibold text-slate-700">Common POVs</span>
+                    <span className="text-xs font-semibold text-cyan-400/90 font-mono">COMMON POVS</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {post.match_reason.common_povs.map((pov) => (
-                      <span key={pov} className="px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                      <span key={pov} className="px-2 py-1 bg-cyan-900/30 text-cyan-400/90 rounded text-xs font-mono border border-cyan-500/30">
                         #{pov}
                       </span>
                     ))}
@@ -194,14 +194,14 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onTagClick, currentUse
               )}
 
               {post.match_reason.pov_matches && post.match_reason.pov_matches.length > 0 && (
-                <div className="p-3 bg-gradient-to-r from-purple-50/50 to-pink-50/50 rounded-lg border border-purple-100">
+                <div className="p-3 bg-fuchsia-900/20 rounded-lg border border-fuchsia-500/20">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-lg">🏷️</span>
-                    <span className="text-sm font-semibold text-slate-700">Matched POVs</span>
+                    <span className="text-xs font-semibold text-fuchsia-400/90 font-mono">MATCHED POVS</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {post.match_reason.pov_matches.map((pov) => (
-                      <span key={pov} className="px-2.5 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                      <span key={pov} className="px-2 py-1 bg-fuchsia-900/30 text-fuchsia-400/90 rounded text-xs font-mono border border-fuchsia-500/30">
                         #{pov}
                       </span>
                     ))}
@@ -210,26 +210,26 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onTagClick, currentUse
               )}
 
               {post.match_reason.similar_to_user_posts && post.match_reason.similar_to_user_posts.length > 0 && (
-                <div className="p-3 bg-gradient-to-r from-blue-50/50 to-purple-50/50 rounded-lg border border-blue-100">
+                <div className="p-3 bg-cyan-900/20 rounded-lg border border-cyan-500/20">
                   <div className="flex items-center gap-2 mb-3">
                     <span className="text-lg">🔗</span>
-                    <span className="text-sm font-semibold text-slate-700">Your Posts That Contributed</span>
+                    <span className="text-xs font-semibold text-cyan-400/90 font-mono">YOUR POSTS THAT CONTRIBUTED</span>
                   </div>
                   <div className="space-y-2">
                     {post.match_reason.similar_to_user_posts.map((userPost, index) => (
                       <div
                         key={userPost.id}
-                        className="p-3 bg-white rounded-lg border border-blue-200 shadow-sm"
+                        className="p-3 bg-[#1a1a2f] rounded-lg border border-cyan-500/15"
                       >
                         <div className="flex items-start justify-between gap-2 mb-1">
-                          <span className="text-xs font-medium text-slate-500">Post #{index + 1}</span>
+                          <span className="text-xs font-medium text-cyan-400/60 font-mono">POST #{index + 1}</span>
                           {userPost.similarity_score !== undefined && (
-                            <span className="text-xs text-blue-600 font-bold">
-                              {Math.round(userPost.similarity_score * 100)}% similar
+                            <span className="text-xs text-cyan-400/90 font-bold font-mono">
+                              {Math.round(userPost.similarity_score * 100)}% SIMILAR
                             </span>
                           )}
                         </div>
-                        <p className="text-sm text-slate-700 leading-relaxed">
+                        <p className="text-sm text-cyan-300/90 leading-relaxed">
                           {userPost.text}
                         </p>
                       </div>
@@ -240,12 +240,12 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onTagClick, currentUse
             </div>
 
             {/* Footer */}
-            <div className="p-4 border-t border-slate-200 bg-slate-50">
+            <div className="p-4 border-t border-cyan-500/15 bg-[#1a1a2f]">
               <button
                 onClick={() => setShowMatchReasonDetails(false)}
-                className="w-full py-2.5 px-4 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg font-medium hover:from-blue-600 hover:to-purple-600 transition-colors"
+                className="w-full py-2.5 px-4 bg-gradient-to-r from-cyan-500/90 to-fuchsia-500/90 text-black rounded font-medium hover:from-cyan-400 hover:to-fuchsia-400 transition-colors font-mono font-bold"
               >
-                Close
+                CLOSE
               </button>
             </div>
           </div>
@@ -255,29 +255,29 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onTagClick, currentUse
       {/* Match Details Modal (for similar user posts - shown when POV match is clicked) */}
       {showMatchDetails && post.match_reason?.similar_to_user_posts && post.match_reason.similar_to_user_posts.length > 0 && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" 
           onClick={() => setShowMatchDetails(false)}
         >
           <div 
-            className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col" 
+            className="bg-[#0f0f1f] rounded-lg border border-fuchsia-500/30 w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col" 
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="bg-gradient-to-r from-purple-500 to-pink-500 p-4 flex items-center justify-between">
+            <div className="bg-[#1a1a2f] border-b border-fuchsia-500/20 p-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-                  <span className="text-white text-lg">🏷️</span>
+                <div className="w-10 h-10 rounded-full bg-fuchsia-900/20 border border-fuchsia-500/30 flex items-center justify-center">
+                  <span className="text-fuchsia-400/90 text-lg">🏷️</span>
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-white">Match Details</h3>
-                  <p className="text-xs text-white/80">
-                    {post.match_reason.similar_to_user_posts.length} of your posts contributed to this match
+                  <h3 className="text-lg font-bold text-fuchsia-400/90 font-mono">MATCH DETAILS</h3>
+                  <p className="text-xs text-fuchsia-400/60 font-mono">
+                    {post.match_reason.similar_to_user_posts.length} OF YOUR POSTS CONTRIBUTED TO THIS MATCH
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setShowMatchDetails(false)}
-                className="text-white hover:bg-white/20 rounded-full p-1 transition-colors"
+                className="text-fuchsia-400/70 hover:text-fuchsia-400 hover:bg-fuchsia-900/10 rounded p-1 transition-colors"
               >
                 <X size={20} />
               </button>
@@ -291,15 +291,15 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onTagClick, currentUse
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className="p-4 bg-gradient-to-r from-purple-50/50 to-pink-50/50 rounded-lg border border-purple-200 hover:border-purple-300 transition-colors cursor-pointer"
+                  className="p-4 bg-fuchsia-900/20 rounded-lg border border-fuchsia-500/20 hover:border-fuchsia-500/40 transition-colors cursor-pointer"
                   onClick={() => {
                     // Scroll to the post if it exists in the timeline
                     const postElement = document.getElementById(`post-${userPost.id}`)
                     if (postElement) {
                       postElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                      postElement.classList.add('ring-2', 'ring-purple-400', 'ring-offset-2')
+                      postElement.classList.add('ring-2', 'ring-fuchsia-400', 'ring-offset-2')
                       setTimeout(() => {
-                        postElement.classList.remove('ring-2', 'ring-purple-400', 'ring-offset-2')
+                        postElement.classList.remove('ring-2', 'ring-fuchsia-400', 'ring-offset-2')
                       }, 2000)
                     }
                     setShowMatchDetails(false)
@@ -307,27 +307,27 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onTagClick, currentUse
                 >
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white text-xs font-bold">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-fuchsia-400/80 to-cyan-400/80 flex items-center justify-center text-black text-xs font-bold border border-fuchsia-500/30 font-mono">
                         {index + 1}
                       </div>
-                      <span className="text-xs font-semibold text-slate-600">Your post</span>
+                      <span className="text-xs font-semibold text-fuchsia-400/80 font-mono">YOUR POST</span>
                     </div>
                   </div>
-                  <p className="text-sm text-slate-700 leading-relaxed break-words">
+                  <p className="text-sm text-cyan-300/90 leading-relaxed break-words">
                     {userPost.text}
                   </p>
-                  <p className="text-xs text-purple-600 mt-2 font-medium">Click to view →</p>
+                  <p className="text-xs text-fuchsia-400/80 mt-2 font-medium font-mono">CLICK TO VIEW →</p>
                 </motion.div>
               ))}
             </div>
 
             {/* Footer */}
-            <div className="p-4 border-t border-slate-200 bg-slate-50">
+            <div className="p-4 border-t border-fuchsia-500/15 bg-[#1a1a2f]">
               <button
                 onClick={() => setShowMatchDetails(false)}
-                className="w-full py-2.5 px-4 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg font-medium hover:from-blue-600 hover:to-purple-600 transition-colors"
+                className="w-full py-2.5 px-4 bg-gradient-to-r from-cyan-500/90 to-fuchsia-500/90 text-black rounded font-medium hover:from-cyan-400 hover:to-fuchsia-400 transition-colors font-mono font-bold"
               >
-                Close
+                CLOSE
               </button>
             </div>
           </div>
@@ -336,44 +336,44 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onTagClick, currentUse
 
       {/* Delete Confirmation Dialog */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setShowDeleteConfirm(false)}>
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setShowDeleteConfirm(false)}>
+          <div className="bg-[#0f0f1f] rounded-lg border border-red-500/30 w-full max-w-md p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
-                <AlertTriangle className="text-red-600" size={24} />
+              <div className="w-12 h-12 rounded-full bg-red-900/30 border border-red-500/30 flex items-center justify-center">
+                <AlertTriangle className="text-red-400/90" size={24} />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Delete Post</h3>
-                <p className="text-sm text-slate-600">This action cannot be undone</p>
+                <h3 className="text-lg font-bold text-red-400/90 font-mono">DELETE POST</h3>
+                <p className="text-sm text-red-400/60 font-mono">THIS ACTION CANNOT BE UNDONE</p>
               </div>
             </div>
-            <p className="text-sm text-slate-700">
-              Deleting this post will also delete all comments and likes.
+            <p className="text-sm text-cyan-300/80 font-mono">
+              DELETING THIS POST WILL ALSO DELETE ALL COMMENTS AND LIKES.
             </p>
             <div className="flex gap-3 pt-2">
               <button
                 type="button"
                 onClick={() => setShowDeleteConfirm(false)}
                 disabled={deletePostMutation.isPending}
-                className="flex-1 py-2.5 px-4 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 transition-colors disabled:opacity-50"
+                className="flex-1 py-2.5 px-4 bg-[#1a1a2f] text-cyan-400/80 border border-cyan-500/20 rounded font-medium hover:bg-[#0f0f1f] hover:border-cyan-500/40 transition-colors disabled:opacity-50 font-mono"
               >
-                Cancel
+                CANCEL
               </button>
               <button
                 type="button"
                 onClick={() => deletePostMutation.mutate()}
                 disabled={deletePostMutation.isPending}
-                className="flex-1 py-2.5 px-4 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-1 py-2.5 px-4 bg-red-600/90 text-white rounded font-medium hover:bg-red-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-mono font-bold"
               >
                 {deletePostMutation.isPending ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>Deleting...</span>
+                    <span>DELETING...</span>
                   </>
                 ) : (
                   <>
                     <Trash2 size={16} />
-                    <span>Delete</span>
+                    <span>DELETE</span>
                   </>
                 )}
               </button>
@@ -391,25 +391,25 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onTagClick, currentUse
         onTagClick={onTagClick}
       />
 
-      {/* Post Actions - Twitter/Mixi style */}
-      <div className="px-4 sm:px-5 py-3 sm:py-4 border-t border-slate-100 bg-gradient-to-r from-slate-50 via-blue-50/30 to-purple-50/20">
+      {/* Post Actions - Cyberpunk style */}
+      <div className="px-4 sm:px-5 py-3 sm:py-4 border-t border-cyan-500/25 bg-[#252540]">
         <div className="flex items-center gap-4 sm:gap-8">
           {/* Like Button */}
           <button
             onClick={handleLike}
             disabled={likeMutation.isPending}
-            className={`flex items-center gap-1.5 sm:gap-2 transition-all group px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg ${
+            className={`flex items-center gap-1.5 sm:gap-2 transition-all group px-2 sm:px-3 py-1 sm:py-1.5 rounded font-mono border ${
               post.liked
-                ? "text-red-500 bg-red-50 hover:bg-red-100"
-                : "text-slate-600 hover:text-red-500 hover:bg-red-50/50"
+                ? "text-red-300 bg-red-900/15 border-red-500/25"
+                : "text-cyan-400/70 hover:text-red-300 hover:bg-red-900/10 border-transparent hover:border-red-500/20"
             } ${likeMutation.isPending ? "opacity-50 cursor-wait" : ""}`}
           >
             <Heart
               size={18}
               className={`sm:w-5 sm:h-5 transition-all ${
                 post.liked
-                  ? "fill-red-500 stroke-red-500"
-                  : "group-hover:fill-red-500 group-hover:stroke-red-500"
+                  ? "fill-red-300 stroke-red-300"
+                  : "group-hover:fill-red-300 group-hover:stroke-red-300"
               } ${likeMutation.isPending ? "animate-pulse" : ""}`}
             />
             <span className="text-xs sm:text-sm font-semibold">
@@ -420,18 +420,18 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onTagClick, currentUse
           {/* Comment Button */}
           <button
             onClick={() => setShowComments(!showComments)}
-            className={`flex items-center gap-1.5 sm:gap-2 transition-all group px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg ${
+            className={`flex items-center gap-1.5 sm:gap-2 transition-all group px-2 sm:px-3 py-1 sm:py-1.5 rounded font-mono border ${
               showComments
-                ? "text-blue-600 bg-blue-50"
-                : "text-slate-600 hover:text-blue-600 hover:bg-blue-50/50"
+                ? "text-cyan-300 bg-cyan-900/15 border-cyan-500/25"
+                : "text-cyan-400/70 hover:text-cyan-300 hover:bg-cyan-900/10 border-transparent hover:border-cyan-500/20"
             }`}
           >
             <MessageSquare
               size={18}
               className={`sm:w-5 sm:h-5 transition-colors ${
                 showComments
-                  ? "stroke-blue-600 fill-blue-100"
-                  : "group-hover:stroke-blue-600"
+                  ? "stroke-cyan-300"
+                  : "group-hover:stroke-cyan-300"
               }`}
             />
             <span className="text-xs sm:text-sm font-semibold">
@@ -449,28 +449,28 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onTagClick, currentUse
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="mt-4 pt-4 border-t border-slate-200 overflow-hidden"
+              className="mt-4 pt-4 border-t border-cyan-500/25 overflow-hidden"
             >
               {/* Comment Form */}
               <form onSubmit={handleAddComment} className="mb-4">
                 <div className="flex gap-2 items-center">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-purple-400 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-400/90 to-fuchsia-400/90 flex items-center justify-center text-black text-xs font-bold flex-shrink-0 border border-cyan-500/30 font-mono">
                     U
                   </div>
                   <input
                     type="text"
                     value={commentText}
                     onChange={(e) => setCommentText(e.target.value)}
-                    placeholder="Add a comment..."
-                    className="flex-1 px-4 py-2.5 bg-white rounded-xl border-2 border-slate-200 focus:ring-2 focus:ring-blue-200 focus:border-blue-400 text-slate-700 placeholder:text-slate-400 text-sm"
+                    placeholder="ADD A COMMENT..."
+                    className="flex-1 px-4 py-2.5 bg-[#252540] rounded border border-cyan-500/25 focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/40 text-cyan-300 placeholder:text-cyan-400/60 text-sm font-mono transition-all"
                   />
                   <button
                     type="submit"
                     disabled={!commentText.trim() || addCommentMutation.isPending}
-                    className="px-4 py-2.5 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl hover:from-blue-600 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg flex items-center gap-1"
+                    className="px-4 py-2.5 bg-gradient-to-r from-cyan-500/95 to-fuchsia-500/95 text-black rounded hover:from-cyan-400 hover:to-fuchsia-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-1 font-mono font-bold"
                   >
                     <Send size={16} />
-                    <span className="text-xs font-medium">Send</span>
+                    <span className="text-xs font-medium">SEND</span>
                   </button>
                 </div>
               </form>
@@ -478,8 +478,8 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onTagClick, currentUse
               {/* Comments List */}
               <div className="space-y-3 max-h-80 overflow-y-auto pr-2">
                 {comments.length === 0 ? (
-                  <div className="text-center py-6 text-sm text-slate-400 bg-slate-50 rounded-lg border border-slate-100">
-                    No comments yet
+                  <div className="text-center py-6 text-sm text-cyan-400/60 bg-[#1a1a2e] rounded-lg border border-cyan-500/25 font-mono">
+                    NO COMMENTS YET
                   </div>
                 ) : (
                   comments.map((comment) => (
@@ -487,17 +487,17 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onTagClick, currentUse
                       key={comment.id}
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
-                      className="bg-gradient-to-r from-white to-blue-50/30 rounded-xl p-4 border border-slate-200 shadow-sm hover:shadow-md transition-shadow"
+                      className="bg-[#252540] rounded-lg p-4 border border-cyan-500/25 hover:border-cyan-500/35 transition-all"
                     >
                       <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-purple-400 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-sm">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-400/90 to-fuchsia-400/90 flex items-center justify-center text-black text-xs font-bold flex-shrink-0 border border-cyan-500/30 font-mono">
                           {comment.username ? comment.username.slice(0, 1).toUpperCase() : comment.authorId.slice(0, 1).toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-xs text-slate-500 mb-1.5 font-medium">
-                            {comment.username || `User_${comment.authorId.slice(0, 8)}`}
+                          <div className="text-xs text-cyan-300 mb-1.5 font-medium font-mono">
+                            {comment.username || `USER_${comment.authorId.slice(0, 8)}`}
                           </div>
-                          <p className="text-sm text-slate-700 leading-relaxed break-words">
+                          <p className="text-sm text-cyan-200 leading-relaxed break-words">
                             {comment.text}
                           </p>
                         </div>

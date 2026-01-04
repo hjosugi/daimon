@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query"
-import { Loader2, Search, X, Tag as TagIcon, ArrowLeft } from "lucide-react"
+import { Loader2, Search, X, Hash, ChevronDown, ChevronUp } from "lucide-react"
 import { useState, useEffect } from "react"
 import { searchPosts, getCurrentUser, type User } from "../api/client"
-import { PostCard } from "./PostCard"
+import { SearchPostCard } from "./SearchPostCard"
 import type React from "react"
 
 interface SearchPageProps {
@@ -15,6 +15,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialTags = [], onTags
   const [searchQuery, setSearchQuery] = useState<string>("")
   const [searchTags, setSearchTags] = useState<string[]>(initialTags)
   const [searchTagInput, setSearchTagInput] = useState<string>("")
+  const [showPOVSearch, setShowPOVSearch] = useState<boolean>(false)
   const [currentUser, setCurrentUser] = useState<User | null>(null)
 
   // Get current user
@@ -55,10 +56,8 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialTags = [], onTags
   })
 
   const handleSearchTagAdd = () => {
-    // Allow spaces in POV names, only trim leading/trailing spaces
     const trimmed = searchTagInput.trim()
     if (!trimmed || searchTags.includes(trimmed)) return
-    // Validate POV length (max 300 characters)
     if (trimmed.length > 300) {
       alert("POV must be 300 characters or less")
       return
@@ -78,173 +77,168 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialTags = [], onTags
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      <div className="max-w-2xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
-        {/* Back Button */}
-        {onBack && (
-          <button
-            onClick={onBack}
-            className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors mb-4"
-          >
-            <ArrowLeft size={18} />
-            <span className="text-sm font-medium">Back to Timeline</span>
-          </button>
-        )}
-        {/* Search Bar */}
-        <div className="bg-white rounded-xl sm:rounded-2xl shadow-md border border-slate-200/50 overflow-hidden sticky top-2 sm:top-4 z-10">
-          <div className="p-3 sm:p-4 border-b border-slate-100 bg-gradient-to-r from-blue-50/50 to-purple-50/50">
-            <div className="flex items-center gap-2">
-              <Search size={18} className="sm:w-5 sm:h-5 text-blue-600" />
-              <h2 className="text-base sm:text-lg font-semibold text-slate-700">Search</h2>
-              {(searchQuery.trim() || searchTags.length > 0) && (
-                <button
-                  onClick={clearSearch}
-                  className="ml-auto text-xs sm:text-sm text-slate-500 hover:text-slate-700 px-2 sm:px-3 py-1 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-1"
-                >
-                  <X size={14} className="sm:w-4 sm:h-4" />
-                  <span className="hidden sm:inline">Clear</span>
-                </button>
-              )}
-            </div>
-          </div>
-          <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
-            {/* Search Query Input */}
+    <div className="min-h-screen bg-[#0f0f1a]">
+      <div className="max-w-2xl mx-auto px-3 sm:px-4 py-3 sm:py-4 space-y-2">
+        {/* Simple Search Input - Cyberpunk style */}
+        <div className="bg-[#1a1a2e] rounded border border-cyan-500/25">
+          <div className="p-3 space-y-2">
+            {/* Text Search */}
             <div className="relative">
-              <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-cyan-400/60" size={16} />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => {
-                  // Enter to search
                   if (e.key === "Enter") {
                     e.preventDefault()
-                    // The query will be automatically executed by useQuery when searchQuery changes
                   }
                 }}
-                placeholder="Search posts... (Press Enter to search)"
-                className="w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 bg-slate-50 rounded-lg sm:rounded-xl border-2 border-slate-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 text-slate-700 placeholder:text-slate-400 text-sm sm:text-base"
+                placeholder="SEARCH POSTS..."
+                className="w-full pl-9 pr-3 py-2 bg-[#252540] rounded border border-cyan-500/25 focus:border-cyan-500/45 focus:ring-1 focus:ring-cyan-500/30 text-cyan-300 placeholder:text-cyan-400/60 text-sm font-mono transition-all"
                 autoFocus
               />
+              {(searchQuery.trim() || searchTags.length > 0) && (
+                <button
+                  onClick={clearSearch}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-cyan-400/60 hover:text-red-300 p-1 transition-colors"
+                >
+                  <X size={14} />
+                </button>
+              )}
             </div>
 
-            {/* POV Search */}
-            <div>
-              <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-2 sm:mb-3">
-                Search by POVs
-              </label>
-              <div className="flex gap-2 items-center">
-                <TagIcon className="text-slate-400 flex-shrink-0" size={16} />
-                <input
-                  type="text"
-                  value={searchTagInput}
-                  maxLength={300}
-                  onChange={(e) => {
-                    let value = e.target.value
-                    if (value.startsWith("#")) {
-                      value = value.slice(1)
-                    }
-                    // Limit to 300 characters
-                    if (value.length > 300) {
-                      value = value.slice(0, 300)
-                    }
-                    setSearchTagInput(value)
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault()
-                      handleSearchTagAdd()
-                    }
-                  }}
-                  placeholder="Enter POV and press Enter (max 300 chars)"
-                  className="flex-1 px-3 sm:px-4 py-2 sm:py-2.5 bg-slate-50 rounded-lg border border-slate-200 focus:ring-2 focus:ring-blue-200 focus:border-blue-300 text-slate-700 placeholder:text-slate-400 text-sm"
-                />
-                <button
-                  type="button"
-                  onClick={handleSearchTagAdd}
-                  disabled={!searchTagInput.trim()}
-                  className="px-4 sm:px-5 py-2 sm:py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs sm:text-sm font-medium"
-                >
-                  Add
-                </button>
-              </div>
+            {/* POV Search Toggle */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowPOVSearch(!showPOVSearch)}
+                className="flex items-center gap-1.5 px-2 py-1 text-xs font-mono text-fuchsia-300 hover:text-fuchsia-300 hover:bg-fuchsia-900/15 border border-fuchsia-500/25 hover:border-fuchsia-500/40 rounded transition-colors"
+              >
+                <Hash size={12} />
+                <span>POV</span>
+                {showPOVSearch ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+              </button>
+              
+              {/* Active search tags */}
               {searchTags.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2 sm:mt-3">
+                <div className="flex flex-wrap gap-1 flex-1">
                   {searchTags.map((tag) => (
                     <span
                       key={tag}
-                      className="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-blue-50 text-blue-600 rounded-full text-xs sm:text-sm font-medium flex items-center gap-1.5 sm:gap-2"
+                      className="px-1.5 py-0.5 bg-fuchsia-900/25 text-fuchsia-300 rounded text-[10px] font-mono flex items-center gap-0.5 border border-fuchsia-500/30"
                     >
-                      #{tag}
+                      #{tag.length > 12 ? `${tag.slice(0, 12)}...` : tag}
                       <button
                         type="button"
                         onClick={() => handleSearchTagRemove(tag)}
-                        className="hover:bg-blue-100 rounded-full p-0.5 transition-colors"
+                        className="hover:bg-fuchsia-900/35 rounded p-0.5 transition-colors"
                       >
-                        <X size={12} className="sm:w-3.5 sm:h-3.5" />
+                        <X size={9} />
                       </button>
                     </span>
                   ))}
                 </div>
               )}
             </div>
+
+            {/* POV Input (collapsible) */}
+            {showPOVSearch && (
+              <div className="pt-1 border-t border-fuchsia-500/20">
+                <div className="flex gap-1.5 items-center">
+                  <Hash className="text-fuchsia-300 flex-shrink-0" size={12} />
+                  <input
+                    type="text"
+                    value={searchTagInput}
+                    maxLength={300}
+                    onChange={(e) => {
+                      let value = e.target.value
+                      if (value.startsWith("#")) {
+                        value = value.slice(1)
+                      }
+                      if (value.length > 300) {
+                        value = value.slice(0, 300)
+                      }
+                      setSearchTagInput(value)
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault()
+                        handleSearchTagAdd()
+                      }
+                    }}
+                    placeholder="ENTER POV (ENTER TO ADD)"
+                    className="flex-1 px-2 py-1.5 bg-[#252540] rounded border border-fuchsia-500/25 focus:ring-1 focus:ring-fuchsia-500/30 focus:border-fuchsia-500/40 text-fuchsia-300 placeholder:text-fuchsia-400/60 text-xs font-mono transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSearchTagAdd}
+                    disabled={!searchTagInput.trim()}
+                    className="px-2 py-1.5 bg-fuchsia-500/90 text-black rounded hover:bg-fuchsia-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-xs font-mono font-bold"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Search Results */}
-        <div className="space-y-4">
+        <div className="space-y-2">
           {searchQuery.trim() || searchTags.length > 0 ? (
             <>
               {(searchQuery.trim() || searchTags.length > 0) && (
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                  <div className="flex items-center gap-2 text-sm text-blue-700">
-                    <Search size={16} />
-                    <span className="font-medium">
+                <div className="bg-[#1a1a2e] border border-cyan-500/25 rounded p-2">
+                  <div className="flex items-center gap-1.5 text-xs font-mono text-cyan-300">
+                    <Search size={12} />
+                    <span>
                       {searchQuery.trim() && `"${searchQuery}"`}
                       {searchTags.length > 0 && ` #${searchTags.join(" #")}`}
-                      {searchQuery.trim() || searchTags.length > 0 ? " search results" : ""}
+                      {posts.length > 0 && ` → ${posts.length} RESULTS`}
                     </span>
                   </div>
                 </div>
               )}
               {isLoading ? (
-                <div className="flex justify-center p-12 text-slate-400">
+                <div className="flex justify-center p-12 text-cyan-300">
                   <Loader2 size={32} className="animate-spin" />
                 </div>
               ) : isError ? (
-                <div className="text-center py-12 text-red-400">
-                  <p>Failed to load. Please try again.</p>
+                <div className="text-center py-12 text-red-300">
+                  <p className="font-mono">[ERROR] FAILED TO LOAD</p>
                 </div>
               ) : (
-                        <>
-                          {posts.map((post) => (
-                            <PostCard 
-                              key={post.id} 
-                              post={post}
-                              currentUser={currentUser}
-                              onTagClick={(tag) => {
-                                if (!searchTags.includes(tag)) {
-                                  setSearchTags((prev) => [...prev, tag])
-                                }
-                              }}
-                            />
-                          ))}
-                  {posts.length === 0 && (
-                    <div className="text-center py-16 text-slate-400">
-                      <Search size={48} className="mx-auto mb-4 opacity-50" />
-                      <p className="text-lg font-medium">No results found</p>
-                      <p className="text-sm mt-2">Try searching with different keywords or tags</p>
+                <>
+                  {posts.length > 0 ? (
+                    <div className="bg-[#1a1a2e] rounded border border-cyan-500/25 overflow-hidden">
+                      {posts.map((post) => (
+                        <SearchPostCard 
+                          key={post.id} 
+                          post={post}
+                          currentUser={currentUser}
+                          onTagClick={(tag) => {
+                            if (!searchTags.includes(tag)) {
+                              setSearchTags((prev) => [...prev, tag])
+                            }
+                          }}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 text-cyan-400/60">
+                      <div className="font-mono text-xs text-cyan-400/50 mb-2">[NO RESULTS]</div>
+                      <p className="text-sm text-cyan-300 font-mono">TRY DIFFERENT KEYWORDS OR TAGS</p>
                     </div>
                   )}
                 </>
               )}
             </>
           ) : (
-            <div className="text-center py-16 text-slate-400">
-              <Search size={64} className="mx-auto mb-6 opacity-30" />
-              <p className="text-xl font-medium text-slate-500">Start Searching</p>
-              <p className="text-sm mt-2 text-slate-400">
-                Search posts by keywords or POVs
+            <div className="text-center py-16 text-cyan-400/50">
+              <Search size={64} className="mx-auto mb-6 opacity-20" />
+              <p className="text-xl font-medium text-cyan-300 font-mono">START SEARCHING</p>
+              <p className="text-sm mt-2 text-cyan-400/60 font-mono">
+                SEARCH POSTS BY KEYWORDS OR POVS
               </p>
             </div>
           )}

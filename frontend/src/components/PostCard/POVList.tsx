@@ -34,15 +34,15 @@ export const POVList: React.FC<POVListProps> = ({
             <button
               type="button"
               onClick={() => onPOVClick?.(pov)}
-              className={`px-3 py-1 rounded-full text-sm font-medium transition-all cursor-pointer border active:scale-95 flex items-center gap-1.5 ${
+              className={`px-2 py-1 rounded text-xs font-mono transition-all cursor-pointer border active:scale-95 flex items-center gap-1 ${
                 isAutoTag
-                  ? "bg-gradient-to-r from-purple-50 to-pink-50 text-purple-600 hover:from-purple-100 hover:to-pink-100 border-purple-200"
-                  : "bg-gradient-to-r from-blue-50 to-purple-50 text-blue-600 hover:from-blue-100 hover:to-purple-100 border-blue-100"
+                  ? "bg-fuchsia-900/25 text-fuchsia-300 hover:bg-fuchsia-900/35 border-fuchsia-500/30 hover:border-fuchsia-500/45"
+                  : "bg-cyan-900/25 text-cyan-300 hover:bg-cyan-900/35 border-cyan-500/30 hover:border-cyan-500/45"
               }`}
               title={isAutoTag ? "Auto-generated POV" : "Manual POV"}
             >
               {isAutoTag && (
-                <Sparkles size={12} className="text-purple-500" />
+                <Sparkles size={10} className="text-fuchsia-400/80" />
               )}
               <span>#{pov}</span>
             </button>
@@ -50,21 +50,21 @@ export const POVList: React.FC<POVListProps> = ({
               <button
                 type="button"
                 onClick={(e) => onPOVLike?.(e, pov)}
-                className={`p-1 rounded-full transition-all active:scale-95 ${
+                className={`p-1 rounded transition-all active:scale-95 border border-transparent ${
                   povLikeStatus.liked
-                    ? "text-red-500 hover:text-red-600 hover:bg-red-50"
-                    : "text-slate-400 hover:text-red-500 hover:bg-red-50"
+                    ? "text-red-300 hover:text-red-300 hover:bg-red-900/15 hover:border-red-500/25"
+                    : "text-cyan-400/60 hover:text-red-300 hover:bg-red-900/10 hover:border-red-500/20"
                 }`}
                 title={povLikeStatus.liked ? "Unlike this POV" : "Like this POV"}
               >
                 <Heart
-                  size={14}
+                  size={12}
                   className={povLikeStatus.liked ? "fill-current" : ""}
                 />
               </button>
             )}
             {povLikeStatus.likes > 0 && (
-              <span className="text-xs text-slate-500 ml-0.5">
+              <span className="text-xs text-cyan-400/70 ml-0.5 font-mono">
                 {povLikeStatus.likes}
               </span>
             )}

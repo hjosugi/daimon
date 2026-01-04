@@ -5,10 +5,29 @@
     box-sizing: border-box;
   }
   
-body {
+  body {
     margin: 0;
-    background-color: rgb(248 250 252);
-    color: rgb(15 23 42);
-    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+    background: #0f0f1a;
+    background-image: 
+      radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.06) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(255, 0, 255, 0.06) 0%, transparent 50%),
+      linear-gradient(135deg, #0f0f1a 0%, #1a0f2a 100%);
+    color: #7dd3fc;
+    font-family: 'Courier New', 'Monaco', 'Menlo', monospace;
+    min-height: 100vh;
+  }
+
+  /* Cyberpunk glow effects - subtle */
+  @keyframes scanline {
+    0% {
+      transform: translateY(-100%);
+    }
+    100% {
+      transform: translateY(100vh);
+    }
+  }
+
+  .cyber-glow {
+    text-shadow: 0 0 2px currentColor;
   }
 }
