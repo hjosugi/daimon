@@ -57,16 +57,17 @@ logger.info(f"CORS origins: {origins} (environment: {environment})")
     
 #     app.add_middleware(CORSDebugMiddleware)
 
-# CORS
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=origins,
-#     allow_credentials=True,
-#     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
-#     allow_headers=["*"],
-#     expose_headers=["*"],
-#     max_age=3600,  # Cache preflight requests for 1 hour
-# )
+# CORS - Temporarily disabled (allow all origins)
+# TODO: Re-enable proper CORS configuration for production
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins (temporary)
+    allow_credentials=False,  # Must be False when allow_origins=["*"]
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600,  # Cache preflight requests for 1 hour
+)
 
 @app.get("/health")
 def health_check():
