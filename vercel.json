@@ -1,7 +1,7 @@
 {
-  "buildCommand": "npm run build",
+  "buildCommand": "pnpm run build",
   "outputDirectory": "frontend/dist",
-  "installCommand": "cd frontend && npm install",
+  "installCommand": "cd frontend && pnpm install",
   "framework": "vite",
   "ignoreCommand": "git diff HEAD^ HEAD --quiet -- ./frontend"
 }
