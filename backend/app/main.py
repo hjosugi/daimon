@@ -43,21 +43,24 @@ else:
 
 logger.info(f"CORS origins: {origins} (environment: {environment})")
 
-# Add logging middleware for CORS debugging
+# Add logging middleware for CORS debugging (added first, so runs last)
 class CORSDebugMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         if request.method == "OPTIONS":
             origin = request.headers.get("origin")
             logger.info(f"OPTIONS preflight request - Origin: {origin}, Path: {request.url.path}, Allowed origins: {origins if origins != ['*'] else 'ALL'}")
         response = await call_next(request)
-        if request.method == "OPTIONS":
-            logger.info(f"OPTIONS response status: {response.status_code}, Headers: {dict(response.headers)}")
+        # Log CORS headers in response
+        cors_headers = {k: v for k, v in response.headers.items() if k.lower().startswith('access-control')}
+        if cors_headers or request.method == "OPTIONS":
+            logger.info(f"{request.method} {request.url.path} - Status: {response.status_code}, CORS headers: {cors_headers}")
         return response
 
 app.add_middleware(CORSDebugMiddleware)
 
 # CORS - Temporarily disabled (allow all origins)
 # TODO: Re-enable proper CORS configuration for production
+# IMPORTANT: CORSMiddleware must be added LAST so it runs FIRST (middleware runs in reverse order)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Allow all origins (temporary)
