@@ -15,8 +15,7 @@ ENV UV_SYSTEM_PYTHON=1
 
 # Cache dependencies by copying requirements first
 COPY requirements.txt ./
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install --system -r requirements.txt
+RUN uv pip install --system -r requirements.txt
 
 COPY . .
 

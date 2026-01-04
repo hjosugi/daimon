@@ -9,17 +9,15 @@ steps:
     id: 'pull-cache'
 
   - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
     args:
-      - 'build'
-      - '--cache-from'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/daimon-api:latest'
-      - '--build-arg'
-      - 'BUILDKIT_INLINE_CACHE=1'
-      - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/daimon-api:${SHORT_SHA}'
-      - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/daimon-api:latest'
-      - '.'
+      - '-c'
+      - |
+        DOCKER_BUILDKIT=1 docker build \
+          --cache-from ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/daimon-api:latest \
+          -t ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/daimon-api:${SHORT_SHA} \
+          -t ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/daimon-api:latest \
+          .
     dir: 'backend'
     waitFor: ['pull-cache']
     timeout: '1200s'
