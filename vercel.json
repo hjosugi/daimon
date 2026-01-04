@@ -1,7 +1,10 @@
 {
   "buildCommand": "pnpm run build",
   "outputDirectory": "frontend/dist",
-  "installCommand": "cd frontend && npm install -g pnpm@9.15.0 && pnpm install --no-frozen-lockfile",
+  "installCommand": "cd frontend && corepack enable && corepack prepare pnpm@9.15.0 --activate && pnpm -v && pnpm install --no-frozen-lockfile",
   "framework": "vite",
-  "ignoreCommand": "git diff HEAD^ HEAD --quiet -- ./frontend"
+  "ignoreCommand": "git diff HEAD^ HEAD --quiet -- ./frontend",
+  "env": {
+    "ENABLE_EXPERIMENTAL_COREPACK": "1"
+  }
 }
