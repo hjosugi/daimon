@@ -232,14 +232,38 @@ async def startup_event():
     logger.info("Application startup - initializing services...")
     try:
         # Test database connection
-        from app.database import get_db
+        from app.database import get_db, DATABASE_URL
         from sqlalchemy import text
+        from urllib.parse import urlparse
+        
+        # Log database connection info (without password)
+        try:
+            parsed = urlparse(DATABASE_URL)
+            db_info = f"{parsed.scheme}://{parsed.username}:***@{parsed.hostname}:{parsed.port or 5432}{parsed.path}"
+            logger.info(f"Connecting to database: {db_info}")
+        except Exception:
+            logger.warning("Could not parse DATABASE_URL for logging")
+        
         db = next(get_db())
         try:
             db.execute(text("SELECT 1"))
             logger.info("Database connection successful")
         except Exception as db_error:
-            logger.error(f"Database connection failed during startup: {db_error}", exc_info=True)
+            error_msg = str(db_error)
+            # Provide helpful error messages
+            if "no password supplied" in error_msg.lower():
+                logger.error(
+                    "Database connection failed: Password missing in DATABASE_URL. "
+                    "Please verify Secret Manager configuration. "
+                    "Expected format: postgresql://user:password@host:port/database"
+                )
+            elif "connection refused" in error_msg.lower():
+                logger.error(
+                    f"Database connection failed: Connection refused. "
+                    f"Please verify database host and port are correct."
+                )
+            else:
+                logger.error(f"Database connection failed during startup: {db_error}", exc_info=True)
         finally:
             db.close()
         

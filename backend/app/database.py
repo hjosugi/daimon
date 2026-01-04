@@ -2,6 +2,8 @@
 Database connection and models using SQLAlchemy
 """
 import os
+import logging
+from urllib.parse import urlparse
 from sqlalchemy import create_engine, Column, String, Text, ARRAY, DateTime, ForeignKey, Integer, Boolean, UniqueConstraint, Index
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
@@ -9,10 +11,43 @@ from datetime import datetime
 from typing import List
 import uuid
 
+logger = logging.getLogger("daimon")
+
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
     "postgresql://daimon:daimon@localhost:5432/daimon"
 )
+
+# Validate DATABASE_URL format
+def validate_database_url(url: str) -> bool:
+    """Validate that DATABASE_URL contains password"""
+    try:
+        parsed = urlparse(url)
+        # Check if password is present (netloc format: user:password@host:port)
+        if parsed.netloc:
+            parts = parsed.netloc.split('@')
+            if len(parts) == 2:
+                auth = parts[0]
+                if ':' in auth:
+                    user, password = auth.split(':', 1)
+                    if password:
+                        return True
+        logger.error(
+            f"DATABASE_URL validation failed: password missing. "
+            f"Expected format: postgresql://user:password@host:port/database. "
+            f"Host: {parsed.hostname or 'unknown'}"
+        )
+        return False
+    except Exception as e:
+        logger.error(f"DATABASE_URL validation error: {e}")
+        return False
+
+if not validate_database_url(DATABASE_URL):
+    logger.warning(
+        "DATABASE_URL appears to be missing password. "
+        "Connection attempts may fail. "
+        "Please verify Secret Manager configuration."
+    )
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

@@ -282,6 +282,30 @@ gcloud run services update daimon-api \
   --region [REGION]
 ```
 
+**Step 5: Verify and Update Secrets (Troubleshooting)**
+
+If you encounter "no password supplied" errors, verify and update the secret:
+
+```bash
+# View current secret value (without password)
+gcloud secrets versions access latest --secret="database-url" | sed 's/:[^@]*@/:***@/'
+
+# Update secret with correct DATABASE_URL format
+# Format: postgresql://postgres:[PASSWORD]@[PROJECT].supabase.co:5432/postgres
+echo -n "postgresql://postgres:[YOUR-PASSWORD]@[YOUR-PROJECT].supabase.co:5432/postgres" | \
+  gcloud secrets versions add database-url --data-file=-
+
+# Verify the secret is accessible by Cloud Run service account
+PROJECT_NUMBER=$(gcloud projects describe $(gcloud config get-value project) --format="value(projectNumber)")
+SERVICE_ACCOUNT="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+gcloud secrets get-iam-policy database-url | grep "${SERVICE_ACCOUNT}"
+```
+
+**Important Notes:**
+- The `DATABASE_URL` must include the password in the format: `postgresql://user:password@host:port/database`
+- Special characters in passwords should be URL-encoded (e.g., `@` becomes `%40`, `#` becomes `%23`)
+- After updating the secret, Cloud Run will automatically use the new version on the next request (no redeployment needed)
+
 #### 3.5.2 Using Cloud Build Trigger Substitution Variables
 
 If using Cloud Build Trigger for continuous deployment, set substitution variables:
