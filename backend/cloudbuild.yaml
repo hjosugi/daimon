@@ -43,7 +43,7 @@ steps:
       - '${_REGION}'
       - '--allow-unauthenticated'
       - '--memory'
-      - '2Gi'
+      - '1Gi'
       - '--cpu'
       - '1'
       - '--min-instances'
@@ -66,7 +66,7 @@ substitutions:
 
 options:
   logging: CLOUD_LOGGING_ONLY
-  machineType: 'E2_STANDARD_2'
+  machineType: 'E2_STANDARD_4'
   substitution_option: 'ALLOW_LOOSE'
   diskSizeGb: 10
   timeout: '1800s'
