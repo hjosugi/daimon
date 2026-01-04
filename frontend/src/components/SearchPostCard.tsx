@@ -11,7 +11,7 @@ interface SearchPostCardProps {
   currentUser?: User | null
 }
 
-export const SearchPostCard: React.FC<SearchPostCardProps> = ({ post, onTagClick, currentUser }) => {
+export const SearchPostCard: React.FC<SearchPostCardProps> = ({ post, onTagClick }) => {
   const queryClient = useQueryClient()
 
   const likeMutation = useMutation({

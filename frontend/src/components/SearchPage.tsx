@@ -11,7 +11,7 @@ interface SearchPageProps {
   onBack?: () => void
 }
 
-export const SearchPage: React.FC<SearchPageProps> = ({ initialTags = [], onTagsChange, onBack }) => {
+export const SearchPage: React.FC<SearchPageProps> = ({ initialTags = [], onTagsChange }) => {
   const [searchQuery, setSearchQuery] = useState<string>("")
   const [searchTags, setSearchTags] = useState<string[]>(initialTags)
   const [searchTagInput, setSearchTagInput] = useState<string>("")
