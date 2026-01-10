@@ -15,5 +15,5 @@ dependencies = [
     "psycopg2-binary==2.9.9",
     "spacy==3.7.2",
     "bcrypt==4.1.2",
-    "alembic==1.13.1",
+    "alembic==1.18.0",
 ]
