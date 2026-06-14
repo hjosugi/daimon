@@ -1,10 +1,7 @@
 {
   "buildCommand": "pnpm run build",
   "outputDirectory": "frontend/dist",
-  "installCommand": "cd frontend && corepack enable && corepack prepare pnpm@9.15.0 --activate && pnpm -v && pnpm install --no-frozen-lockfile",
+  "installCommand": "npm install -g pnpm@9.15.0 && cd frontend && pnpm install --no-frozen-lockfile",
   "framework": "vite",
-  "ignoreCommand": "git diff HEAD^ HEAD --quiet -- ./frontend",
-  "env": {
-    "ENABLE_EXPERIMENTAL_COREPACK": "1"
-  }
+  "ignoreCommand": "git diff HEAD^ HEAD --quiet -- ./frontend ./vercel.json ./package.json"
 }
