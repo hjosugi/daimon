@@ -7,6 +7,11 @@ QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
 QDRANT_PORT = int(os.getenv("QDRANT_PORT", 6333))
 QDRANT_URL = os.getenv("QDRANT_URL")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
+# Run WITHOUT a Qdrant server (qdrant-client has a built-in local mode):
+#   QDRANT_PATH=./qdrant_local  -> on-disk, persists across restarts
+#   QDRANT_LOCAL=1 (or "memory") -> in-memory, ephemeral (great for tests)
+QDRANT_PATH = os.getenv("QDRANT_PATH")
+QDRANT_LOCAL = os.getenv("QDRANT_LOCAL")
 COLLECTION_NAME = "posts"
 VECTOR_SIZE = 384
 
@@ -19,11 +24,16 @@ class QdrantService:
     def client(self):
         if self._client is None:
             if QDRANT_URL:
-                self._client = QdrantClient(
-                    url=QDRANT_URL,
-                    api_key=QDRANT_API_KEY,
-                )
+                # Managed / remote Qdrant (e.g. Qdrant Cloud)
+                self._client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
+            elif QDRANT_PATH:
+                # No server: embedded on-disk mode (persists)
+                self._client = QdrantClient(path=QDRANT_PATH)
+            elif QDRANT_LOCAL:
+                # No server: in-memory mode (ephemeral)
+                self._client = QdrantClient(location=":memory:")
             else:
+                # Local/remote Qdrant server over HTTP
                 self._client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
             if not self._initialized:
                 self._ensure_collection()

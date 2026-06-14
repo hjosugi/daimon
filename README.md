@@ -25,6 +25,33 @@ docker compose up -d
 ```
 *Check logs: `docker compose logs -f`*
 
+#### No Qdrant server? (embedded / local mode)
+
+`qdrant-client` ships a built-in **local mode** (pure Python, no server), so you
+can run vector search without the Qdrant container — handy for constrained
+environments, CI, or quick demos. Set one env var:
+
+```bash
+# On-disk (persists across restarts):
+QDRANT_PATH=qdrant_local   ./.venv/bin/uvicorn app.main:app --reload --port 8000
+# In-memory (ephemeral, e.g. for tests):
+QDRANT_LOCAL=1             ./.venv/bin/uvicorn app.main:app --reload --port 8000
+```
+
+Or via make (starts Postgres only — no Qdrant container needed):
+
+```bash
+make infra-db                              # Postgres only
+make seed QDRANT_PATH=qdrant_local         # seed into the local store, then...
+make dev  QDRANT_PATH=qdrant_local         # ...run the app against it
+```
+
+Notes:
+- Local mode is brute-force (no Rust HNSW) — great up to ~100k vectors, not millions.
+- The on-disk store is single-process: seed first (let it exit), then run `dev`
+  (don't open the same `QDRANT_PATH` from two processes at once).
+- Production / large scale still uses a real Qdrant server (`QDRANT_URL`).
+
 ### 2. Backend Setup
 
 **For bash/zsh:**
@@ -123,6 +150,47 @@ alembic upgrade head
 ```
 
 See `backend/alembic/README.md` for details.
+
+### 3.5 Seed Test Data (optional)
+
+Populate the database + Qdrant with realistic test data so the timeline and
+Sense-Distance ranking have something to work with. All seeded accounts use
+`@example.com` emails and the password `password123`.
+
+```bash
+# From repo root (infra must be up; `make seed` brings it up + migrates first):
+make seed                       # ~300 users + 12,000 posts (real embeddings)
+make seed ARGS="--posts 50000"  # bigger
+make seed ARGS="--fresh"        # wipe existing test data first
+
+# High-volume SCALE testing (synthetic vectors, skips the embedding model):
+make seed-large                 # 1,000,000 posts with --fake-vectors
+```
+
+Or run the script directly for full control:
+
+```bash
+cd backend
+./.venv/bin/python seed.py --posts 12000 --users 300        # real embeddings
+./.venv/bin/python seed.py --posts 1000000 --fake-vectors   # synthetic, fast
+./.venv/bin/python seed.py --fresh --no-likes --no-comments
+```
+
+**How many is realistic?** Real embeddings are encoded by `all-MiniLM-L6-v2`
+at roughly **300–400 texts/sec on an 8-core CPU**, so:
+
+| Posts | Real embeddings (CPU) | Notes |
+|------:|----------------------|-------|
+| 10k   | ~30 sec              | great for UX / ranking demo |
+| 100k  | ~5 min               | comfortable |
+| 1M    | ~45–60 min           | practical local ceiling (CPU) |
+| 10M+  | hours → use a GPU    | or `--fake-vectors` |
+| 100M  | not local            | needs GPU fleet + sharded/managed Qdrant |
+
+For anything past ~1M, use `--fake-vectors` (synthetic clustered vectors, no
+model) to stress the Qdrant search path, or move encoding to a GPU.
+
+Login with any seeded account, e.g. `seeduser1@example.com` / `password123`.
 
 ### 4. Frontend Setup
 ```bash

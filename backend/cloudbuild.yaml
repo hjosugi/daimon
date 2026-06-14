@@ -54,7 +54,7 @@ steps:
       - '300'
       - '--startup-cpu-boost'
       - '--set-secrets'
-      - 'DATABASE_URL=database-url:latest'
+      - 'DATABASE_URL=database-url:latest,QDRANT_API_KEY=qdrant-api-key:latest'
       - '--set-env-vars'
       - 'QDRANT_URL=${_QDRANT_URL},CORS_ORIGINS=${_CORS_ORIGINS}'
 

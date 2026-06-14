@@ -17,6 +17,16 @@ ENV UV_SYSTEM_PYTHON=1
 COPY requirements.txt ./
 RUN uv pip install --system -r requirements.txt
 
+# Pre-bake the ML models into the image so vector search and POV generation
+# work in production on the FIRST request — no runtime download from
+# HuggingFace / spaCy, faster cold starts, and no dependency on those hosts
+# being reachable from Cloud Run. The same cache dirs are used at runtime.
+ENV HF_HOME=/opt/models/hf
+ENV SENTENCE_TRANSFORMERS_HOME=/opt/models/st
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')" \
+    && python -m spacy download ja_core_news_sm \
+    && python -m spacy download en_core_web_sm
+
 COPY . .
 
 EXPOSE 8080

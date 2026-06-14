@@ -27,7 +27,13 @@ COMPOSE := $(shell \
 # Resolve pnpm even when its mise shim isn't on the (non-interactive) PATH yet.
 PNPM := $(shell command -v pnpm >/dev/null 2>&1 && echo pnpm || echo "mise exec -- pnpm")
 
-.PHONY: all setup infra wait-db backend backend-ensure frontend frontend-ensure ensure-pnpm migrate dev down clean
+# Run WITHOUT a Qdrant server: pass QDRANT_PATH (on-disk) or QDRANT_LOCAL=1
+# (in-memory) to any target, e.g.  `make dev QDRANT_PATH=qdrant_local`.
+# Exported so the backend/seed processes inherit it.
+export QDRANT_PATH ?=
+export QDRANT_LOCAL ?=
+
+.PHONY: all setup infra infra-db wait-db backend backend-ensure frontend frontend-ensure ensure-pnpm migrate seed seed-large dev down clean
 
 # All-in-one. Installs deps only if missing, so it's safe to run every day.
 all: infra wait-db backend-ensure frontend-ensure migrate dev
@@ -39,6 +45,11 @@ setup: infra wait-db backend frontend migrate
 infra:
 	@echo "Using compose provider: $(COMPOSE)"
 	$(COMPOSE) up -d
+
+# Start ONLY Postgres (for environments running Qdrant in local/embedded mode).
+infra-db:
+	@echo "Using compose provider: $(COMPOSE)"
+	$(COMPOSE) up -d db
 
 # Portable readiness check: wait for Postgres' published TCP port (no compose
 # exec, which differs between Docker and Podman).
@@ -67,6 +78,18 @@ frontend-ensure: ensure-pnpm
 # Apply DB migrations (needs Postgres up).
 migrate:
 	cd backend && ./.venv/bin/alembic upgrade head
+
+# Seed realistic test data: users (@example.com / password123) + ~12k posts
+# with real embeddings + POVs + likes/comments. Override count e.g.:
+#   make seed ARGS="--posts 50000"
+#   make seed ARGS="--fresh"
+seed: infra wait-db backend-ensure migrate
+	cd backend && ./.venv/bin/python seed.py $(ARGS)
+
+# Scale seed with SYNTHETIC vectors (no embedding model) — for load/latency
+# testing at high volume. Default 1,000,000 posts; override with ARGS.
+seed-large: infra wait-db backend-ensure migrate
+	cd backend && ./.venv/bin/python seed.py --posts 1000000 --fake-vectors --no-comments $(ARGS)
 
 # Provide pnpm at the pinned version. Prefer mise (this repo's toolchain),
 # then corepack, then a global npm install as a last resort.
