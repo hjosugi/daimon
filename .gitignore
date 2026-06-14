@@ -53,3 +53,14 @@ out/
 backend/.venv/
 backend/__pycache__/
 backend/**/__pycache__/
+
+# Operations runbook (contains infra-specific values — keep local)
+RUNBOOK.md
+*.local.md
+
+# Local Qdrant embedded-mode store
+qdrant_local/
+backend/qdrant_local/
+
+# Vercel CLI
+.vercel/

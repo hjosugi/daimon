@@ -19,6 +19,37 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U daimon -d daimon"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://daimon:daimon@db:5432/daimon
+      # Point at the bundled Qdrant container. To use Qdrant Cloud instead,
+      # set QDRANT_URL (+ QDRANT_API_KEY) in the environment and they win.
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: "6333"
+      QDRANT_URL: ${QDRANT_URL:-}
+      QDRANT_API_KEY: ${QDRANT_API_KEY:-}
+      PORT: "8000"
+      EMBEDDING_DEVICE: cpu
+      PYTHONUNBUFFERED: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+    volumes:
+      - ./backend:/app          # live code for --reload
+      - /app/.venv              # mask host venv (container uses system Python)
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    restart: unless-stopped
 
 volumes:
   qdrant_storage:

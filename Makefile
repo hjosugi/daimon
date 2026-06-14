@@ -33,7 +33,7 @@ PNPM := $(shell command -v pnpm >/dev/null 2>&1 && echo pnpm || echo "mise exec 
 export QDRANT_PATH ?=
 export QDRANT_LOCAL ?=
 
-.PHONY: all setup infra infra-db wait-db backend backend-ensure frontend frontend-ensure ensure-pnpm migrate seed seed-large dev down clean
+.PHONY: all setup infra infra-db wait-db backend backend-ensure frontend frontend-ensure ensure-pnpm migrate seed seed-large dev docker docker-logs docker-down web down clean
 
 # All-in-one. Installs deps only if missing, so it's safe to run every day.
 all: infra wait-db backend-ensure frontend-ensure migrate dev
@@ -106,6 +106,23 @@ dev:
 	  ( cd backend && ./.venv/bin/uvicorn app.main:app --reload --port 8000 ) & \
 	  ( cd frontend && $(PNPM) dev ) & \
 	  wait
+
+# Fully containerized backend: db + qdrant + backend all in Docker/Podman.
+# (Frontend stays on the host — run `make web` in another terminal.)
+docker:
+	$(COMPOSE) up -d --build
+	@echo "✅ db + qdrant + backend (:8000) are up. Logs: 'make docker-logs'."
+	@echo "   Start the UI with: make web   (frontend :5173)"
+
+docker-logs:
+	$(COMPOSE) logs -f backend
+
+docker-down:
+	$(COMPOSE) down
+
+# Frontend dev server only (use alongside `make docker`).
+web: frontend-ensure
+	cd frontend && $(PNPM) dev
 
 down:
 	$(COMPOSE) down
