@@ -1,6 +1,6 @@
 services:
   qdrant:
-    image: qdrant/qdrant:latest
+    image: docker.io/qdrant/qdrant:latest
     ports:
       - "6333:6333"
       - "6334:6334"
@@ -9,7 +9,7 @@ services:
     restart: always
 
   db:
-    image: postgres:15-alpine
+    image: docker.io/library/postgres:15-alpine
     ports:
       - "5432:5432"
     environment:

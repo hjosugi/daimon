@@ -36,6 +36,10 @@ export interface MatchReason {
   pov_match_rate?: number  // POV match rate (0.0 to 1.0)
   matched_by: "tag" | "both"  // Match type (TAG or BOTH)
   similar_to_user_posts?: SimilarUserPost[]  // User's posts that contributed to the POV match (max 3)
+  // Sense-Distance discovery ranking
+  reason?: string  // Human-readable "why this surfaced"
+  sense_distance?: number  // 0.0 = near your sense, 1.0 = far
+  is_bridge?: boolean  // Far from you, but shares a value (POV)
 }
 
 export interface Post {

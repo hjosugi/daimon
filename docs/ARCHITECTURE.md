@@ -167,6 +167,36 @@ Where:
 - `α = similarity_weight` (default 0.7)
 - `β = 1 - similarity_weight` (default 0.3)
 
+### Sense-Distance Discovery Ranking (Echo-Chamber Breaker)
+
+Pure similarity ranking creates an echo chamber: you only ever see what you
+already agree with. Daimon's timeline ranker (`services/discovery_service.py`)
+deliberately surfaces **bridges** — posts that are semantically *distant* from
+the user's own "sense" yet share a common-ground POV ("different conclusion,
+shared value") — and then de-duplicates the feed with **MMR (Maximal Marginal
+Relevance)** so it stays diverse instead of ten near-identical takes.
+
+Per-candidate base score (then MMR rerank):
+```
+near   = cos(user_centroid, post)          # closeness to the user's sense
+far    = 1 - near
+bridge = far * 1[post.tags ∩ user.tags]    # distant AND shares a value
+base   = α·near + (1-α)·bridge + 0.15·common_ground [+ 0.20·popularity]
+```
+
+- `user_centroid` = mean of the user's own post embeddings.
+- `α = similarity_weight`: the UI slider becomes a real "near opinions ↔ far-but-bridged" dial.
+- `include_far_posts` toggles the bridge term (otherwise "far" is just noise).
+- `boost_popular` adds the popularity term.
+
+This makes the previously-inert tuning knobs functional, and the result is
+**explainable**: each post returns a `reason`, a `sense_distance` (0=near,
+1=far) and an `is_bridge` flag, surfaced in the UI (🌉 BRIDGE badge).
+
+This is the same family of ideas as bridging-based ranking (Twitter Community
+Notes, Polis): rank for *constructive cross-perspective contact*, not just
+agreement.
+
 ---
 
 ## API Patterns

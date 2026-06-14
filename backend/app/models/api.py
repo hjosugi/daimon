@@ -43,6 +43,10 @@ class MatchReason(BaseModel):
     pov_match_rate: Optional[float] = None
     matched_by: MatchType = MatchType.TAG
     similar_to_user_posts: Optional[List[SimilarUserPost]] = None
+    # Sense-Distance discovery ranking (see services/discovery_service.py)
+    reason: Optional[str] = None  # Human-readable "why this surfaced"
+    sense_distance: Optional[float] = None  # 0.0 = near your sense, 1.0 = far
+    is_bridge: Optional[bool] = None  # Far from you, but shares a value (POV)
 
 class PostResponse(BaseModel):
     id: str

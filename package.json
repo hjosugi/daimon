@@ -2,7 +2,12 @@
   "name": "daimon",
   "private": true,
   "version": "0.1.0",
+  "packageManager": "pnpm@9.15.0",
   "scripts": {
+    "setup": "make setup",
+    "dev": "make dev",
+    "down": "make down",
+    "clean": "make clean",
     "build": "cd frontend && pnpm install && pnpm run build"
   }
 }

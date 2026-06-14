@@ -88,7 +88,8 @@ class QdrantService:
             logger.warning(f"Qdrant get_user_posts failed: {e}")
             return []
 
-    def search_similar(self, vector: List[float], limit: int = 10, required_tags: Optional[List[str]] = None):
+    def search_similar(self, vector: List[float], limit: int = 10, required_tags: Optional[List[str]] = None,
+                       with_vectors: bool = False):
         try:
             query_filter = None
             if required_tags:
@@ -103,7 +104,9 @@ class QdrantService:
                 collection_name=COLLECTION_NAME,
                 query_vector=vector,
                 query_filter=query_filter,
-                limit=limit
+                limit=limit,
+                # Return vectors inline so callers avoid a per-result retrieve() round-trip.
+                with_vectors=with_vectors,
             )
             return hits
         except Exception as e:

@@ -51,6 +51,14 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
           )}
           {!isOwnPost && (
             <div className="flex items-center gap-2">
+              {post.match_reason?.is_bridge && (
+                <span
+                  className="px-2 py-1 sm:py-1.5 rounded text-xs font-semibold whitespace-nowrap font-mono border bg-amber-900/25 text-amber-300 border-amber-500/25"
+                  title={post.match_reason.reason || "遠い視点だが価値観を共有"}
+                >
+                  🌉 BRIDGE
+                </span>
+              )}
               {post.match_reason?.pov_match_rate !== undefined && (
                 <button
                   onClick={onMatchDetailsClick}
