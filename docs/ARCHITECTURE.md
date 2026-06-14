@@ -1,5 +1,11 @@
 # Architecture: Daimon SNS
 
+> Current note: the Docker stack now runs the Go API in `api/` plus the Python
+> ML microservice in `ml-service/`. The Python FastAPI implementation in
+> `backend/` still exists as a reference/local path and owns seed/migration
+> tooling. See `docs/ARCHITECTURE.local.md` and `docs/ML_VECTOR.local.md` for
+> the more detailed local implementation notes.
+
 ## Overview
 
 Daimon is a "Sense Distance" SNS that connects users based on value similarity using Vector Search and POVs (Points of View). The system uses a hybrid approach combining explicit POV-based matching with implicit vector-based similarity.

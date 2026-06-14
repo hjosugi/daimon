@@ -1,243 +1,198 @@
 # Daimon
 
-Daimon is a "Sense Distance" SNS prototype that connects users based on value similarity using Vector Search.
+Daimon は、投稿テキストの意味ベクトルと POV (Point of View) タグを使って、価値観の近さや「遠いけれど共通点がある」投稿を見つける SNS プロトタイプです。
 
-## Architecture
+単なるキーワード検索ではなく、以下を組み合わせます。
 
-- **Frontend**: React (Vite) + TypeScript + Tailwind CSS
-- **Backend**: FastAPI + Sentence Transformers (Python)
-- **Database**: Qdrant (Vector), PostgreSQL (Relational)
-- **Infra**: Docker Compose
+- 投稿本文を Sentence Transformers で 384 次元ベクトルにする
+- Qdrant で近傍検索して候補投稿を取る
+- PostgreSQL を正本として本文、ユーザー、POV、いいね、コメントを保持する
+- Sense-Distance ランキングで、近い投稿だけでなく bridge 投稿も混ぜる
 
-## Prerequisites
+## まず知ること
 
-- Docker & Docker Compose
-- Node.js (v18+)
-- pnpm (`npm install -g pnpm`)
-- Python 3.10+
-- `uv` (Python package manager)
+このリポジトリには実行経路が 2 つあります。
+
+| 経路 | 主な用途 | 構成 |
+| --- | --- | --- |
+| Docker / Go API | 推奨のアプリ実行経路 | `api/` + `ml-service/` + PostgreSQL + Qdrant + Redis |
+| Python FastAPI | 旧実装・検証・seed/migration 周辺 | `backend/` + PostgreSQL + Qdrant |
+
+現在の `compose.yml` は Go API を `:8000`、Python ML microservice を `:8001` で起動します。`backend/` はまだ seed、Alembic、FastAPI 版の参照実装として残っています。
+
+## ディレクトリ
+
+| Path | 役割 |
+| --- | --- |
+| `frontend/` | React + Vite + TypeScript の UI |
+| `api/` | Go の HTTP API。認証、投稿、検索、タイムライン、ランキングの本体 |
+| `ml-service/` | Python ML microservice。embedding と POV 抽出だけを担当 |
+| `backend/` | Python FastAPI 版、Alembic migration、seed script |
+| `docs/` | 共有ドキュメント。`*.local.md` は gitignore される詳細メモ用 |
+| `compose.yml` | PostgreSQL / Qdrant / Redis / ML / Go API のローカル構成 |
+
+## アーキテクチャ概要
+
+```
+Frontend (:5173)
+    |
+    | REST
+    v
+Go API (:8000)
+    |                 |
+    | SQL             | HTTP
+    v                 v
+PostgreSQL        ML service (:8001)
+正本DB              embedding / POV extraction
+    |
+    | post ids, metadata
+    v
+Qdrant (:6333)
+vector search index
+```
+
+重要な考え方はこれです。
+
+- PostgreSQL: System of Record。消えてはいけないデータ、関係、集計の正本
+- Qdrant: System of Search。再構築できる検索インデックス
+- ML service: Go API から分離した CPU 推論プロセス
+- Redis: 任意の read-model cache。未設定なら no-op
+
+投稿作成時は、本文と POV を PostgreSQL に保存し、embedding が取れた場合だけ Qdrant に upsert します。Qdrant 書き込みは best-effort で、壊れても PostgreSQL から再生成できる前提です。
 
 ## Quick Start
 
-### 1. Start Infrastructure (Background)
-```bash
-docker compose up -d
-```
-*Check logs: `docker compose logs -f`*
-
-#### No Qdrant server? (embedded / local mode)
-
-`qdrant-client` ships a built-in **local mode** (pure Python, no server), so you
-can run vector search without the Qdrant container — handy for constrained
-environments, CI, or quick demos. Set one env var:
+迷ったらこれです。
 
 ```bash
-# On-disk (persists across restarts):
-QDRANT_PATH=qdrant_local   ./.venv/bin/uvicorn app.main:app --reload --port 8000
-# In-memory (ephemeral, e.g. for tests):
-QDRANT_LOCAL=1             ./.venv/bin/uvicorn app.main:app --reload --port 8000
+make fresh
 ```
 
-Or via make (starts Postgres only — no Qdrant container needed):
+これはローカルの Docker volume を消して、DB / Qdrant / Redis / ML / Go API を build し、seed data を入れて、frontend を起動します。
+
+毎回データを消したくない場合:
 
 ```bash
-make infra-db                              # Postgres only
-make seed QDRANT_PATH=qdrant_local         # seed into the local store, then...
-make dev  QDRANT_PATH=qdrant_local         # ...run the app against it
+make docker
+make web
 ```
 
-Notes:
-- Local mode is brute-force (no Rust HNSW) — great up to ~100k vectors, not millions.
-- The on-disk store is single-process: seed first (let it exit), then run `dev`
-  (don't open the same `QDRANT_PATH` from two processes at once).
-- Production / large scale still uses a real Qdrant server (`QDRANT_URL`).
+開く URL:
 
-### 2. Backend Setup
+- Frontend: http://localhost:5173
+- API health: http://localhost:8000/health
+- Qdrant dashboard: http://localhost:6333/dashboard
 
-**For bash/zsh:**
-```bash
-cd backend
-uv venv .venv
-source .venv/bin/activate
-uv pip install -r requirements.txt
-# Install spaCy language models for POV generation
-python -m spacy download ja_core_news_sm
-python -m spacy download en_core_web_sm
-uv run uvicorn app.main:app --reload --port 8000
-```
+seed 済みユーザーは `seeduser1@example.com` / `password123` のような `@example.com` アカウントです。
 
-**For fish shell:**
-```fish
-cd backend
-uv venv .venv
-source .venv/bin/activate.fish
-uv pip install -r requirements.txt
-# Install spaCy language models for POV generation
-python -m spacy download ja_core_news_sm
-python -m spacy download en_core_web_sm
-uv run uvicorn app.main:app --reload --port 8000
-```
+## Host 開発
 
-**Alternative (using uv run directly):**
-```bash
-cd backend
-uv pip install -r requirements.txt
-# Install spaCy language models for POV generation
-uv run python -m spacy download ja_core_news_sm
-uv run python -m spacy download en_core_web_sm
-uv run uvicorn app.main:app --reload --port 8000
-```
-
-### 3. Database Migration
-
-Database schema is managed using Alembic.
-
-**Initial Setup (when database is empty):**
-```bash
-cd backend
-alembic upgrade head
-```
-
-**Creating migrations after model changes:**
-```bash
-cd backend
-# After modifying models, create migration with auto-detection
-alembic revision --autogenerate -m "Description of changes"
-
-# Apply migrations
-alembic upgrade head
-```
-
-**Checking migration status:**
-```bash
-# Check current migration state
-alembic current
-
-# View migration history
-alembic history
-
-# View details of a specific revision
-alembic show <revision>
-```
-
-**Rolling back migrations:**
-```bash
-# Rollback to previous migration
-alembic downgrade -1
-
-# Rollback all migrations
-alembic downgrade base
-```
-
-**Resetting database (delete all data):**
-```bash
-cd backend
-# TRUNCATE all tables
-docker compose exec -T db psql -U daimon -d daimon << 'SQL'
-TRUNCATE TABLE pov_likes CASCADE;
-TRUNCATE TABLE povs CASCADE;
-TRUNCATE TABLE comments CASCADE;
-TRUNCATE TABLE likes CASCADE;
-TRUNCATE TABLE sessions CASCADE;
-TRUNCATE TABLE posts CASCADE;
-TRUNCATE TABLE users CASCADE;
-TRUNCATE TABLE alembic_version CASCADE;
-SQL
-
-# Reapply migrations
-alembic stamp base
-alembic upgrade head
-```
-
-See `backend/alembic/README.md` for details.
-
-### 3.5 Seed Test Data (optional)
-
-Populate the database + Qdrant with realistic test data so the timeline and
-Sense-Distance ranking have something to work with. All seeded accounts use
-`@example.com` emails and the password `password123`.
+Python FastAPI 版で動かす場合:
 
 ```bash
-# From repo root (infra must be up; `make seed` brings it up + migrates first):
-make seed                       # ~300 users + 12,000 posts (real embeddings)
-make seed ARGS="--posts 50000"  # bigger
-make seed ARGS="--fresh"        # wipe existing test data first
-
-# High-volume SCALE testing (synthetic vectors, skips the embedding model):
-make seed-large                 # 1,000,000 posts with --fake-vectors
+make all
 ```
 
-Or run the script directly for full control:
+個別に進める場合:
 
 ```bash
-cd backend
-./.venv/bin/python seed.py --posts 12000 --users 300        # real embeddings
-./.venv/bin/python seed.py --posts 1000000 --fake-vectors   # synthetic, fast
-./.venv/bin/python seed.py --fresh --no-likes --no-comments
+make infra
+make backend
+make migrate
+make seed
+make dev
 ```
 
-**How many is realistic?** Real embeddings are encoded by `all-MiniLM-L6-v2`
-at roughly **300–400 texts/sec on an 8-core CPU**, so:
+Go API をホストでデバッグしたい場合は、依存サービスだけを先に起動します。
 
-| Posts | Real embeddings (CPU) | Notes |
-|------:|----------------------|-------|
-| 10k   | ~30 sec              | great for UX / ranking demo |
-| 100k  | ~5 min               | comfortable |
-| 1M    | ~45–60 min           | practical local ceiling (CPU) |
-| 10M+  | hours → use a GPU    | or `--fake-vectors` |
-| 100M  | not local            | needs GPU fleet + sharded/managed Qdrant |
-
-For anything past ~1M, use `--fake-vectors` (synthetic clustered vectors, no
-model) to stress the Qdrant search path, or move encoding to a GPU.
-
-Login with any seeded account, e.g. `seeduser1@example.com` / `password123`.
-
-### 4. Frontend Setup
 ```bash
-cd frontend
-pnpm install
-pnpm dev
+make deps-up
+cd api
+go run ./cmd/server
 ```
 
-## Monitoring & Logging
+別ターミナルで:
 
-- **Application Logs**: FastAPI output appears in the terminal running `uvicorn`. 
-  - Level: INFO by default.
-  - Structure: `[Date] [Level] [Path] Message`
-- **Qdrant Dashboard**: http://localhost:6333/dashboard
-  - Monitor collection usage and run search queries visually.
-- **Docker Containers**:
-  - `docker stats` for resource usage.
-  - `docker ps` to verify running services.
+```bash
+make web
+```
+
+## ML と Vector の流れ
+
+投稿作成:
+
+1. UI が `POST /posts` を呼ぶ
+2. API が本文と POV を validation する
+3. API が ML service の `POST /embed` に本文を渡す
+4. ML service が `all-MiniLM-L6-v2` で 384 次元 vector を返す
+5. API が PostgreSQL に投稿と POV を保存する
+6. API が Qdrant `posts` collection に `{post_id, user_id, tags, created_at}` と vector を upsert する
+
+タイムライン:
+
+1. UI が `POST /posts/timeline` を呼ぶ
+2. API が query text を embedding する
+3. Qdrant から類似候補を 100-200 件取る
+4. PostgreSQL から本文、POV、like/comment count を bulk load する
+5. ユーザー自身の投稿 vector から centroid を作る
+6. `rank_by_sense_distance` / `RankBySenseDistance` で並べ替える
+7. UI に `match_reason.reason`, `sense_distance`, `is_bridge` を返す
+
+ランキングの中心式:
+
+```text
+near   = cos(user_centroid, post_vector)
+far    = 1 - near
+bridge = far * has_common_pov
+base   = alpha * near + (1 - alpha) * bridge + 0.15 * has_common_pov
+```
+
+最後に MMR (Maximal Marginal Relevance) で似すぎた候補を間引きます。
+
+## 詳細ドキュメント
+
+共有用:
+
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- [docs/CONTENT_MODERATION.md](docs/CONTENT_MODERATION.md)
+
+ローカル詳細メモ:
+
+- `docs/ARCHITECTURE.local.md`
+- `docs/ML_VECTOR.local.md`
+
+`*.local.md` は `.gitignore` 済みです。実装の細かい読み解き、試行錯誤、環境固有のメモはここに置けます。
+
+## よく使うコマンド
+
+```bash
+make fresh        # まっさらから Docker stack + seed + frontend
+make docker       # Docker stack 起動
+make web          # frontend のみ起動
+make docker-logs  # api / ml logs
+make seed         # realistic seed data
+make seed-large   # synthetic vectors で高負荷 seed
+make down         # compose down
+make clean        # venv / node_modules も削除
+```
+
+## Qdrant local mode
+
+Python FastAPI 経路では、Qdrant server を使わず qdrant-client の local mode でも動かせます。
+
+```bash
+make infra-db
+make seed QDRANT_PATH=qdrant_local
+make dev QDRANT_PATH=qdrant_local
+```
+
+注意:
+
+- local mode は brute-force なので大規模用途では使わない
+- `QDRANT_PATH` は同時に複数プロセスから開かない
+- 本番や大規模検証は Qdrant server / Qdrant Cloud を使う
 
 ## CI/CD
 
-### Continuous Integration (CI)
-GitHub Actions workflows are located in `.github/workflows/`:
-- **`ci.yml`**: Main CI pipeline
-  - Backend: Linting (Ruff), Type checking (mypy), Tests (pytest)
-  - Frontend: Linting (Biome), Type checking (TypeScript), Build verification
-  - Security: Trivy vulnerability scanning
-  - Docker: Compose validation and build testing
-- **`dependabot.yml`**: Auto-merge for dependency updates
+`.github/workflows/` に CI/CD の設定があります。主に backend / frontend の lint、typecheck、test、build、Docker 検証、deploy を想定しています。
 
-### Continuous Deployment (CD)
-- **`deploy.yml`**: Full deployment pipeline
-  - Deploys both backend (Cloud Run) and frontend (Vercel)
-  - Automatically runs on push to `main` branch
-  - Only runs when `backend/` or `frontend/` directories change
-  - Allows individual selection of backend/frontend during manual execution
-  - Uses Cloud Build to deploy to Cloud Run
-- **`cd.yml`**: Docker Compose testing pipeline
-  - Builds and tests Docker Compose
-  - Creates GitHub releases on version tags
-
-### Dependabot
-Automated dependency updates configured in `.github/dependabot.yml`:
-- Weekly updates for npm, pip, GitHub Actions, and Docker
-- Auto-merge enabled for security updates
-
-## Development URLs
-
-- Frontend: http://localhost:5173
-- Backend Docs: http://localhost:8000/docs

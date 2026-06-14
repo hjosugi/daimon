@@ -1,11 +1,13 @@
 import type React from "react"
-import { Settings2, User as UserIcon, LogOut, Search, Home } from "lucide-react"
+import { Settings2, User as UserIcon, LogOut, Search, Home, FileText, Bookmark } from "lucide-react"
 import type { User } from "../api/client"
+
+type Page = "timeline" | "search" | "mine" | "saved" | "user"
 
 interface HeaderProps {
   user: User | null
-  currentPage: "timeline" | "search"
-  onPageChange: (page: "timeline" | "search") => void
+  currentPage: Page
+  onPageChange: (page: Page) => void
   onAuthClick: () => void
   onProfileClick: () => void
   onLogout: () => void
@@ -25,7 +27,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   return (
     <header className="bg-[#151520]/95 backdrop-blur-sm border-b border-cyan-500/15 sticky top-0 z-20">
-      <div className="max-w-2xl mx-auto px-3 sm:px-4 h-14 sm:h-16 flex items-center justify-between">
+      <div className="max-w-3xl mx-auto px-3 sm:px-4 h-14 sm:h-16 flex items-center justify-between">
         <h1 className="text-lg sm:text-xl font-bold text-cyan-300 cyber-glow flex items-center gap-1 sm:gap-2 font-mono">
           DAIMON
         </h1>
@@ -59,6 +61,36 @@ export const Header: React.FC<HeaderProps> = ({
               <Search size={14} className="sm:w-4 sm:h-4" />
               <span className="hidden sm:inline">SEARCH</span>
             </button>
+            {user && (
+              <button
+                onClick={() => onPageChange("mine")}
+                className={`relative flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 transition-all text-xs sm:text-sm font-mono ${currentPage === "mine"
+                    ? "bg-[#2a2a50] text-cyan-300 rounded-t-lg -mb-[1px] z-10 border-t-2 border-l-2 border-r-2 border-cyan-500/40"
+                    : "text-cyan-300/80 hover:text-cyan-300 bg-[#1f1f35] rounded-t-lg border-t border-l border-r border-cyan-500/15 hover:border-cyan-500/35"
+                  }`}
+              >
+                {currentPage === "mine" && (
+                  <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-transparent border-t-cyan-500/40"></div>
+                )}
+                <FileText size={14} className="sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">MINE</span>
+              </button>
+            )}
+            {user && (
+              <button
+                onClick={() => onPageChange("saved")}
+                className={`relative flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 transition-all text-xs sm:text-sm font-mono ${currentPage === "saved"
+                    ? "bg-[#2a2a50] text-cyan-300 rounded-t-lg -mb-[1px] z-10 border-t-2 border-l-2 border-r-2 border-cyan-500/40"
+                    : "text-cyan-300/80 hover:text-cyan-300 bg-[#1f1f35] rounded-t-lg border-t border-l border-r border-cyan-500/15 hover:border-cyan-500/35"
+                  }`}
+              >
+                {currentPage === "saved" && (
+                  <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-transparent border-t-cyan-500/40"></div>
+                )}
+                <Bookmark size={14} className="sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">SAVED</span>
+              </button>
+            )}
           </div>
           <button
             onClick={onSettingsClick}

@@ -1,18 +1,43 @@
-import { Heart, MessageSquare, Hash } from "lucide-react"
-import React from "react"
+import { Heart, MessageSquare, Hash, Bookmark } from "lucide-react"
+import React, { useEffect, useState } from "react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import type { Post, User } from "../api/client"
-import { likePost, unlikePost } from "../api/client"
+import { likePost, unlikePost, savePost, unsavePost, getSaveStatus } from "../api/client"
 import { formatRelativeDate } from "../utils/date"
 
 interface SearchPostCardProps {
   post: Post
   onTagClick?: (tag: string) => void
   currentUser?: User | null
+  onUserClick?: (userId: string) => void
 }
 
-export const SearchPostCard: React.FC<SearchPostCardProps> = ({ post, onTagClick }) => {
+export const SearchPostCard: React.FC<SearchPostCardProps> = ({ post, onTagClick, currentUser, onUserClick }) => {
   const queryClient = useQueryClient()
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    if (!currentUser) return
+    getSaveStatus(post.id)
+      .then((s) => setSaved(s.saved))
+      .catch(() => {})
+  }, [post.id, currentUser])
+
+  const saveMutation = useMutation({
+    mutationFn: () => (saved ? unsavePost(post.id) : savePost(post.id)),
+    onMutate: () => {
+      const prev = saved
+      setSaved(!saved)
+      return { prev }
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx) setSaved(ctx.prev)
+    },
+    onSuccess: (data) => {
+      setSaved(data.saved)
+      queryClient.invalidateQueries({ queryKey: ["saved-posts"] })
+    },
+  })
 
   // Update every cached search result set (key is ["search", query, tags]).
   const patchSearchCaches = (updater: (p: Post) => Post) => {
@@ -49,12 +74,19 @@ export const SearchPostCard: React.FC<SearchPostCardProps> = ({ post, onTagClick
   }
 
   return (
-    <div className="border-b border-cyan-500/15 hover:bg-cyan-500/8 transition-colors">
+    <div className="group border-b border-cyan-500/15 hover:bg-cyan-500/8 transition-colors">
       <div className="px-2.5 py-2">
         {/* Header - Username and Match Score */}
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-1.5">
-            <span className="text-[11px] font-mono text-cyan-300">@{post.username || `u${post.user_id?.slice(0, 6)}`}</span>
+            <button
+              type="button"
+              onClick={() => onUserClick && post.user_id && onUserClick(post.user_id)}
+              disabled={!(onUserClick && post.user_id)}
+              className={`text-[11px] font-mono text-cyan-300 ${onUserClick && post.user_id ? "hover:text-cyan-200 cursor-pointer" : ""}`}
+            >
+              @{post.username || `u${post.user_id?.slice(0, 6)}`}
+            </button>
             {post.created_at && (
               <span className="text-[10px] font-mono text-cyan-300/80">
                 · {formatRelativeDate(post.created_at)}
@@ -80,7 +112,7 @@ export const SearchPostCard: React.FC<SearchPostCardProps> = ({ post, onTagClick
           </p>
         </div>
 
-        {/* Why this matched */}
+        {/* Why this matched — subtle, revealed on hover */}
         {post.match_reason && (() => {
           const mr = post.match_reason
           const why = mr.reason
@@ -93,14 +125,9 @@ export const SearchPostCard: React.FC<SearchPostCardProps> = ({ post, onTagClick
               : null
           if (!why) return null
           return (
-            <div className="mb-1.5 flex items-start gap-1 text-[11px] font-mono text-emerald-200">
-              <span className="text-emerald-400 shrink-0">🎯 なぜ表示</span>
-              <span className="text-cyan-100/90">{why}</span>
-              {mr.is_bridge && (
-                <span className="ml-auto shrink-0 text-amber-300" title="遠い視点だが価値観を共有">
-                  🌉
-                </span>
-              )}
+            <div className="mb-1.5 text-[11px] font-mono text-cyan-300/60">
+              {why}
+              {mr.is_bridge && <span className="ml-1 text-amber-300/75">· bridge</span>}
             </div>
           )
         })()}
@@ -141,6 +168,20 @@ export const SearchPostCard: React.FC<SearchPostCardProps> = ({ post, onTagClick
             <MessageSquare size={11} />
             <span>{post.commentCount ?? 0}</span>
           </div>
+          {currentUser && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                saveMutation.mutate()
+              }}
+              className={`flex items-center gap-0.5 font-mono transition-colors active:scale-95 ml-auto ${
+                saved ? "text-amber-300" : "text-cyan-300/90 hover:text-amber-300"
+              }`}
+              title={saved ? "保存済み" : "保存する"}
+            >
+              <Bookmark size={12} className={saved ? "fill-amber-300" : ""} />
+            </button>
+          )}
         </div>
       </div>
     </div>

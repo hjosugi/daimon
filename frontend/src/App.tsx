@@ -4,6 +4,9 @@ import { getCurrentUser, logout, type User } from "./api/client"
 import { Header } from "./components/Header"
 import { TimelinePage } from "./components/TimelinePage"
 import { SearchPage } from "./components/SearchPage"
+import { MyPostsPage } from "./components/MyPostsPage"
+import { SavedPage } from "./components/SavedPage"
+import { UserProfilePage } from "./components/UserProfilePage"
 import { AuthModal } from "./components/AuthModal"
 import { ProfileModal } from "./components/ProfileModal"
 import { SettingsModal } from "./components/SettingsModal"
@@ -20,9 +23,20 @@ function App() {
   const [showProfileModal, setShowProfileModal] = useState(false)
 
   // Page state
-  const [currentPage, setCurrentPage] = useState<"timeline" | "search">("timeline")
+  const [currentPage, setCurrentPage] = useState<
+    "timeline" | "search" | "mine" | "saved" | "user"
+  >("timeline")
   const [initialSearchTags, setInitialSearchTags] = useState<string[]>([])
+  const [viewingUserId, setViewingUserId] = useState<string | null>(null)
+  const [prevPage, setPrevPage] = useState<"timeline" | "search" | "mine" | "saved">("timeline")
   const timelineScrollRef = useRef<number>(0)
+
+  const handleUserClick = (userId: string) => {
+    if (!userId) return
+    setPrevPage(currentPage === "user" ? prevPage : (currentPage as "timeline" | "search" | "mine" | "saved"))
+    setViewingUserId(userId)
+    setCurrentPage("user")
+  }
 
   const queryClient = useQueryClient()
 
@@ -60,7 +74,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#151520] text-cyan-200 font-mono relative overflow-hidden">
+    <div className="min-h-screen bg-[#151520] text-cyan-200 font-mono relative overflow-x-hidden">
       {/* Scanline effect */}
       <div className="fixed inset-0 pointer-events-none z-50 opacity-5">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-500 to-transparent h-[2px] animate-[scanline_8s_linear_infinite]"></div>
@@ -77,10 +91,23 @@ function App() {
       />
 
       {currentPage === "search" ? (
-        <SearchPage 
-          initialTags={initialSearchTags} 
+        <SearchPage
+          initialTags={initialSearchTags}
           onTagsChange={setInitialSearchTags}
           onBack={handleBackToTimeline}
+          onUserClick={handleUserClick}
+        />
+      ) : currentPage === "mine" ? (
+        <MyPostsPage user={user} onTagClick={handleTagClick} onUserClick={handleUserClick} />
+      ) : currentPage === "saved" ? (
+        <SavedPage user={user} onTagClick={handleTagClick} />
+      ) : currentPage === "user" && viewingUserId ? (
+        <UserProfilePage
+          userId={viewingUserId}
+          currentUser={user}
+          onBack={() => setCurrentPage(prevPage)}
+          onTagClick={handleTagClick}
+          onUserClick={handleUserClick}
         />
       ) : (
         <TimelinePage
@@ -91,6 +118,7 @@ function App() {
           includeFarPosts={includeFarPosts}
           onAuthRequired={() => setShowAuthModal(true)}
           onTagClick={handleTagClick}
+          onUserClick={handleUserClick}
         />
       )}
 

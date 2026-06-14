@@ -4,11 +4,15 @@ import (
 	"context"
 	"net/http"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 
+	dbq "daimon/api/internal/db"
 	"daimon/api/internal/httpx"
+	"daimon/api/internal/qdrant"
+	"daimon/api/internal/ranking"
 )
 
 type timelineReq struct {
@@ -33,8 +37,7 @@ type postMeta struct {
 
 func (s *Server) loadPosts(ctx context.Context, ids []string) map[string]postMeta {
 	m := map[string]postMeta{}
-	rows, err := s.pool.Query(ctx,
-		`SELECT id, user_id, COALESCE(username,''), text, created_at FROM posts WHERE id = ANY($1)`, ids)
+	rows, err := s.pool.Query(ctx, dbq.SQL("feed.load_posts"), ids)
 	if err != nil {
 		return m
 	}
@@ -51,7 +54,7 @@ func (s *Server) loadPosts(ctx context.Context, ids []string) map[string]postMet
 
 func (s *Server) loadPOVs(ctx context.Context, ids []string) map[string][]string {
 	m := map[string][]string{}
-	rows, err := s.pool.Query(ctx, `SELECT post_id, pov FROM povs WHERE post_id = ANY($1)`, ids)
+	rows, err := s.pool.Query(ctx, dbq.SQL("feed.load_povs"), ids)
 	if err != nil {
 		return m
 	}
@@ -67,8 +70,16 @@ func (s *Server) loadPOVs(ctx context.Context, ids []string) map[string][]string
 
 func (s *Server) loadCounts(ctx context.Context, table string, ids []string) map[string]int {
 	m := map[string]int{}
-	rows, err := s.pool.Query(ctx,
-		`SELECT post_id, count(*) FROM `+table+` WHERE post_id = ANY($1) GROUP BY post_id`, ids)
+	var query string
+	switch table {
+	case "likes":
+		query = dbq.SQL("feed.like_counts")
+	case "comments":
+		query = dbq.SQL("feed.comment_counts")
+	default:
+		return m
+	}
+	rows, err := s.pool.Query(ctx, query, ids)
 	if err != nil {
 		return m
 	}
@@ -88,8 +99,7 @@ func (s *Server) loadLikedSet(ctx context.Context, ids []string, uid string) map
 	if uid == "" {
 		return m
 	}
-	rows, err := s.pool.Query(ctx,
-		`SELECT post_id FROM likes WHERE post_id = ANY($1) AND user_id=$2`, ids, uid)
+	rows, err := s.pool.Query(ctx, dbq.SQL("feed.liked_set"), ids, uid)
 	if err != nil {
 		return m
 	}
@@ -101,6 +111,110 @@ func (s *Server) loadLikedSet(ctx context.Context, ids []string, uid string) map
 		}
 	}
 	return m
+}
+
+// bundle holds everything needed to render a set of posts (loaded in bulk).
+type bundle struct {
+	meta          map[string]postMeta
+	povs          map[string][]string
+	likeCounts    map[string]int
+	commentCounts map[string]int
+	liked         map[string]bool
+}
+
+func defaultTimelineQuery(q string) bool {
+	q = strings.TrimSpace(strings.ToLower(q))
+	return q == "" || q == "general interest"
+}
+
+func defaultTimelineKnobs(req timelineReq) bool {
+	return defaultTimelineQuery(req.QueryText) &&
+		req.BoostPopular &&
+		req.SimilarityWeight > 0.69 &&
+		req.SimilarityWeight < 0.71 &&
+		!req.IncludeFarPosts
+}
+
+func qdrantPointToHit(p qdrant.Point, searchVector []float32) qdrant.Hit {
+	return qdrant.Hit{
+		ID:      p.ID,
+		Score:   ranking.Cosine(searchVector, p.Vector),
+		Vector:  p.Vector,
+		Payload: p.Payload,
+	}
+}
+
+func tagSetKeys(tags map[string]bool) []string {
+	out := make([]string, 0, len(tags))
+	for t := range tags {
+		out = append(out, t)
+	}
+	return out
+}
+
+func recencyScore(createdAt, now time.Time) float32 {
+	if createdAt.IsZero() {
+		return 0
+	}
+	age := now.Sub(createdAt).Hours() / 24
+	if age <= 0 {
+		return 1
+	}
+	score := 1 - float32(age/30)
+	if score < 0 {
+		return 0
+	}
+	return score
+}
+
+func povCoverageRate(tagList []string, userTags map[string]bool) float32 {
+	if len(tagList) == 0 || len(userTags) == 0 {
+		return 0
+	}
+	common := 0
+	seen := map[string]bool{}
+	for _, t := range tagList {
+		if seen[t] {
+			continue
+		}
+		seen[t] = true
+		if userTags[t] {
+			common++
+		}
+	}
+	if len(seen) == 0 {
+		return 0
+	}
+	return float32(common) / float32(len(seen))
+}
+
+func displayMatchRate(c ranking.Candidate, tagList []string, userTags map[string]bool) float32 {
+	rate := c.SimToUser
+	if rate <= 0 {
+		rate = c.Relevance
+	}
+	if povRate := povCoverageRate(tagList, userTags); povRate > rate {
+		rate = povRate
+	}
+	if rate < 0 {
+		return 0
+	}
+	if rate > 1 {
+		return 1
+	}
+	return rate
+}
+
+// loadBundle bulk-loads post metadata, POVs, counts and the user's liked set
+// for a set of post IDs (the shared read path for timeline/search/profile).
+func (s *Server) loadBundle(ctx context.Context, ids []string, uid string) bundle {
+	return bundle{
+		meta:          s.loadPosts(ctx, ids),
+		povs:          s.loadPOVs(ctx, ids),
+		likeCounts:    s.loadCounts(ctx, "likes", ids),
+		commentCounts: s.loadCounts(ctx, "comments", ids),
+		liked:         s.loadLikedSet(ctx, ids, uid),
+	}
 }
 
 func meanVectors(vs [][]float32) []float32 {
@@ -139,8 +253,7 @@ func (s *Server) userSense(ctx context.Context, uid string) (map[string]bool, []
 	if uid == "" {
 		return tags, nil
 	}
-	rows, err := s.pool.Query(ctx,
-		`SELECT p.pov FROM povs p JOIN posts po ON po.id = p.post_id WHERE po.user_id=$1`, uid)
+	rows, err := s.pool.Query(ctx, dbq.SQL("feed.user_povs"), uid)
 	if err == nil {
 		for rows.Next() {
 			var pov string
@@ -163,6 +276,54 @@ func (s *Server) userSense(ctx context.Context, uid string) (map[string]bool, []
 	return tags, centroid
 }
 
+// userTagSet loads just the user's POV set (no Qdrant centroid call).
+func (s *Server) userTagSet(ctx context.Context, uid string) map[string]bool {
+	tags := map[string]bool{}
+	if uid == "" {
+		return tags
+	}
+	rows, err := s.pool.Query(ctx, dbq.SQL("feed.user_povs"), uid)
+	if err == nil {
+		for rows.Next() {
+			var pov string
+			if rows.Scan(&pov) == nil {
+				tags[pov] = true
+			}
+		}
+		rows.Close()
+	}
+	return tags
+}
+
+// materializeIDs builds responses for a fixed, ordered list of post IDs
+// (used for the precomputed-feed cache fast path). Counts are always fresh.
+func (s *Server) materializeIDs(ctx context.Context, ids []string, uid string) []postResp {
+	b := s.loadBundle(ctx, ids, uid)
+	meta, povs, likeCounts, commentCounts, liked := b.meta, b.povs, b.likeCounts, b.commentCounts, b.liked
+	userTags := s.userTagSet(ctx, uid)
+
+	out := make([]postResp, 0, len(ids))
+	for _, id := range ids {
+		pm, ok := meta[id]
+		if !ok || pm.userID == uid {
+			continue
+		}
+		tagList := povs[id]
+		common := intersect(tagList, userTags)
+		var mr *matchReason
+		if len(common) > 0 {
+			rate := povCoverageRate(tagList, userTags)
+			mr = &matchReason{PovMatches: common, CommonPovs: common, PovMatchRate: &rate, MatchedBy: "both"}
+		}
+		out = append(out, postResp{
+			ID: id, Text: pm.text, Povs: tagList, UserID: pm.userID, Username: pm.username,
+			Likes: likeCounts[id], Liked: liked[id], CommentCount: commentCounts[id],
+			MatchReason: mr, CreatedAt: pm.createdAt.Format(time.RFC3339),
+		})
+	}
+	return out
+}
+
 func intersect(tags []string, set map[string]bool) []string {
 	out := []string{}
 	for _, t := range tags {
@@ -171,6 +332,26 @@ func intersect(tags []string, set map[string]bool) []string {
 		}
 	}
 	return out
+}
+
+func (s *Server) recentPopularMatchedPostIDs(ctx context.Context, uid string, userTags map[string]bool, limit int) []string {
+	tags := tagSetKeys(userTags)
+	if uid == "" || len(tags) == 0 || limit <= 0 {
+		return nil
+	}
+	rows, err := s.pool.Query(ctx, dbq.SQL("feed.recent_popular_matched_ids"), uid, tags, limit)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+	var ids []string
+	for rows.Next() {
+		var id string
+		if rows.Scan(&id) == nil {
+			ids = append(ids, id)
+		}
+	}
+	return ids
 }
 
 // ---- handlers ------------------------------------------------------------
@@ -183,34 +364,64 @@ func (s *Server) handleTimeline(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	uid := userID(ctx)
 
+	// Fast path: serve the batch-precomputed home feed (default knobs).
+	// Discovery mode (include_far_posts) always computes live.
+	if uid != "" && defaultTimelineKnobs(req) {
+		var ids []string
+		if s.cache.GetJSON(ctx, "feed:"+uid, &ids) && len(ids) > 0 {
+			if out := s.materializeIDs(ctx, ids, uid); len(out) > 0 {
+				httpx.JSON(w, http.StatusOK, out)
+				return
+			}
+		}
+	}
+
 	vector, err := s.embed.Embed(ctx, req.QueryText)
 	if err != nil {
 		httpx.JSON(w, http.StatusOK, []postResp{}) // degrade gracefully
 		return
 	}
 	userTags, centroid := s.userSense(ctx, uid)
+	searchVector := vector
+	if uid != "" && len(centroid) > 0 && defaultTimelineQuery(req.QueryText) {
+		searchVector = centroid
+	}
 
 	limit := 100
 	if req.IncludeFarPosts {
 		limit = 200
 	}
-	hits, err := s.qdrant.Search(ctx, vector, limit, nil, true)
+	hits, err := s.qdrant.Search(ctx, searchVector, limit, nil, true)
 	if err != nil || len(hits) == 0 {
 		httpx.JSON(w, http.StatusOK, []postResp{})
 		return
+	}
+
+	seenHits := map[string]bool{}
+	for _, h := range hits {
+		seenHits[h.ID] = true
+	}
+	if req.BoostPopular && uid != "" && len(userTags) > 0 {
+		if pts, err := s.qdrant.Retrieve(ctx, s.recentPopularMatchedPostIDs(ctx, uid, userTags, 80), true); err == nil {
+			for _, p := range pts {
+				if seenHits[p.ID] || len(p.Vector) == 0 {
+					continue
+				}
+				seenHits[p.ID] = true
+				hits = append(hits, qdrantPointToHit(p, searchVector))
+			}
+		}
 	}
 
 	ids := make([]string, 0, len(hits))
 	for _, h := range hits {
 		ids = append(ids, h.ID)
 	}
-	meta := s.loadPosts(ctx, ids)
-	povs := s.loadPOVs(ctx, ids)
-	likeCounts := s.loadCounts(ctx, "likes", ids)
-	commentCounts := s.loadCounts(ctx, "comments", ids)
-	liked := s.loadLikedSet(ctx, ids, uid)
+	b := s.loadBundle(ctx, ids, uid)
+	meta, povs, likeCounts, commentCounts, liked := b.meta, b.povs, b.likeCounts, b.commentCounts, b.liked
 
-	cands := make([]candidate, 0, len(hits))
+	cands := make([]ranking.Candidate, 0, len(hits))
+	now := time.Now().UTC()
 	for _, h := range hits {
 		pm, ok := meta[h.ID]
 		if !ok || pm.userID == uid {
@@ -221,12 +432,12 @@ func (s *Server) handleTimeline(w http.ResponseWriter, r *http.Request) {
 			tagSet[p] = true
 		}
 		pop := float32(likeCounts[h.ID]) / 10.0
-		cands = append(cands, candidate{
-			postID: h.ID, vector: h.Vector, tags: tagSet, relevance: h.Score, popularity: pop,
+		cands = append(cands, ranking.Candidate{
+			PostID: h.ID, Vector: h.Vector, Tags: tagSet, Relevance: h.Score, Popularity: pop, Recency: recencyScore(pm.createdAt, now),
 		})
 	}
 
-	ranked := rankBySenseDistance(cands, centroid, userTags,
+	ranked := ranking.RankBySenseDistance(cands, centroid, userTags,
 		req.SimilarityWeight, req.BoostPopular, req.IncludeFarPosts, 0.3, 10)
 
 	out := make([]postResp, 0, len(ranked))
@@ -236,21 +447,22 @@ func (s *Server) handleTimeline(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, out)
 }
 
-func (s *Server) materialize(c candidate, meta map[string]postMeta, povs map[string][]string,
+func (s *Server) materialize(c ranking.Candidate, meta map[string]postMeta, povs map[string][]string,
 	likeCounts, commentCounts map[string]int, liked map[string]bool, userTags map[string]bool) postResp {
-	pm := meta[c.postID]
-	tagList := povs[c.postID]
+	pm := meta[c.PostID]
+	tagList := povs[c.PostID]
 	common := intersect(tagList, userTags)
-	score := c.relevance
-	sd := 1 - c.simToUser
-	bridge := c.bridgeScore > 0
-	reason := c.reason
+	score := c.Relevance
+	sd := 1 - c.SimToUser
+	bridge := c.BridgeScore > 0
+	reason := c.Reason
+	matchRate := displayMatchRate(c, tagList, userTags)
 	return postResp{
-		ID: c.postID, Text: pm.text, Povs: tagList, UserID: pm.userID, Username: pm.username,
-		Score: &score, Likes: likeCounts[c.postID], Liked: liked[c.postID],
-		CommentCount: commentCounts[c.postID],
+		ID: c.PostID, Text: pm.text, Povs: tagList, UserID: pm.userID, Username: pm.username,
+		Score: &score, Likes: likeCounts[c.PostID], Liked: liked[c.PostID],
+		CommentCount: commentCounts[c.PostID],
 		MatchReason: &matchReason{
-			PovMatches: common, CommonPovs: common, MatchedBy: "both",
+			PovMatches: common, CommonPovs: common, PovMatchRate: &matchRate, MatchedBy: "both",
 			Reason: &reason, SenseDistance: &sd, IsBridge: &bridge,
 		},
 		CreatedAt: pm.createdAt.Format(time.RFC3339),
@@ -288,8 +500,7 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 			scores[h.ID] = h.Score
 		}
 	} else if len(req.Povs) > 0 {
-		rows, err := s.pool.Query(ctx,
-			`SELECT DISTINCT post_id FROM povs WHERE pov = ANY($1) LIMIT $2`, req.Povs, req.Limit)
+		rows, err := s.pool.Query(ctx, dbq.SQL("feed.search_pov_ids"), req.Povs, req.Limit)
 		if err == nil {
 			for rows.Next() {
 				var pid string
@@ -305,11 +516,8 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	meta := s.loadPosts(ctx, ids)
-	povs := s.loadPOVs(ctx, ids)
-	likeCounts := s.loadCounts(ctx, "likes", ids)
-	commentCounts := s.loadCounts(ctx, "comments", ids)
-	liked := s.loadLikedSet(ctx, ids, uid)
+	b := s.loadBundle(ctx, ids, uid)
+	meta, povs, likeCounts, commentCounts, liked := b.meta, b.povs, b.likeCounts, b.commentCounts, b.liked
 	querySet := map[string]bool{}
 	for _, p := range req.Povs {
 		querySet[p] = true
@@ -334,7 +542,11 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 		}
 		var mr *matchReason
 		if pm.userID != uid {
-			mr = &matchReason{PovMatches: common, CommonPovs: common, MatchedBy: "tag"}
+			rate := povCoverageRate(tagList, userTags)
+			if sc, ok := scores[id]; ok && sc > rate {
+				rate = sc
+			}
+			mr = &matchReason{PovMatches: common, CommonPovs: common, PovMatchRate: &rate, MatchedBy: "tag"}
 		}
 		out = append(out, postResp{
 			ID: id, Text: pm.text, Povs: tagList, UserID: pm.userID, Username: pm.username,
@@ -351,8 +563,7 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleUserPosts(w http.ResponseWriter, r *http.Request) {
 	target := chi.URLParam(r, "userID")
 	ctx := r.Context()
-	rows, err := s.pool.Query(ctx,
-		`SELECT id FROM posts WHERE user_id=$1 ORDER BY created_at DESC LIMIT 50`, target)
+	rows, err := s.pool.Query(ctx, dbq.SQL("feed.user_post_ids"), target)
 	if err != nil {
 		httpx.Error(w, http.StatusInternalServerError, "Database error")
 		return
@@ -369,11 +580,8 @@ func (s *Server) handleUserPosts(w http.ResponseWriter, r *http.Request) {
 		httpx.JSON(w, http.StatusOK, []postResp{})
 		return
 	}
-	meta := s.loadPosts(ctx, ids)
-	povs := s.loadPOVs(ctx, ids)
-	likeCounts := s.loadCounts(ctx, "likes", ids)
-	commentCounts := s.loadCounts(ctx, "comments", ids)
-	liked := s.loadLikedSet(ctx, ids, userID(ctx))
+	b := s.loadBundle(ctx, ids, userID(ctx))
+	meta, povs, likeCounts, commentCounts, liked := b.meta, b.povs, b.likeCounts, b.commentCounts, b.liked
 
 	out := make([]postResp, 0, len(ids))
 	for _, id := range ids {

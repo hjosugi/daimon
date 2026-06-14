@@ -5,19 +5,24 @@
     box-sizing: border-box;
   }
   
+  html,
+  body {
+    overflow-x: hidden;
+  }
+
   body {
     margin: 0;
-    background: #151520;
-    background-image: 
-      radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.04) 0%, transparent 50%),
-      radial-gradient(circle at 80% 80%, rgba(255, 0, 255, 0.04) 0%, transparent 50%),
-      linear-gradient(135deg, #151520 0%, #1f152f 100%);
-    color: #7dd3fc;
+    background: #16161f;
+    background-image:
+      radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.022) 0%, transparent 55%),
+      radial-gradient(circle at 80% 80%, rgba(255, 0, 255, 0.022) 0%, transparent 55%),
+      linear-gradient(135deg, #16161f 0%, #1b1726 100%);
+    color: #cbe7f5;
     font-family: 'Courier New', 'Monaco', 'Menlo', monospace;
     min-height: 100vh;
   }
 
-  /* Cyberpunk glow effects - subtle */
+  /* Cyberpunk glow effects - kept very subtle */
   @keyframes scanline {
     0% {
       transform: translateY(-100%);
@@ -28,6 +33,6 @@
   }
 
   .cyber-glow {
-    text-shadow: 0 0 2px currentColor;
+    text-shadow: 0 0 1px currentColor;
   }
 }

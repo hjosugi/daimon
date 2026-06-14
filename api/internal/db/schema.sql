@@ -68,3 +68,24 @@ CREATE TABLE IF NOT EXISTS pov_likes (
   CONSTRAINT uq_pov_likes_pov_user UNIQUE (pov, user_id)
 );
 CREATE INDEX IF NOT EXISTS ix_pov_likes_pov ON pov_likes (pov);
+
+CREATE TABLE IF NOT EXISTS follows (
+  id          varchar PRIMARY KEY,
+  follower_id varchar NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  followee_id varchar NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at  timestamp NOT NULL,
+  CONSTRAINT uq_follows UNIQUE (follower_id, followee_id)
+);
+CREATE INDEX IF NOT EXISTS ix_follows_follower ON follows (follower_id);
+CREATE INDEX IF NOT EXISTS ix_follows_followee ON follows (followee_id);
+
+-- Saved / clipped posts. Also a strong relevance signal for ranking/ML.
+CREATE TABLE IF NOT EXISTS bookmarks (
+  id         varchar PRIMARY KEY,
+  user_id    varchar NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  post_id    varchar NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+  created_at timestamp NOT NULL,
+  CONSTRAINT uq_bookmarks_user_post UNIQUE (user_id, post_id)
+);
+CREATE INDEX IF NOT EXISTS ix_bookmarks_user ON bookmarks (user_id);
+CREATE INDEX IF NOT EXISTS ix_bookmarks_post ON bookmarks (post_id);

@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 
+	dbq "daimon/api/internal/db"
 	"daimon/api/internal/httpx"
 )
 
@@ -31,13 +32,20 @@ func (s *Server) handleGeneratePOVs(w http.ResponseWriter, r *http.Request) {
 
 // handleSuggestPOVs suggests POVs by popularity, matching an optional query.
 // Prefix matches rank above substring matches; ties broken by frequency.
+// Uses batch-precomputed popular + vector-related POVs from cache when present.
 func (s *Server) handleSuggestPOVs(w http.ResponseWriter, r *http.Request) {
 	q := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("query")))
 
-	rows, err := s.pool.Query(r.Context(),
-		`SELECT pov, count(*) AS c FROM povs
-		 WHERE ($1 = '' OR lower(pov) LIKE '%' || $1 || '%')
-		 GROUP BY pov ORDER BY c DESC LIMIT 50`, q)
+	// Empty query -> serve precomputed popular list if the batch produced one.
+	if q == "" {
+		var popular []string
+		if s.cache.GetJSON(r.Context(), "suggest:popular", &popular) && len(popular) > 0 {
+			httpx.JSON(w, http.StatusOK, map[string][]string{"povs": popular[:min(10, len(popular))]})
+			return
+		}
+	}
+
+	rows, err := s.pool.Query(r.Context(), dbq.SQL("povs.suggest"), q)
 	if err != nil {
 		httpx.JSON(w, http.StatusOK, map[string][]string{"povs": {}})
 		return
@@ -67,10 +75,28 @@ func (s *Server) handleSuggestPOVs(w http.ResponseWriter, r *http.Request) {
 
 	limit := 10
 	out := make([]string, 0, limit)
+	seen := map[string]bool{}
 	for _, p := range list {
 		out = append(out, p.pov)
+		seen[strings.ToLower(p.pov)] = true
 		if len(out) >= limit {
 			break
+		}
+	}
+
+	// Enrich with batch-precomputed vector-related POVs of the best match.
+	if q != "" && len(out) > 0 {
+		var related []string
+		if s.cache.GetJSON(r.Context(), "suggest:related:"+strings.ToLower(out[0]), &related) {
+			for _, rp := range related {
+				if len(out) >= limit {
+					break
+				}
+				if !seen[strings.ToLower(rp)] {
+					seen[strings.ToLower(rp)] = true
+					out = append(out, rp)
+				}
+			}
 		}
 	}
 	httpx.JSON(w, http.StatusOK, map[string][]string{"povs": out})

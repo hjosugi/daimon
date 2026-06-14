@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
+	dbq "daimon/api/internal/db"
 	"daimon/api/internal/httpx"
 	"daimon/api/internal/qdrant"
 )
@@ -71,7 +72,7 @@ func (s *Server) handleCreatePost(w http.ResponseWriter, r *http.Request) {
 	uid := userID(ctx)
 
 	var username string
-	if err := s.pool.QueryRow(ctx, `SELECT username FROM users WHERE id=$1`, uid).Scan(&username); err != nil {
+	if err := s.pool.QueryRow(ctx, dbq.SQL("posts.username_by_id"), uid).Scan(&username); err != nil {
 		httpx.Error(w, http.StatusUnauthorized, "User not found")
 		return
 	}
@@ -89,16 +90,12 @@ func (s *Server) handleCreatePost(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback(ctx)
 
-	if _, err := tx.Exec(ctx,
-		`INSERT INTO posts (id, user_id, username, text, created_at, updated_at)
-		 VALUES ($1,$2,$3,$4,$5,$5)`, id, uid, username, text, now); err != nil {
+	if _, err := tx.Exec(ctx, dbq.SQL("posts.insert_post"), id, uid, username, text, now); err != nil {
 		httpx.Error(w, http.StatusInternalServerError, "Could not create post")
 		return
 	}
 	for _, p := range povs {
-		if _, err := tx.Exec(ctx,
-			`INSERT INTO povs (id, post_id, pov, is_auto, created_at) VALUES ($1,$2,$3,false,$4)`,
-			uuid.NewString(), id, p, now); err != nil {
+		if _, err := tx.Exec(ctx, dbq.SQL("posts.insert_pov"), uuid.NewString(), id, p, now); err != nil {
 			httpx.Error(w, http.StatusInternalServerError, "Could not save POV")
 			return
 		}
@@ -133,7 +130,7 @@ func (s *Server) handleDeletePost(w http.ResponseWriter, r *http.Request) {
 	uid := userID(r.Context())
 
 	var owner string
-	if err := s.pool.QueryRow(r.Context(), `SELECT user_id FROM posts WHERE id=$1`, id).Scan(&owner); err != nil {
+	if err := s.pool.QueryRow(r.Context(), dbq.SQL("posts.owner"), id).Scan(&owner); err != nil {
 		httpx.Error(w, http.StatusNotFound, "Post not found")
 		return
 	}
@@ -141,7 +138,7 @@ func (s *Server) handleDeletePost(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, http.StatusForbidden, "You can only delete your own posts")
 		return
 	}
-	if _, err := s.pool.Exec(r.Context(), `DELETE FROM posts WHERE id=$1`, id); err != nil {
+	if _, err := s.pool.Exec(r.Context(), dbq.SQL("posts.delete"), id); err != nil {
 		httpx.Error(w, http.StatusInternalServerError, "Could not delete post")
 		return
 	}
@@ -151,24 +148,21 @@ func (s *Server) handleDeletePost(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) likesCount(ctx context.Context, postID string) int {
 	var n int
-	_ = s.pool.QueryRow(ctx, `SELECT count(*) FROM likes WHERE post_id=$1`, postID).Scan(&n)
+	_ = s.pool.QueryRow(ctx, dbq.SQL("posts.like_count"), postID).Scan(&n)
 	return n
 }
 
 func (s *Server) handleLike(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	uid := userID(r.Context())
-	_, _ = s.pool.Exec(r.Context(),
-		`INSERT INTO likes (id, post_id, user_id, created_at) VALUES ($1,$2,$3,$4)
-		 ON CONFLICT (post_id, user_id) DO NOTHING`,
-		uuid.NewString(), id, uid, time.Now().UTC())
+	_, _ = s.pool.Exec(r.Context(), dbq.SQL("posts.insert_like"), uuid.NewString(), id, uid, time.Now().UTC())
 	httpx.JSON(w, http.StatusOK, likeResp{Liked: true, Likes: s.likesCount(r.Context(), id)})
 }
 
 func (s *Server) handleUnlike(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	uid := userID(r.Context())
-	_, _ = s.pool.Exec(r.Context(), `DELETE FROM likes WHERE post_id=$1 AND user_id=$2`, id, uid)
+	_, _ = s.pool.Exec(r.Context(), dbq.SQL("posts.delete_like"), id, uid)
 	httpx.JSON(w, http.StatusOK, likeResp{Liked: false, Likes: s.likesCount(r.Context(), id)})
 }
 
@@ -180,10 +174,7 @@ type likerResp struct {
 // handleGetLikers returns who liked a post (newest first).
 func (s *Server) handleGetLikers(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	rows, err := s.pool.Query(r.Context(),
-		`SELECT u.id, u.username
-		 FROM likes l JOIN users u ON u.id = l.user_id
-		 WHERE l.post_id=$1 ORDER BY l.created_at DESC LIMIT 200`, id)
+	rows, err := s.pool.Query(r.Context(), dbq.SQL("posts.likers"), id)
 	if err != nil {
 		httpx.Error(w, http.StatusInternalServerError, "Database error")
 		return
@@ -209,10 +200,7 @@ type commentResp struct {
 
 func (s *Server) handleGetComments(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	rows, err := s.pool.Query(r.Context(),
-		`SELECT c.id, c.text, c.user_id, u.username, c.created_at
-		 FROM comments c LEFT JOIN users u ON u.id = c.user_id
-		 WHERE c.post_id=$1 ORDER BY c.created_at ASC`, id)
+	rows, err := s.pool.Query(r.Context(), dbq.SQL("posts.comments"), id)
 	if err != nil {
 		httpx.Error(w, http.StatusInternalServerError, "Database error")
 		return
@@ -256,7 +244,7 @@ func (s *Server) handleAddComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var exists bool
-	_ = s.pool.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM posts WHERE id=$1)`, id).Scan(&exists)
+	_ = s.pool.QueryRow(r.Context(), dbq.SQL("posts.exists"), id).Scan(&exists)
 	if !exists {
 		httpx.Error(w, http.StatusNotFound, "Post not found")
 		return
@@ -264,9 +252,7 @@ func (s *Server) handleAddComment(w http.ResponseWriter, r *http.Request) {
 
 	cid := uuid.NewString()
 	now := time.Now().UTC()
-	if _, err := s.pool.Exec(r.Context(),
-		`INSERT INTO comments (id, post_id, user_id, text, created_at) VALUES ($1,$2,$3,$4,$5)`,
-		cid, id, uid, text, now); err != nil {
+	if _, err := s.pool.Exec(r.Context(), dbq.SQL("posts.insert_comment"), cid, id, uid, text, now); err != nil {
 		httpx.Error(w, http.StatusInternalServerError, "Could not add comment")
 		return
 	}

@@ -36,7 +36,7 @@ PNPM := $(shell command -v pnpm >/dev/null 2>&1 && echo pnpm || echo "mise exec 
 export QDRANT_PATH ?=
 export QDRANT_LOCAL ?=
 
-.PHONY: all fresh setup infra infra-db deps-up wait-db backend backend-ensure frontend frontend-ensure ensure-pnpm migrate seed seed-large dev docker docker-logs docker-down web down clean
+.PHONY: all fresh setup infra infra-db deps-up batch wait-db backend backend-ensure frontend frontend-ensure ensure-pnpm migrate seed seed-large dev docker docker-logs docker-down web down clean
 
 # All-in-one. Installs deps only if missing, so it's safe to run every day.
 all: infra wait-db backend-ensure frontend-ensure migrate dev
@@ -57,7 +57,15 @@ infra-db:
 # Start only the dependencies (db + qdrant + ml) — for debugging the Go API
 # on the host (so :8000 stays free for the debugger).
 deps-up:
-	$(COMPOSE) up -d db qdrant ml
+	$(COMPOSE) up -d db qdrant redis ml
+
+# Run the precompute batch (timeline feeds + popular/related POVs) into Redis.
+# Needs the stack up (make docker) so db/qdrant/redis/ml are reachable.
+batch:
+	cd api && REDIS_URL=redis://localhost:6379 \
+	  DATABASE_URL=postgresql://daimon:daimon@localhost:5432/daimon \
+	  QDRANT_URL=http://localhost:6333 EMBED_URL=http://localhost:8001 \
+	  go run ./cmd/batch
 
 # Portable readiness check: wait for Postgres' published TCP port (no compose
 # exec, which differs between Docker and Podman).

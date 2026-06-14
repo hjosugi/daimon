@@ -8,6 +8,7 @@ interface PostHeaderProps {
   currentUser?: User | null
   onDelete?: () => void
   onMatchDetailsClick?: () => void
+  onUserClick?: (userId: string) => void
 }
 
 export const PostHeader: React.FC<PostHeaderProps> = ({
@@ -15,22 +16,35 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
   currentUser,
   onDelete,
   onMatchDetailsClick,
+  onUserClick,
 }) => {
   const isOwnPost = currentUser && post.user_id === currentUser.id
+  const username = post.username || `USER_${post.user_id?.slice(0, 8) || post.id.slice(0, 8)}`
+  const canOpenUser = !!(onUserClick && post.user_id)
 
   return (
     <div className="p-3 sm:p-4 border-b border-cyan-500/15 bg-[#1f1f35]">
       <div className="flex items-center gap-2 sm:gap-3">
         {/* Avatar */}
-        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-cyan-400/90 via-fuchsia-400/90 to-cyan-500/90 flex items-center justify-center text-black font-bold text-sm sm:text-base border border-cyan-500/18 flex-shrink-0 font-mono">
+        <button
+          type="button"
+          onClick={() => canOpenUser && onUserClick?.(post.user_id as string)}
+          disabled={!canOpenUser}
+          className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-cyan-400/90 via-fuchsia-400/90 to-cyan-500/90 flex items-center justify-center text-black font-bold text-sm sm:text-base border border-cyan-500/18 flex-shrink-0 font-mono ${canOpenUser ? "cursor-pointer hover:brightness-110 active:scale-95 transition-all" : ""}`}
+        >
           {post.username ? post.username.slice(0, 1).toUpperCase() : post.id.slice(0, 1).toUpperCase()}
-        </div>
-        
+        </button>
+
         {/* User info */}
         <div className="flex-1 min-w-0">
-          <div className="text-sm sm:text-base font-semibold text-cyan-300 truncate font-mono">
-            {post.username || `USER_${post.user_id?.slice(0, 8) || post.id.slice(0, 8)}`}
-          </div>
+          <button
+            type="button"
+            onClick={() => canOpenUser && onUserClick?.(post.user_id as string)}
+            disabled={!canOpenUser}
+            className={`block text-left text-sm sm:text-base font-semibold text-cyan-300 truncate font-mono ${canOpenUser ? "hover:text-cyan-200 cursor-pointer" : ""}`}
+          >
+            {username}
+          </button>
           {post.created_at && (
             <div className="text-xs text-cyan-300/90 font-mono">
               {formatRelativeDate(post.created_at)}

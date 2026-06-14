@@ -13,7 +13,9 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"daimon/api/internal/cache"
 	"daimon/api/internal/config"
+	dbq "daimon/api/internal/db"
 	"daimon/api/internal/embed"
 	"daimon/api/internal/httpx"
 	"daimon/api/internal/qdrant"
@@ -24,6 +26,7 @@ type Server struct {
 	cfg    config.Config
 	embed  *embed.Client
 	qdrant *qdrant.Client
+	cache  *cache.Cache
 }
 
 func New(pool *pgxpool.Pool, cfg config.Config) *Server {
@@ -32,6 +35,7 @@ func New(pool *pgxpool.Pool, cfg config.Config) *Server {
 		cfg:    cfg,
 		embed:  embed.New(cfg.EmbedURL),
 		qdrant: qdrant.New(cfg.QdrantURL, cfg.QdrantAPIKey),
+		cache:  cache.New(cfg.RedisURL),
 	}
 }
 
@@ -67,6 +71,7 @@ func (s *Server) Router() http.Handler {
 		r.Group(func(r chi.Router) {
 			r.Use(s.requireAuth)
 			r.Get("/me", s.handleMe)
+			r.Put("/profile", s.handleUpdateProfile)
 			r.Post("/logout", s.handleLogout)
 			r.Delete("/account", s.handleDeleteAccount)
 		})
@@ -91,10 +96,27 @@ func (s *Server) Router() http.Handler {
 		r.Group(func(r chi.Router) {
 			r.Use(s.requireAuth)
 			r.Post("/", s.handleCreatePost)
+			r.Get("/following", s.handleFollowingFeed)
+			r.Get("/saved", s.handleSavedFeed)
 			r.Delete("/{id}", s.handleDeletePost)
+			r.Post("/{id}/save", s.handleSavePost)
+			r.Delete("/{id}/save", s.handleUnsavePost)
+			r.Get("/{id}/save-status", s.handleSaveStatus)
 			r.Post("/{id}/like", s.handleLike)
 			r.Delete("/{id}/like", s.handleUnlike)
 			r.Post("/{id}/comments", s.handleAddComment)
+			r.Post("/povs/{pov}/like", s.handleLikePOV)
+			r.Delete("/povs/{pov}/like", s.handleUnlikePOV)
+			r.Get("/povs/{pov}/like-status", s.handlePOVLikeStatus)
+		})
+	})
+
+	r.Route("/users", func(r chi.Router) {
+		r.With(s.optionalAuth).Get("/{id}", s.handleUserProfile)
+		r.Group(func(r chi.Router) {
+			r.Use(s.requireAuth)
+			r.Post("/{id}/follow", s.handleFollow)
+			r.Delete("/{id}/follow", s.handleUnfollow)
 		})
 	})
 
@@ -133,9 +155,7 @@ func (s *Server) userFromToken(r *http.Request) (string, bool) {
 	}
 	token := strings.TrimPrefix(authz, "Bearer ")
 	var uid string
-	err := s.pool.QueryRow(r.Context(),
-		`SELECT user_id FROM sessions WHERE id=$1 AND expires_at > $2`,
-		token, time.Now().UTC()).Scan(&uid)
+	err := s.pool.QueryRow(r.Context(), dbq.SQL("auth.session_user"), token, time.Now().UTC()).Scan(&uid)
 	if err != nil {
 		return "", false
 	}

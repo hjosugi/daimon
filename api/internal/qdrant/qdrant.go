@@ -108,6 +108,24 @@ func (c *Client) Search(ctx context.Context, vector []float32, limit int, requir
 	return out.Result, nil
 }
 
+func (c *Client) Retrieve(ctx context.Context, ids []string, withVectors bool) ([]Point, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	req := map[string]any{
+		"ids":          ids,
+		"with_payload": true,
+		"with_vector":  withVectors,
+	}
+	var out struct {
+		Result []Point `json:"result"`
+	}
+	if err := c.do(ctx, http.MethodPost, "/collections/"+Collection+"/points", req, &out); err != nil {
+		return nil, err
+	}
+	return out.Result, nil
+}
+
 func (c *Client) Upsert(ctx context.Context, points []Point) error {
 	return c.do(ctx, http.MethodPut, "/collections/"+Collection+"/points",
 		map[string]any{"points": points}, nil)

@@ -9,9 +9,10 @@ interface SearchPageProps {
   initialTags?: string[]
   onTagsChange?: (tags: string[]) => void
   onBack?: () => void
+  onUserClick?: (userId: string) => void
 }
 
-export const SearchPage: React.FC<SearchPageProps> = ({ initialTags = [], onTagsChange }) => {
+export const SearchPage: React.FC<SearchPageProps> = ({ initialTags = [], onTagsChange, onUserClick }) => {
   const [searchQuery, setSearchQuery] = useState<string>("")
   const [searchTags, setSearchTags] = useState<string[]>(initialTags)
   const [searchTagInput, setSearchTagInput] = useState<string>("")
@@ -78,7 +79,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialTags = [], onTags
 
   return (
     <div className="min-h-screen bg-[#151520]">
-      <div className="max-w-2xl mx-auto px-3 sm:px-4 py-3 sm:py-4 space-y-2">
+      <div className="max-w-3xl mx-auto px-3 sm:px-4 py-3 sm:py-4 space-y-2">
         {/* Simple Search Input - Cyberpunk style */}
         <div className="bg-[#1f1f35] rounded border border-cyan-500/15">
           <div className="p-3 space-y-2">
@@ -233,10 +234,11 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialTags = [], onTags
                   {posts.length > 0 ? (
                     <div className="bg-[#1f1f35] rounded border border-cyan-500/15 overflow-hidden">
                       {posts.map((post) => (
-                        <SearchPostCard 
-                          key={post.id} 
+                        <SearchPostCard
+                          key={post.id}
                           post={post}
                           currentUser={currentUser}
+                          onUserClick={onUserClick}
                           onTagClick={(tag) => {
                             if (!searchTags.includes(tag)) {
                               setSearchTags((prev) => [...prev, tag])

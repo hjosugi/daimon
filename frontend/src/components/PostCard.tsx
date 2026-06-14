@@ -1,9 +1,9 @@
 import { motion, AnimatePresence } from "framer-motion"
-import { Send, Trash2, AlertTriangle, X, Heart, MessageSquare } from "lucide-react"
+import { Send, Trash2, AlertTriangle, X, Heart, MessageSquare, Bookmark } from "lucide-react"
 import React, { useState, useEffect } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type { Post, User } from "../api/client"
-import { likePost, unlikePost, getComments, addComment, deletePost, likePOV, unlikePOV, getPOVLikeStatus } from "../api/client"
+import { likePost, unlikePost, getComments, addComment, deletePost, likePOV, unlikePOV, getPOVLikeStatus, savePost, unsavePost, getSaveStatus } from "../api/client"
 import { PostHeader } from "./PostCard/PostHeader"
 import { PostContent } from "./PostCard/PostContent"
 
@@ -11,9 +11,10 @@ interface PostCardProps {
   post: Post
   onTagClick?: (tag: string) => void
   currentUser?: User | null
+  onUserClick?: (userId: string) => void
 }
 
-export const PostCard: React.FC<PostCardProps> = ({ post, onTagClick, currentUser }) => {
+export const PostCard: React.FC<PostCardProps> = ({ post, onTagClick, currentUser, onUserClick }) => {
   const [showComments, setShowComments] = useState(false)
   const [commentText, setCommentText] = useState("")
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -22,30 +23,52 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onTagClick, currentUse
   const [povLikes, setPovLikes] = useState<Record<string, { liked: boolean; likes: number }>>({})
   const queryClient = useQueryClient()
 
-  // Like mutation
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    if (!currentUser) return
+    getSaveStatus(post.id)
+      .then((s) => setSaved(s.saved))
+      .catch(() => {})
+  }, [post.id, currentUser])
+
+  // Patch this post across every cached feed (timeline/search/profile/saved).
+  const patchCaches = (updater: (p: Post) => Post) => {
+    for (const key of [["timeline"], ["search"], ["my-posts"], ["user-posts"], ["saved-posts"]]) {
+      queryClient.setQueriesData<Post[]>({ queryKey: key }, (old) =>
+        Array.isArray(old) ? old.map((p) => (p.id === post.id ? updater(p) : p)) : old,
+      )
+    }
+  }
+
+  const flipLike = (p: Post): Post => ({
+    ...p,
+    liked: !p.liked,
+    likes: (p.likes ?? 0) + (p.liked ? -1 : 1),
+  })
+
+  // Like mutation — optimistic (instant heart, no refetch).
   const likeMutation = useMutation({
     mutationFn: () => (post.liked ? unlikePost(post.id) : likePost(post.id)),
+    onMutate: () => patchCaches(flipLike),
+    onError: () => patchCaches(flipLike),
+    onSuccess: (data) => patchCaches((p) => ({ ...p, liked: data.liked, likes: data.likes })),
+  })
+
+  // Save / clip mutation — optimistic.
+  const saveMutation = useMutation({
+    mutationFn: () => (saved ? unsavePost(post.id) : savePost(post.id)),
+    onMutate: () => {
+      const prev = saved
+      setSaved(!saved)
+      return { prev }
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx) setSaved(ctx.prev)
+    },
     onSuccess: (data) => {
-      // Optimistically update the post
-      queryClient.setQueryData(["timeline"], (oldData: any) => {
-        if (!oldData) return oldData
-        return oldData.map((p: Post) =>
-          p.id === post.id
-            ? { ...p, liked: data.liked, likes: data.likes }
-            : p
-        )
-      })
-      queryClient.setQueryData(["search"], (oldData: any) => {
-        if (!oldData) return oldData
-        return oldData.map((p: Post) =>
-          p.id === post.id
-            ? { ...p, liked: data.liked, likes: data.likes }
-            : p
-        )
-      })
-      // Invalidate to ensure consistency
-      queryClient.invalidateQueries({ queryKey: ["timeline"] })
-      queryClient.invalidateQueries({ queryKey: ["search"] })
+      setSaved(data.saved)
+      queryClient.invalidateQueries({ queryKey: ["saved-posts"] })
     },
   })
 
@@ -142,6 +165,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onTagClick, currentUse
         currentUser={currentUser}
         onDelete={() => setShowDeleteConfirm(true)}
         onMatchDetailsClick={() => setShowMatchDetails(true)}
+        onUserClick={onUserClick}
       />
 
       {/* Match Reason Details Modal */}
@@ -439,6 +463,23 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onTagClick, currentUse
             </span>
           </button>
 
+          {/* Save / clip button */}
+          {currentUser && (
+            <button
+              onClick={() => saveMutation.mutate()}
+              className={`flex items-center gap-1.5 sm:gap-2 transition-all group px-2 sm:px-3 py-1 sm:py-1.5 rounded font-mono border active:scale-95 ml-auto ${
+                saved
+                  ? "text-amber-300 bg-amber-900/15 border-amber-500/25"
+                  : "text-cyan-300/90 hover:text-amber-300 hover:bg-amber-900/10 border-transparent hover:border-amber-500/20"
+              }`}
+              title={saved ? "保存済み（クリックで解除）" : "保存する"}
+            >
+              <Bookmark size={18} className={`sm:w-5 sm:h-5 ${saved ? "fill-amber-300" : ""}`} />
+              <span className="text-xs sm:text-sm font-semibold hidden sm:inline">
+                {saved ? "保存済み" : "保存"}
+              </span>
+            </button>
+          )}
         </div>
 
         {/* Comments Section */}

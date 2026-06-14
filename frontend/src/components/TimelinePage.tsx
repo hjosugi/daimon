@@ -14,6 +14,7 @@ interface TimelinePageProps {
   includeFarPosts: boolean
   onAuthRequired: () => void
   onTagClick: (tag: string) => void
+  onUserClick?: (userId: string) => void
 }
 
 export const TimelinePage: React.FC<TimelinePageProps> = ({
@@ -24,6 +25,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
   includeFarPosts,
   onAuthRequired,
   onTagClick,
+  onUserClick,
 }) => {
   const [showPostForm, setShowPostForm] = useState(false)
   const { data: posts = [], isLoading, isError } = useQuery({
@@ -34,7 +36,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
   })
 
   return (
-    <main className="max-w-2xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6 relative">
+    <main className="max-w-3xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6 relative">
       {showPostForm && (
         <PostInputForm 
           user={user} 
@@ -56,7 +58,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
         ) : (
           <>
             {posts.map((post) => (
-              <PostCard key={post.id} post={post} onTagClick={onTagClick} currentUser={user} />
+              <PostCard key={post.id} post={post} onTagClick={onTagClick} onUserClick={onUserClick} currentUser={user} />
             ))}
             {posts.length === 0 && (
               <div className="text-center py-12 text-cyan-300/70">

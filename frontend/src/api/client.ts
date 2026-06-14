@@ -237,6 +237,54 @@ export interface SearchParams {
   limit?: number
 }
 
+export const getUserPosts = async (userId: string): Promise<Post[]> => {
+  return await api.get(`posts/by-user/${userId}`).json<Post[]>()
+}
+
+export interface UserProfile {
+  id: string
+  username: string
+  avatar_url?: string | null
+  posts_count: number
+  followers: number
+  following: number
+  is_following: boolean
+  is_me: boolean
+}
+
+export const getUserProfile = async (userId: string): Promise<UserProfile> => {
+  return await api.get(`users/${userId}`).json<UserProfile>()
+}
+
+export const followUser = async (userId: string): Promise<{ following: boolean; followers: number }> => {
+  return await api.post(`users/${userId}/follow`).json()
+}
+
+export const unfollowUser = async (userId: string): Promise<{ following: boolean; followers: number }> => {
+  return await api.delete(`users/${userId}/follow`).json()
+}
+
+export const getFollowingFeed = async (): Promise<Post[]> => {
+  return await api.get("posts/following").json<Post[]>()
+}
+
+// --- Bookmarks (save / clip) ---
+export const savePost = async (postId: string): Promise<{ saved: boolean }> => {
+  return await api.post(`posts/${postId}/save`).json()
+}
+
+export const unsavePost = async (postId: string): Promise<{ saved: boolean }> => {
+  return await api.delete(`posts/${postId}/save`).json()
+}
+
+export const getSaveStatus = async (postId: string): Promise<{ saved: boolean }> => {
+  return await api.get(`posts/${postId}/save-status`).json()
+}
+
+export const getSavedPosts = async (): Promise<Post[]> => {
+  return await api.get("posts/saved").json<Post[]>()
+}
+
 export const searchPosts = async (params: SearchParams): Promise<Post[]> => {
   return await api
     .post("posts/search", {

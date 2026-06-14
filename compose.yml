@@ -25,6 +25,12 @@ services:
       timeout: 3s
       retries: 20
 
+  redis:
+    image: docker.io/library/redis:7-alpine
+    ports:
+      - "6379:6379"
+    restart: always
+
   # Python ML microservice — the ONLY Python in the running stack.
   ml:
     build: ./ml-service
