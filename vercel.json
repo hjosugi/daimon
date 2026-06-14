@@ -1,7 +1,7 @@
 {
-  "buildCommand": "pnpm run build",
+  "buildCommand": "cd frontend && npx --yes pnpm@9.15.0 run build",
   "outputDirectory": "frontend/dist",
-  "installCommand": "npm install -g pnpm@9.15.0 && cd frontend && pnpm install --no-frozen-lockfile",
+  "installCommand": "cd frontend && npx --yes pnpm@9.15.0 install --no-frozen-lockfile",
   "framework": "vite",
   "ignoreCommand": "git diff HEAD^ HEAD --quiet -- ./frontend ./vercel.json ./package.json"
 }
