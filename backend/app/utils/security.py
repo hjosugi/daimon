@@ -83,6 +83,61 @@ def escape_html(text: str) -> str:
     return escape(text)
 
 
+# --- Account input normalization & validation -----------------------------
+
+USERNAME_MAX = 30
+EMAIL_MAX = 254
+PASSWORD_MIN = 8
+PASSWORD_MAX_BYTES = 72  # bcrypt silently truncates beyond 72 bytes
+
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+_CONTROL_RE = re.compile(r"[\x00-\x1F\x7F]")
+
+
+def normalize_username(username: str) -> str:
+    """Trim ends and collapse internal whitespace runs to a single space."""
+    if not username:
+        return ""
+    return re.sub(r"\s+", " ", username).strip()
+
+
+def validate_username(username: str) -> Tuple[bool, Optional[str]]:
+    """Validate a (pre-normalization) username. Returns (ok, error)."""
+    u = normalize_username(username or "")
+    if not u:
+        return False, "Username cannot be empty"
+    if len(u) > USERNAME_MAX:
+        return False, f"Username must be {USERNAME_MAX} characters or less"
+    if _CONTROL_RE.search(u) or "<" in u or ">" in u:
+        return False, "Username contains invalid characters"
+    return True, None
+
+
+def normalize_email(email: str) -> str:
+    return (email or "").strip().lower()
+
+
+def validate_email(email: str) -> Tuple[bool, Optional[str]]:
+    e = normalize_email(email)
+    if not e:
+        return False, "Email cannot be empty"
+    if len(e) > EMAIL_MAX:
+        return False, "Email is too long"
+    if not _EMAIL_RE.match(e):
+        return False, "Invalid email format"
+    return True, None
+
+
+def validate_password(password: str) -> Tuple[bool, Optional[str]]:
+    if not password:
+        return False, "Password cannot be empty"
+    if len(password) < PASSWORD_MIN:
+        return False, f"Password must be at least {PASSWORD_MIN} characters"
+    if len(password.encode("utf-8")) > PASSWORD_MAX_BYTES:
+        return False, f"Password must be {PASSWORD_MAX_BYTES} bytes or less"
+    return True, None
+
+
 def sanitize_sql_input(value: str) -> str:
     if not isinstance(value, str):
         return str(value)

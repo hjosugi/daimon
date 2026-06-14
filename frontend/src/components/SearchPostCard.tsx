@@ -14,18 +14,32 @@ interface SearchPostCardProps {
 export const SearchPostCard: React.FC<SearchPostCardProps> = ({ post, onTagClick }) => {
   const queryClient = useQueryClient()
 
+  // Update every cached search result set (key is ["search", query, tags]).
+  const patchSearchCaches = (updater: (p: Post) => Post) => {
+    queryClient.setQueriesData<Post[]>({ queryKey: ["search"] }, (old) =>
+      Array.isArray(old) ? old.map((p) => (p.id === post.id ? updater(p) : p)) : old,
+    )
+  }
+
   const likeMutation = useMutation({
     mutationFn: () => (post.liked ? unlikePost(post.id) : likePost(post.id)),
+    // Optimistic: flip the heart immediately, no refetch (instant feedback).
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ["search"] })
+      const prev = queryClient.getQueriesData<Post[]>({ queryKey: ["search"] })
+      patchSearchCaches((p) => ({
+        ...p,
+        liked: !p.liked,
+        likes: (p.likes ?? 0) + (p.liked ? -1 : 1),
+      }))
+      return { prev }
+    },
+    onError: (_e, _v, ctx) => {
+      ctx?.prev?.forEach(([key, data]) => queryClient.setQueryData(key, data))
+    },
     onSuccess: (data) => {
-      queryClient.setQueryData(["search"], (oldData: any) => {
-        if (!oldData) return oldData
-        return oldData.map((p: Post) =>
-          p.id === post.id
-            ? { ...p, liked: data.liked, likes: data.likes }
-            : p
-        )
-      })
-      queryClient.invalidateQueries({ queryKey: ["search"] })
+      // Reconcile with the server's authoritative count.
+      patchSearchCaches((p) => ({ ...p, liked: data.liked, likes: data.likes }))
     },
   })
 
@@ -66,6 +80,31 @@ export const SearchPostCard: React.FC<SearchPostCardProps> = ({ post, onTagClick
           </p>
         </div>
 
+        {/* Why this matched */}
+        {post.match_reason && (() => {
+          const mr = post.match_reason
+          const why = mr.reason
+            ? mr.reason
+            : (mr.pov_matches?.length || mr.common_povs?.length)
+              ? `共通の視点: ${(mr.pov_matches?.length ? mr.pov_matches : mr.common_povs ?? [])
+                  .slice(0, 3)
+                  .map((p) => `#${p}`)
+                  .join(" ")}`
+              : null
+          if (!why) return null
+          return (
+            <div className="mb-1.5 flex items-start gap-1 text-[11px] font-mono text-emerald-200">
+              <span className="text-emerald-400 shrink-0">🎯 なぜ表示</span>
+              <span className="text-cyan-100/90">{why}</span>
+              {mr.is_bridge && (
+                <span className="ml-auto shrink-0 text-amber-300" title="遠い視点だが価値観を共有">
+                  🌉
+                </span>
+              )}
+            </div>
+          )
+        })()}
+
         {/* Tags */}
         {post.povs && post.povs.length > 0 && (
           <div className="flex flex-wrap gap-0.5 mb-1.5">
@@ -91,17 +130,11 @@ export const SearchPostCard: React.FC<SearchPostCardProps> = ({ post, onTagClick
         <div className="flex items-center gap-3 text-[11px]">
           <button
             onClick={handleLike}
-            disabled={likeMutation.isPending}
-            className={`flex items-center gap-0.5 font-mono transition-colors ${
-              post.liked
-                ? "text-red-300"
-                : "text-cyan-300/90 hover:text-red-300"
-            } ${likeMutation.isPending ? "opacity-50" : ""}`}
+            className={`flex items-center gap-0.5 font-mono transition-colors active:scale-95 ${
+              post.liked ? "text-red-400" : "text-cyan-300/90 hover:text-red-300"
+            }`}
           >
-            <Heart
-              size={11}
-              className={post.liked ? "fill-red-300" : ""}
-            />
+            <Heart size={13} className={post.liked ? "fill-red-400" : ""} />
             <span>{post.likes ?? 0}</span>
           </button>
           <div className="flex items-center gap-0.5 text-cyan-300/90 font-mono">

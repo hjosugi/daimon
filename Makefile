@@ -1,13 +1,15 @@
 # Daimon — one-command local setup & dev (run from repo root).
 #
-#   make all     ★ All-in-one: infra + deps (if missing) + migrate + run. Idempotent.
-#   make setup   Full (re)install: infra + backend deps (fresh venv) + frontend deps + migrate
-#   make dev     Run backend (:8000) and frontend (:5173) together
+#   make fresh   ★★ FROM ZERO (Docker): wipe data → build → migrate → seed → run UI
+#   make all     ★ All-in-one (host): infra + deps (if missing) + migrate + run
+#   make docker  Containerized backend: db + qdrant + backend via compose
+#   make setup   Full (re)install on host: fresh venv + frontend deps + migrate
+#   make dev     Run backend (:8000) and frontend (:5173) on the host
+#   make seed    Load test data (override count: make seed POSTS=50000 via ARGS)
 #   make migrate Apply DB migrations (alembic upgrade head)
-#   make down    Stop infra
-#   make clean   Stop infra and remove .venv / node_modules
+#   make down / make clean   Stop infra / also remove .venv & node_modules
 #
-# Quick start on a fresh machine:  make all
+# Confused / want everything in one go:  make fresh
 #
 # Backend is pinned to Python 3.12: sentence-transformers / psycopg2-binary
 # have no wheels for 3.13+, so a newer interpreter would build from source.
@@ -15,6 +17,7 @@
 SHELL := /bin/bash
 PY_VERSION := 3.12
 PNPM_VERSION := 9.15.0
+POSTS ?= 12000
 
 # Auto-detect a Compose provider (works for Docker and Podman/CachyOS setups).
 COMPOSE := $(shell \
@@ -33,7 +36,7 @@ PNPM := $(shell command -v pnpm >/dev/null 2>&1 && echo pnpm || echo "mise exec 
 export QDRANT_PATH ?=
 export QDRANT_LOCAL ?=
 
-.PHONY: all setup infra infra-db wait-db backend backend-ensure frontend frontend-ensure ensure-pnpm migrate seed seed-large dev docker docker-logs docker-down web down clean
+.PHONY: all fresh setup infra infra-db wait-db backend backend-ensure frontend frontend-ensure ensure-pnpm migrate seed seed-large dev docker docker-logs docker-down web down clean
 
 # All-in-one. Installs deps only if missing, so it's safe to run every day.
 all: infra wait-db backend-ensure frontend-ensure migrate dev
@@ -107,6 +110,20 @@ dev:
 	  ( cd frontend && $(PNPM) dev ) & \
 	  wait
 
+# ★ Everything from zero. Wipes ALL local data (Postgres + Qdrant volumes),
+# rebuilds the backend image, auto-migrates, seeds test data, then runs the UI.
+# Override seeded count: `make fresh POSTS=50000`.
+fresh: backend-ensure
+	@echo "⚠️  Wiping containers + volumes (all local Postgres + Qdrant data)..."
+	-$(COMPOSE) down -v --remove-orphans
+	$(COMPOSE) up -d --build
+	@echo "⏳ Waiting for Go API (build + schema bootstrap; ML image bakes models)..."
+	@until curl -sf http://localhost:8000/health >/dev/null 2>&1; do sleep 3; done
+	@echo "🌱 Seeding $(POSTS) posts (users @example.com / password123)..."
+	cd backend && ./.venv/bin/python seed.py --posts $(POSTS)
+	@echo "🎨 Starting frontend (:5173). Ctrl-C stops the UI; api keeps running in Docker."
+	@$(MAKE) web
+
 # Fully containerized backend: db + qdrant + backend all in Docker/Podman.
 # (Frontend stays on the host — run `make web` in another terminal.)
 docker:
@@ -115,7 +132,7 @@ docker:
 	@echo "   Start the UI with: make web   (frontend :5173)"
 
 docker-logs:
-	$(COMPOSE) logs -f backend
+	$(COMPOSE) logs -f api ml
 
 docker-down:
 	$(COMPOSE) down

@@ -112,34 +112,55 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialTags = [], onTags
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowPOVSearch(!showPOVSearch)}
-                className="flex items-center gap-1.5 px-2 py-1 text-xs font-mono text-fuchsia-300 hover:text-fuchsia-300 hover:bg-fuchsia-900/15 border border-fuchsia-500/25 hover:border-fuchsia-500/40 rounded transition-colors"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-mono text-fuchsia-100 hover:bg-fuchsia-900/20 border border-fuchsia-500/30 hover:border-fuchsia-500/50 rounded transition-colors"
               >
-                <Hash size={12} />
-                <span>POV</span>
-                {showPOVSearch ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                <Hash size={14} />
+                <span>POVで絞り込み</span>
+                {searchTags.length > 0 && (
+                  <span className="ml-0.5 min-w-[18px] px-1.5 rounded-full bg-fuchsia-500 text-black text-[11px] font-bold text-center">
+                    {searchTags.length}
+                  </span>
+                )}
+                {showPOVSearch ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
               </button>
-              
-              {/* Active search tags */}
-              {searchTags.length > 0 && (
-                <div className="flex flex-wrap gap-1 flex-1">
+            </div>
+
+            {/* Selected POVs — prominent so it's clear what's filtering */}
+            {searchTags.length > 0 && (
+              <div className="rounded border border-fuchsia-500/30 bg-fuchsia-900/15 p-2.5">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-fuchsia-100 font-mono">
+                    絞り込み中の POV（{searchTags.length}）
+                  </span>
+                  <button
+                    onClick={() => setSearchTags([])}
+                    className="flex items-center gap-1 text-xs text-fuchsia-200 hover:text-red-300 transition-colors"
+                  >
+                    <X size={12} />
+                    すべて消す
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
                   {searchTags.map((tag) => (
                     <span
                       key={tag}
-                      className="px-1.5 py-0.5 bg-fuchsia-900/25 text-fuchsia-300 rounded text-[10px] font-mono flex items-center gap-0.5 border border-fuchsia-500/18"
+                      className="inline-flex items-center gap-1 pl-2.5 pr-1 py-1 bg-fuchsia-500 text-black rounded-full text-xs font-mono font-semibold"
                     >
-                      #{tag.length > 12 ? `${tag.slice(0, 12)}...` : tag}
+                      #{tag}
                       <button
                         type="button"
                         onClick={() => handleSearchTagRemove(tag)}
-                        className="hover:bg-fuchsia-900/35 rounded p-0.5 transition-colors"
+                        aria-label={`「${tag}」を外す`}
+                        title={`「${tag}」を外す`}
+                        className="rounded-full hover:bg-black/25 p-0.5 transition-colors"
                       >
-                        <X size={9} />
+                        <X size={13} />
                       </button>
                     </span>
                   ))}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* POV Input (collapsible) */}
             {showPOVSearch && (
