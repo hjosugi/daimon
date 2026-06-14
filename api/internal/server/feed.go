@@ -76,6 +76,8 @@ func (s *Server) loadCounts(ctx context.Context, table string, ids []string) map
 		query = dbq.SQL("feed.like_counts")
 	case "comments":
 		query = dbq.SQL("feed.comment_counts")
+	case "bookmarks":
+		query = dbq.SQL("feed.save_counts")
 	default:
 		return m
 	}
@@ -276,6 +278,61 @@ func (s *Server) userSense(ctx context.Context, uid string) (map[string]bool, []
 	return tags, centroid
 }
 
+// savedCentroid returns the mean vector of the posts a user has saved.
+// A save is a stronger preference signal than a like, so the timeline blends
+// this into the user's "sense" to surface more of what they clip.
+func (s *Server) savedCentroid(ctx context.Context, uid string) []float32 {
+	if uid == "" {
+		return nil
+	}
+	rows, err := s.pool.Query(ctx, dbq.SQL("feed.user_saved_ids"), uid)
+	if err != nil {
+		return nil
+	}
+	var ids []string
+	for rows.Next() {
+		var id string
+		if rows.Scan(&id) == nil {
+			ids = append(ids, id)
+		}
+	}
+	rows.Close()
+	if len(ids) == 0 {
+		return nil
+	}
+	pts, err := s.qdrant.Retrieve(ctx, ids, true)
+	if err != nil || len(pts) == 0 {
+		return nil
+	}
+	vs := make([][]float32, 0, len(pts))
+	for _, p := range pts {
+		if len(p.Vector) > 0 {
+			vs = append(vs, p.Vector)
+		}
+	}
+	return meanVectors(vs)
+}
+
+// blendCentroids combines the user's own-post centroid with their saved-post
+// centroid, weighting saves higher (a stronger preference signal).
+func blendCentroids(post, saved []float32) []float32 {
+	if len(saved) == 0 {
+		return post
+	}
+	if len(post) == 0 {
+		return saved
+	}
+	n := len(post)
+	if len(saved) < n {
+		n = len(saved)
+	}
+	out := make([]float32, n)
+	for i := 0; i < n; i++ {
+		out[i] = 0.4*post[i] + 0.6*saved[i]
+	}
+	return out
+}
+
 // userTagSet loads just the user's POV set (no Qdrant centroid call).
 func (s *Server) userTagSet(ctx context.Context, uid string) map[string]bool {
 	tags := map[string]bool{}
@@ -382,6 +439,8 @@ func (s *Server) handleTimeline(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	userTags, centroid := s.userSense(ctx, uid)
+	// Saves are a strong preference signal: blend the saved-post centroid in.
+	centroid = blendCentroids(centroid, s.savedCentroid(ctx, uid))
 	searchVector := vector
 	if uid != "" && len(centroid) > 0 && defaultTimelineQuery(req.QueryText) {
 		searchVector = centroid
@@ -419,6 +478,7 @@ func (s *Server) handleTimeline(w http.ResponseWriter, r *http.Request) {
 	}
 	b := s.loadBundle(ctx, ids, uid)
 	meta, povs, likeCounts, commentCounts, liked := b.meta, b.povs, b.likeCounts, b.commentCounts, b.liked
+	saveCounts := s.loadCounts(ctx, "bookmarks", ids)
 
 	cands := make([]ranking.Candidate, 0, len(hits))
 	now := time.Now().UTC()
@@ -431,7 +491,8 @@ func (s *Server) handleTimeline(w http.ResponseWriter, r *http.Request) {
 		for _, p := range povs[h.ID] {
 			tagSet[p] = true
 		}
-		pop := float32(likeCounts[h.ID]) / 10.0
+		// A save counts ~3x a like as a quality/preference signal.
+		pop := float32(likeCounts[h.ID]+3*saveCounts[h.ID]) / 10.0
 		cands = append(cands, ranking.Candidate{
 			PostID: h.ID, Vector: h.Vector, Tags: tagSet, Relevance: h.Score, Popularity: pop, Recency: recencyScore(pm.createdAt, now),
 		})

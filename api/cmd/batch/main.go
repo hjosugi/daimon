@@ -130,11 +130,14 @@ func timelineJob(ctx context.Context, pool *pgxpool.Pool, qc *qdrant.Client, em 
 	}
 	povsByPost := loadPOVs(ctx, pool, ids)
 	likeCounts := loadLikeCounts(ctx, pool, ids)
+	saveCounts := loadSaveCounts(ctx, pool, ids)
 
 	users := distinctPosters(ctx, pool)
 	done := 0
 	for _, uid := range users {
-		centroid := userCentroid(ctx, qc, uid)
+		// Blend the user's own-post centroid with their saved-post centroid
+		// (saves are a stronger preference signal).
+		centroid := blendVectors(userCentroid(ctx, qc, uid), savedCentroid(ctx, pool, qc, uid))
 		userTags := userTagSet(ctx, pool, uid)
 
 		cands := make([]ranking.Candidate, 0, len(hits))
@@ -148,7 +151,8 @@ func timelineJob(ctx context.Context, pool *pgxpool.Pool, qc *qdrant.Client, em 
 			}
 			cands = append(cands, ranking.Candidate{
 				PostID: h.ID, Vector: h.Vector, Tags: tagSet,
-				Relevance: h.Score, Popularity: float32(likeCounts[h.ID]) / 10.0,
+				Relevance:  h.Score,
+				Popularity: float32(likeCounts[h.ID]+3*saveCounts[h.ID]) / 10.0,
 			})
 		}
 		ranked := ranking.RankBySenseDistance(cands, centroid, userTags, 0.7, true, false, 0.3, 10)
@@ -197,6 +201,92 @@ func loadLikeCounts(ctx context.Context, pool *pgxpool.Pool, ids []string) map[s
 		}
 	}
 	return m
+}
+
+func loadSaveCounts(ctx context.Context, pool *pgxpool.Pool, ids []string) map[string]int {
+	m := map[string]int{}
+	rows, err := pool.Query(ctx, dbq.SQL("feed.save_counts"), ids)
+	if err != nil {
+		return m
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var pid string
+		var n int
+		if rows.Scan(&pid, &n) == nil {
+			m[pid] = n
+		}
+	}
+	return m
+}
+
+// savedCentroid returns the mean vector of the user's saved posts.
+func savedCentroid(ctx context.Context, pool *pgxpool.Pool, qc *qdrant.Client, uid string) []float32 {
+	rows, err := pool.Query(ctx, dbq.SQL("feed.user_saved_ids"), uid)
+	if err != nil {
+		return nil
+	}
+	var ids []string
+	for rows.Next() {
+		var id string
+		if rows.Scan(&id) == nil {
+			ids = append(ids, id)
+		}
+	}
+	rows.Close()
+	if len(ids) == 0 {
+		return nil
+	}
+	pts, err := qc.Retrieve(ctx, ids, true)
+	if err != nil || len(pts) == 0 {
+		return nil
+	}
+	var dim int
+	for _, p := range pts {
+		if len(p.Vector) > dim {
+			dim = len(p.Vector)
+		}
+	}
+	if dim == 0 {
+		return nil
+	}
+	sum := make([]float32, dim)
+	n := 0
+	for _, p := range pts {
+		if len(p.Vector) != dim {
+			continue
+		}
+		for i, v := range p.Vector {
+			sum[i] += v
+		}
+		n++
+	}
+	if n == 0 {
+		return nil
+	}
+	for i := range sum {
+		sum[i] /= float32(n)
+	}
+	return sum
+}
+
+// blendVectors blends the own-post centroid with the saved centroid (saves weighted higher).
+func blendVectors(post, saved []float32) []float32 {
+	if len(saved) == 0 {
+		return post
+	}
+	if len(post) == 0 {
+		return saved
+	}
+	n := len(post)
+	if len(saved) < n {
+		n = len(saved)
+	}
+	out := make([]float32, n)
+	for i := 0; i < n; i++ {
+		out[i] = 0.4*post[i] + 0.6*saved[i]
+	}
+	return out
 }
 
 func distinctPosters(ctx context.Context, pool *pgxpool.Pool) []string {

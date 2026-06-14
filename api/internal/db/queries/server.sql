@@ -89,6 +89,12 @@ SELECT post_id, count(*) FROM likes WHERE post_id = ANY($1) GROUP BY post_id
 -- name: feed.comment_counts
 SELECT post_id, count(*) FROM comments WHERE post_id = ANY($1) GROUP BY post_id
 
+-- name: feed.save_counts
+SELECT post_id, count(*) FROM bookmarks WHERE post_id = ANY($1) GROUP BY post_id
+
+-- name: feed.user_saved_ids
+SELECT post_id FROM bookmarks WHERE user_id=$1 ORDER BY created_at DESC LIMIT 100
+
 -- name: feed.liked_set
 SELECT post_id FROM likes WHERE post_id = ANY($1) AND user_id=$2
 
