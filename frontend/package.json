@@ -9,10 +9,10 @@
     "pnpm": "^9.0.0"
   },
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
+    "dev": "NODE_OPTIONS=--disable-warning=DEP0205 vite",
+    "build": "tsc && NODE_OPTIONS=--disable-warning=DEP0205 vite build",
     "lint": "biome check .",
-    "preview": "vite preview"
+    "preview": "NODE_OPTIONS=--disable-warning=DEP0205 vite preview"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.18",
