@@ -8,6 +8,7 @@ import (
 
 const (
 	UsernameMax     = 30
+	BioMax          = 160
 	EmailMax        = 254
 	PasswordMin     = 8
 	PasswordMaxByte = 72 // bcrypt silently truncates beyond 72 bytes
@@ -22,6 +23,17 @@ var (
 // NormalizeUsername trims ends and collapses internal whitespace runs.
 func NormalizeUsername(s string) string {
 	return strings.TrimSpace(wsRunRe.ReplaceAllString(s, " "))
+}
+
+func Bio(s string) (string, string) {
+	b := strings.TrimSpace(s)
+	switch {
+	case len([]rune(b)) > BioMax:
+		return "", "Bio must be 160 characters or less"
+	case controlRe.MatchString(b):
+		return "", "Bio contains invalid characters"
+	}
+	return b, ""
 }
 
 func Username(s string) (string, string) {

@@ -6,6 +6,7 @@ import { TimelinePage } from "./components/TimelinePage"
 import { SearchPage } from "./components/SearchPage"
 import { MyPostsPage } from "./components/MyPostsPage"
 import { SavedPage } from "./components/SavedPage"
+import { POVDiscussionPage } from "./components/POVDiscussionPage"
 import { UserProfilePage } from "./components/UserProfilePage"
 import { AuthModal } from "./components/AuthModal"
 import { ProfileModal } from "./components/ProfileModal"
@@ -24,16 +25,17 @@ function App() {
 
   // Page state
   const [currentPage, setCurrentPage] = useState<
-    "timeline" | "search" | "mine" | "saved" | "user"
+    "timeline" | "search" | "mine" | "saved" | "user" | "pov"
   >("timeline")
   const [initialSearchTags, setInitialSearchTags] = useState<string[]>([])
   const [viewingUserId, setViewingUserId] = useState<string | null>(null)
-  const [prevPage, setPrevPage] = useState<"timeline" | "search" | "mine" | "saved">("timeline")
+  const [viewingPOV, setViewingPOV] = useState<string | null>(null)
+  const [prevPage, setPrevPage] = useState<"timeline" | "search" | "mine" | "saved" | "pov">("timeline")
   const timelineScrollRef = useRef<number>(0)
 
   const handleUserClick = (userId: string) => {
     if (!userId) return
-    setPrevPage(currentPage === "user" ? prevPage : (currentPage as "timeline" | "search" | "mine" | "saved"))
+    setPrevPage(currentPage === "user" ? prevPage : (currentPage as "timeline" | "search" | "mine" | "saved" | "pov"))
     setViewingUserId(userId)
     setCurrentPage("user")
   }
@@ -61,8 +63,9 @@ function App() {
   const handleTagClick = (tag: string) => {
     // Save timeline scroll position
     timelineScrollRef.current = window.scrollY
-    setInitialSearchTags([tag])
-    setCurrentPage("search")
+    setPrevPage(currentPage === "pov" ? prevPage : (currentPage as "timeline" | "search" | "mine" | "saved" | "pov"))
+    setViewingPOV(tag)
+    setCurrentPage("pov")
   }
 
   const handleBackToTimeline = () => {
@@ -101,6 +104,15 @@ function App() {
         <MyPostsPage user={user} onTagClick={handleTagClick} onUserClick={handleUserClick} />
       ) : currentPage === "saved" ? (
         <SavedPage user={user} onTagClick={handleTagClick} />
+      ) : currentPage === "pov" && viewingPOV ? (
+        <POVDiscussionPage
+          pov={viewingPOV}
+          user={user}
+          onBack={() => setCurrentPage(prevPage === "pov" ? "timeline" : prevPage)}
+          onAuthRequired={() => setShowAuthModal(true)}
+          onTagClick={handleTagClick}
+          onUserClick={handleUserClick}
+        />
       ) : currentPage === "user" && viewingUserId ? (
         <UserProfilePage
           userId={viewingUserId}

@@ -69,6 +69,20 @@ export interface POVSuggestion {
   povs: string[]
 }
 
+export type POVCommentStance = "support" | "question" | "oppose" | "note"
+
+export interface POVComment {
+  id: string
+  pov: string
+  text: string
+  stance: POVCommentStance
+  user_id: string
+  username: string
+  avatar_url?: string | null
+  created_at: string
+  mine: boolean
+}
+
 export const generatePOVs = async (text: string): Promise<string[]> => {
   try {
     const response = await api
@@ -149,6 +163,7 @@ export interface User {
   username: string
   email: string
   avatar_url?: string
+  bio?: string | null
   token?: string
 }
 
@@ -156,6 +171,7 @@ export interface RegisterData {
   username: string
   email: string
   password: string
+  bio?: string
 }
 
 export interface LoginData {
@@ -211,6 +227,7 @@ export const getCurrentUser = async (): Promise<User> => {
 export const updateProfile = async (data: {
   username?: string
   avatar_url?: string
+  bio?: string
 }): Promise<User> => {
   return await api.put("auth/profile", { json: data }).json<User>()
 }
@@ -245,6 +262,7 @@ export interface UserProfile {
   id: string
   username: string
   avatar_url?: string | null
+  bio?: string | null
   posts_count: number
   followers: number
   following: number
@@ -252,8 +270,19 @@ export interface UserProfile {
   is_me: boolean
 }
 
+export interface FollowUser {
+  id: string
+  username: string
+  avatar_url?: string | null
+  bio?: string | null
+}
+
 export const getUserProfile = async (userId: string): Promise<UserProfile> => {
   return await api.get(`users/${userId}`).json<UserProfile>()
+}
+
+export const getFollowers = async (userId: string): Promise<FollowUser[]> => {
+  return await api.get(`users/${userId}/followers`).json<FollowUser[]>()
 }
 
 export const followUser = async (userId: string): Promise<{ following: boolean; followers: number }> => {
@@ -262,6 +291,10 @@ export const followUser = async (userId: string): Promise<{ following: boolean; 
 
 export const unfollowUser = async (userId: string): Promise<{ following: boolean; followers: number }> => {
   return await api.delete(`users/${userId}/follow`).json()
+}
+
+export const removeFollower = async (userId: string): Promise<{ removed: boolean; followers: number }> => {
+  return await api.delete(`users/${userId}/follower`).json()
 }
 
 export const getFollowingFeed = async (): Promise<Post[]> => {
@@ -308,4 +341,22 @@ export const unlikePOV = async (pov: string): Promise<{ liked: boolean; likes: n
 
 export const getPOVLikeStatus = async (pov: string): Promise<{ liked: boolean; likes: number }> => {
   return await api.get(`posts/povs/${encodeURIComponent(pov)}/like-status`).json<{ liked: boolean; likes: number }>()
+}
+
+export const getPOVComments = async (pov: string): Promise<POVComment[]> => {
+  return await api.get(`posts/povs/${encodeURIComponent(pov)}/comments`).json<POVComment[]>()
+}
+
+export const addPOVComment = async (
+  pov: string,
+  text: string,
+  stance: POVCommentStance,
+): Promise<POVComment> => {
+  return await api
+    .post(`posts/povs/${encodeURIComponent(pov)}/comments`, { json: { text, stance } })
+    .json<POVComment>()
+}
+
+export const deletePOVComment = async (pov: string, commentId: string): Promise<{ deleted: boolean }> => {
+  return await api.delete(`posts/povs/${encodeURIComponent(pov)}/comments/${commentId}`).json<{ deleted: boolean }>()
 }

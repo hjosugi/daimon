@@ -83,6 +83,7 @@ func (s *Server) Router() http.Handler {
 		r.Get("/{id}/likes", s.handleGetLikers) // who liked
 		r.Post("/generate-povs", s.handleGeneratePOVs)
 		r.Get("/povs/suggest", s.handleSuggestPOVs)
+		r.With(s.optionalAuth).Get("/povs/{pov}/comments", s.handlePOVComments)
 		r.Get("/by-user/{userID}", s.handleUserPosts) // a user's other posts
 
 		// Feeds: auth is optional (used for personalization + liked flags).
@@ -108,15 +109,19 @@ func (s *Server) Router() http.Handler {
 			r.Post("/povs/{pov}/like", s.handleLikePOV)
 			r.Delete("/povs/{pov}/like", s.handleUnlikePOV)
 			r.Get("/povs/{pov}/like-status", s.handlePOVLikeStatus)
+			r.Post("/povs/{pov}/comments", s.handleAddPOVComment)
+			r.Delete("/povs/{pov}/comments/{commentID}", s.handleDeletePOVComment)
 		})
 	})
 
 	r.Route("/users", func(r chi.Router) {
 		r.With(s.optionalAuth).Get("/{id}", s.handleUserProfile)
+		r.With(s.optionalAuth).Get("/{id}/followers", s.handleFollowers)
 		r.Group(func(r chi.Router) {
 			r.Use(s.requireAuth)
 			r.Post("/{id}/follow", s.handleFollow)
 			r.Delete("/{id}/follow", s.handleUnfollow)
+			r.Delete("/{id}/follower", s.handleRemoveFollower)
 		})
 	})
 

@@ -6,7 +6,9 @@ from concurrent.futures import ThreadPoolExecutor
 from app.logger import logger
 
 class EmbeddingService:
-    def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
+    # Must match ml-service EMBED_MODEL — seed vectors and runtime query vectors
+    # share one Qdrant space. Multilingual (incl. Japanese), 384-dim.
+    def __init__(self, model_name: str = "paraphrase-multilingual-MiniLM-L12-v2"):
         self.model_name = model_name
         self.device = os.getenv("EMBEDDING_DEVICE", "cpu")
         self._model: Optional[SentenceTransformer] = None
@@ -17,6 +19,8 @@ class EmbeddingService:
         if not self._initialized:
             logger.info(f"Initializing EmbeddingService with model '{self.model_name}' on device '{self.device}'")
             self._model = SentenceTransformer(self.model_name, device=self.device)
+            # Match ml-service: wider window so longer posts aren't truncated to ~128 tokens.
+            self._model.max_seq_length = 512
             self._initialized = True
             logger.info(f"EmbeddingService initialized successfully (device: {self.device})")
 

@@ -20,6 +20,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 }) => {
   const [username, setUsername] = useState<string>("")
   const [email, setEmail] = useState<string>("")
+  const [bio, setBio] = useState<string>("")
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -30,13 +31,14 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     if (currentUser && isOpen) {
       setUsername(currentUser.username)
       setEmail(currentUser.email)
+      setBio(currentUser.bio || "")
       setAvatarPreview(currentUser.avatar_url || null)
       setAvatarFile(null)
     }
   }, [currentUser, isOpen])
 
   const updateProfileMutation = useMutation({
-    mutationFn: async (data: { username?: string; avatar_url?: string }) => {
+    mutationFn: async (data: { username?: string; avatar_url?: string; bio?: string }) => {
       return await updateProfile(data)
     },
     onSuccess: (user) => {
@@ -67,6 +69,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
         updateProfileMutation.mutate({
           username: username !== currentUser?.username ? username : undefined,
           avatar_url: base64String,
+          bio: bio !== (currentUser?.bio || "") ? bio : undefined,
         })
       }
       reader.readAsDataURL(avatarFile)
@@ -74,6 +77,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
       updateProfileMutation.mutate({
         username: username !== currentUser?.username ? username : undefined,
         avatar_url: avatarPreview || undefined,
+        bio: bio !== (currentUser?.bio || "") ? bio : undefined,
       })
     }
   }
@@ -172,6 +176,23 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 className="w-full pl-10 pr-4 py-2.5 bg-[#1f1f3a] border border-cyan-500/12 rounded focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/40 text-cyan-200/95 placeholder:text-cyan-500/30 font-mono transition-all"
                 placeholder="USERNAME"
               />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-cyan-300/95 mb-2 font-mono">
+              BIO
+            </label>
+            <textarea
+              value={bio}
+              onChange={(e) => setBio(e.target.value.slice(0, 160))}
+              rows={3}
+              maxLength={160}
+              className="w-full px-3 py-2.5 bg-[#1f1f3a] border border-cyan-500/12 rounded focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/40 text-cyan-200/95 placeholder:text-cyan-500/30 font-mono transition-all resize-none"
+              placeholder="ひとことプロフィール"
+            />
+            <div className="mt-1 text-right text-[10px] text-cyan-300/60 font-mono">
+              {bio.length}/160
             </div>
           </div>
 

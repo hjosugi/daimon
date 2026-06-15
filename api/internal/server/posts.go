@@ -14,6 +14,10 @@ import (
 	"daimon/api/internal/qdrant"
 )
 
+// maxPostLen caps post length. Long-form by design (deep, 観点-driven posts);
+// embeddings cover the full text via chunking, so length doesn't hurt search.
+const maxPostLen = 40000
+
 type createPostReq struct {
 	Text string   `json:"text"`
 	Povs []string `json:"povs"`
@@ -62,8 +66,8 @@ func (s *Server) handleCreatePost(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, http.StatusBadRequest, "Post text cannot be empty")
 		return
 	}
-	if len([]rune(text)) > 10000 {
-		httpx.Error(w, http.StatusBadRequest, "Post text must be 10,000 characters or less")
+	if len([]rune(text)) > maxPostLen {
+		httpx.Error(w, http.StatusBadRequest, "Post text must be 40,000 characters or less")
 		return
 	}
 	povs := cleanPOVs(req.Povs)

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { FileText, Loader2 } from "lucide-react"
+import { FileText, Loader2, User as UserIcon } from "lucide-react"
 import type React from "react"
 import { getUserPosts, type User } from "../api/client"
 import { PostCard } from "./PostCard"
@@ -30,6 +30,16 @@ export const MyPostsPage: React.FC<MyPostsPageProps> = ({ user, onTagClick, onUs
             <FileText size={16} className="text-cyan-300" />
             <span>あなたの投稿</span>
             {user && <span className="text-cyan-300/70">（{posts.length}）</span>}
+            {user && (
+              <button
+                type="button"
+                onClick={() => onUserClick?.(user.id)}
+                className="ml-auto inline-flex items-center gap-1 px-2 py-1 rounded border border-cyan-500/20 text-xs text-cyan-300 hover:border-cyan-500/45 hover:bg-cyan-900/15 transition-colors"
+              >
+                <UserIcon size={12} />
+                プロフィール
+              </button>
+            )}
           </div>
         </div>
 

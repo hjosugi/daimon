@@ -17,15 +17,46 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
 
+# Multilingual (50+ languages incl. Japanese). all-MiniLM-L6-v2 is English-only
+# and maps Japanese to near-degenerate vectors, so JA search was meaningless.
+# This model is also 384-dim, so Qdrant needs no schema change — but every post
+# must be RE-EMBEDDED (re-seed) after a model swap or query/post vectors won't align.
+EMBED_MODEL = "paraphrase-multilingual-MiniLM-L12-v2"
+
 _model: SentenceTransformer | None = None
 _nlp_cache: dict[str, object] = {}
+
+
+# Long posts (up to 40k chars) must be embedded as a WHOLE, not just their first
+# ~128 tokens. We raise the per-chunk window and mean-pool over chunks so a deep
+# post's full meaning is represented in its single 384-d vector.
+MAX_SEQ_LEN = 512
+CHUNK_CHARS = 1200  # ~one 512-token window of mixed JA/EN text
+MAX_CHUNKS = 48     # bound cost: covers ~57k chars, beyond the 40k post cap
 
 
 def model() -> SentenceTransformer:
     global _model
     if _model is None:
-        _model = SentenceTransformer("all-MiniLM-L6-v2", device="cpu")
+        _model = SentenceTransformer(EMBED_MODEL, device="cpu")
+        _model.max_seq_length = MAX_SEQ_LEN
     return _model
+
+
+def _chunks(text: str) -> list[str]:
+    if len(text) <= CHUNK_CHARS:
+        return [text]
+    out = [text[i : i + CHUNK_CHARS] for i in range(0, len(text), CHUNK_CHARS)]
+    return out[:MAX_CHUNKS]
+
+
+def encode_full(text: str) -> list[float]:
+    """Embed arbitrarily long text by chunking + mean-pooling (cosine-safe)."""
+    text = text or ""
+    parts = _chunks(text)
+    vecs = model().encode(parts, convert_to_numpy=True)
+    vec = vecs.mean(axis=0) if len(parts) > 1 else vecs[0]
+    return vec.tolist()
 
 
 @asynccontextmanager
@@ -48,8 +79,7 @@ def health():
 
 @app.post("/embed")
 def embed(req: TextReq):
-    vec = model().encode(req.text or "", convert_to_numpy=True)
-    return {"vector": vec.tolist()}
+    return {"vector": encode_full(req.text or "")}
 
 
 # --- POV extraction (spaCy ja/en, with a regex fallback) -------------------

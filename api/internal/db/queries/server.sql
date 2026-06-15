@@ -7,15 +7,15 @@ SELECT
   EXISTS(SELECT 1 FROM users WHERE email=$2)
 
 -- name: auth.insert_user
-INSERT INTO users (id, username, email, password_hash, avatar_url, created_at, updated_at)
-VALUES ($1,$2,$3,$4,NULL,$5,$5)
+INSERT INTO users (id, username, email, password_hash, avatar_url, bio, created_at, updated_at)
+VALUES ($1,$2,$3,$4,NULL,$5,$6,$6)
 
 -- name: auth.login_user
-SELECT id, username, email, password_hash, avatar_url
+SELECT id, username, email, password_hash, avatar_url, bio
 FROM users WHERE email=$1 OR username=$2 LIMIT 1
 
 -- name: auth.user_by_id
-SELECT id, username, email, avatar_url FROM users WHERE id=$1
+SELECT id, username, email, avatar_url, bio FROM users WHERE id=$1
 
 -- name: auth.username_taken
 SELECT EXISTS(SELECT 1 FROM users WHERE lower(username)=lower($1) AND id != $2)
@@ -25,6 +25,9 @@ UPDATE users SET username=$1, updated_at=$2 WHERE id=$3
 
 -- name: auth.update_avatar_url
 UPDATE users SET avatar_url=$1, updated_at=$2 WHERE id=$3
+
+-- name: auth.update_bio
+UPDATE users SET bio=$1, updated_at=$2 WHERE id=$3
 
 -- name: auth.delete_session
 DELETE FROM sessions WHERE id=$1
@@ -114,6 +117,11 @@ LIMIT $3
 -- name: feed.search_pov_ids
 SELECT DISTINCT post_id FROM povs WHERE pov = ANY($1) LIMIT $2
 
+-- name: feed.search_query_pov_ids
+SELECT DISTINCT post_id FROM povs
+WHERE lower(pov) = lower($1) OR lower(pov) LIKE '%' || lower($1) || '%'
+LIMIT $2
+
 -- name: feed.user_post_ids
 SELECT id FROM posts WHERE user_id=$1 ORDER BY created_at DESC LIMIT 50
 
@@ -135,11 +143,26 @@ DELETE FROM pov_likes WHERE pov=$1 AND user_id=$2
 -- name: pov_likes.status
 SELECT EXISTS(SELECT 1 FROM pov_likes WHERE pov=$1 AND user_id=$2)
 
+-- name: pov_comments.list
+SELECT pc.id, pc.pov, pc.text, pc.stance, pc.user_id, u.username, u.avatar_url, pc.created_at
+FROM pov_comments pc
+JOIN users u ON u.id = pc.user_id
+WHERE lower(pc.pov) = lower($1)
+ORDER BY pc.created_at DESC
+LIMIT 100
+
+-- name: pov_comments.insert
+INSERT INTO pov_comments (id, pov, user_id, text, stance, created_at)
+VALUES ($1,$2,$3,$4,$5,$6)
+
+-- name: pov_comments.delete_own
+DELETE FROM pov_comments WHERE id=$1 AND user_id=$2
+
 -- name: follows.follower_count
 SELECT count(*) FROM follows WHERE followee_id=$1
 
 -- name: follows.profile_user
-SELECT username, avatar_url FROM users WHERE id=$1
+SELECT username, avatar_url, bio FROM users WHERE id=$1
 
 -- name: follows.posts_count
 SELECT count(*) FROM posts WHERE user_id=$1
@@ -158,6 +181,17 @@ INSERT INTO follows (id, follower_id, followee_id, created_at) VALUES ($1,$2,$3,
 ON CONFLICT (follower_id, followee_id) DO NOTHING
 
 -- name: follows.delete
+DELETE FROM follows WHERE follower_id=$1 AND followee_id=$2
+
+-- name: follows.followers
+SELECT u.id, u.username, u.avatar_url, u.bio
+FROM follows f
+JOIN users u ON u.id = f.follower_id
+WHERE f.followee_id=$1
+ORDER BY f.created_at DESC
+LIMIT 200
+
+-- name: follows.remove_follower
 DELETE FROM follows WHERE follower_id=$1 AND followee_id=$2
 
 -- name: follows.feed

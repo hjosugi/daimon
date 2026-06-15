@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { Loader2, Search, X, Hash, ChevronDown, ChevronUp } from "lucide-react"
 import { useState, useEffect } from "react"
-import { searchPosts, getCurrentUser, type User } from "../api/client"
+import { searchPosts, getCurrentUser, suggestPOVs, type User } from "../api/client"
 import { SearchPostCard } from "./SearchPostCard"
 import type React from "react"
 
@@ -18,6 +18,23 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialTags = [], onTags
   const [searchTagInput, setSearchTagInput] = useState<string>("")
   const [showPOVSearch, setShowPOVSearch] = useState<boolean>(false)
   const [currentUser, setCurrentUser] = useState<User | null>(null)
+
+  const normalizedQuery = searchQuery.trim()
+  const normalizedPOVInput = searchTagInput.trim()
+
+  const { data: queryPOVSuggestions = [] } = useQuery({
+    queryKey: ["pov-suggest", normalizedQuery],
+    queryFn: () => suggestPOVs(normalizedQuery),
+    enabled: normalizedQuery.length > 0,
+    staleTime: 1000 * 60 * 5,
+  })
+
+  const { data: inputPOVSuggestions = [] } = useQuery({
+    queryKey: ["pov-suggest", normalizedPOVInput],
+    queryFn: () => suggestPOVs(normalizedPOVInput),
+    enabled: normalizedPOVInput.length > 0,
+    staleTime: 1000 * 60 * 5,
+  })
 
   // Get current user
   useEffect(() => {
@@ -56,15 +73,28 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialTags = [], onTags
     staleTime: 1000 * 60 * 1,
   })
 
-  const handleSearchTagAdd = () => {
-    const trimmed = searchTagInput.trim()
+  const addSearchTag = (tag: string) => {
+    const trimmed = tag.trim()
     if (!trimmed || searchTags.includes(trimmed)) return
     if (trimmed.length > 300) {
       alert("POV must be 300 characters or less")
       return
     }
     setSearchTags((prev) => [...prev, trimmed])
+  }
+
+  const handleSearchTagAdd = () => {
+    addSearchTag(searchTagInput)
     setSearchTagInput("")
+  }
+
+  const addQueryAsPOVIfExact = () => {
+    const exact = queryPOVSuggestions.find((pov) => pov.toLowerCase() === normalizedQuery.toLowerCase())
+    if (!exact) return false
+    addSearchTag(exact)
+    setSearchQuery("")
+    setShowPOVSearch(true)
+    return true
   }
 
   const handleSearchTagRemove = (tag: string) => {
@@ -93,6 +123,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialTags = [], onTags
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault()
+                    addQueryAsPOVIfExact()
                   }
                 }}
                 placeholder="SEARCH POSTS..."
@@ -108,6 +139,27 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialTags = [], onTags
                 </button>
               )}
             </div>
+
+            {normalizedQuery && queryPOVSuggestions.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                <span className="text-[11px] text-cyan-300/70 font-mono self-center">既存POV:</span>
+                {queryPOVSuggestions.slice(0, 6).map((pov) => (
+                  <button
+                    key={pov}
+                    type="button"
+                    onClick={() => {
+                      addSearchTag(pov)
+                      setSearchQuery("")
+                      setShowPOVSearch(true)
+                    }}
+                    className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-mono text-fuchsia-200 bg-fuchsia-900/20 border border-fuchsia-500/25 rounded hover:border-fuchsia-500/50 hover:bg-fuchsia-900/30 transition-colors"
+                  >
+                    <Hash size={10} />
+                    {pov}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* POV Search Toggle */}
             <div className="flex items-center gap-2">
@@ -200,6 +252,24 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialTags = [], onTags
                     +
                   </button>
                 </div>
+                {inputPOVSuggestions.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5 pl-5">
+                    {inputPOVSuggestions.slice(0, 8).map((pov) => (
+                      <button
+                        key={pov}
+                        type="button"
+                        onClick={() => {
+                          addSearchTag(pov)
+                          setSearchTagInput("")
+                        }}
+                        className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-mono text-fuchsia-200 bg-fuchsia-900/20 border border-fuchsia-500/25 rounded hover:border-fuchsia-500/50 hover:bg-fuchsia-900/30 transition-colors"
+                      >
+                        <Hash size={10} />
+                        {pov}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -240,9 +310,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialTags = [], onTags
                           currentUser={currentUser}
                           onUserClick={onUserClick}
                           onTagClick={(tag) => {
-                            if (!searchTags.includes(tag)) {
-                              setSearchTags((prev) => [...prev, tag])
-                            }
+                            addSearchTag(tag)
                           }}
                         />
                       ))}

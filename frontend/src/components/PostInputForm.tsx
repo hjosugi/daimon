@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { createPost, suggestPOVs, generatePOVs } from "../api/client"
 import type { User } from "../api/client"
+import { POST_CONSTRAINTS } from "../types/constants"
 
 interface PostInputFormProps {
   user: User | null
@@ -166,8 +167,9 @@ export const PostInputForm: React.FC<PostInputFormProps> = ({ user, onAuthRequir
                   }
                 }
               }}
-              placeholder="SHARE YOUR THOUGHTS... (CTRL+ENTER TO POST)"
-              className="w-full min-h-24 sm:min-h-32 p-3 sm:p-4 pr-12 sm:pr-14 bg-[#2a2a50] rounded-lg border border-cyan-500/15 focus:border-cyan-500/35 focus:ring-1 focus:ring-cyan-500/20 resize-none text-sm sm:text-base text-cyan-100 placeholder:text-cyan-300/70 leading-relaxed font-mono transition-all"
+              placeholder="SHARE YOUR THOUGHTS IN DEPTH... (CTRL+ENTER TO POST)"
+              maxLength={POST_CONSTRAINTS.MAX_TEXT_LENGTH}
+              className="w-full min-h-32 sm:min-h-48 p-3 sm:p-4 pr-12 sm:pr-14 bg-[#2a2a50] rounded-lg border border-cyan-500/15 focus:border-cyan-500/35 focus:ring-1 focus:ring-cyan-500/20 resize-y text-sm sm:text-base text-cyan-100 placeholder:text-cyan-300/70 leading-relaxed font-mono transition-all"
             />
             <button
               type="submit"
@@ -180,6 +182,18 @@ export const PostInputForm: React.FC<PostInputFormProps> = ({ user, onAuthRequir
                 <Send size={16} className="sm:w-[18px] sm:h-[18px]" />
               )}
             </button>
+          </div>
+
+          <div className="flex justify-end -mt-2">
+            <span
+              className={`text-[11px] font-mono ${
+                inputText.length > POST_CONSTRAINTS.MAX_TEXT_LENGTH * 0.95
+                  ? "text-fuchsia-400/90"
+                  : "text-cyan-300/45"
+              }`}
+            >
+              {inputText.length.toLocaleString()} / {POST_CONSTRAINTS.MAX_TEXT_LENGTH.toLocaleString()}
+            </span>
           </div>
 
           {/* POV Suggestions display */}

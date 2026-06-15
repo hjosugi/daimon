@@ -13,7 +13,7 @@ COPY requirements.txt ./
 RUN uv pip install --system -r requirements.txt
 
 # Pre-bake the models so the first request needs no download.
-RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')" \
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')" \
     && python -m spacy download ja_core_news_sm \
     && python -m spacy download en_core_web_sm
 

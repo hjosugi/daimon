@@ -560,6 +560,25 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 			ids = append(ids, h.ID)
 			scores[h.ID] = h.Score
 		}
+		if len(req.Povs) == 0 {
+			rows, err := s.pool.Query(ctx, dbq.SQL("feed.search_query_pov_ids"), req.Query, req.Limit)
+			if err == nil {
+				seen := map[string]bool{}
+				for _, id := range ids {
+					seen[id] = true
+				}
+				var povIDs []string
+				for rows.Next() {
+					var pid string
+					if rows.Scan(&pid) == nil && !seen[pid] {
+						seen[pid] = true
+						povIDs = append(povIDs, pid)
+					}
+				}
+				rows.Close()
+				ids = append(povIDs, ids...)
+			}
+		}
 	} else if len(req.Povs) > 0 {
 		rows, err := s.pool.Query(ctx, dbq.SQL("feed.search_pov_ids"), req.Povs, req.Limit)
 		if err == nil {
@@ -615,8 +634,16 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 			MatchReason: mr, CreatedAt: pm.createdAt.Format(time.RFC3339),
 		})
 	}
-	// Newest first (vector order already approximates relevance; this keeps it stable).
-	sort.SliceStable(out, func(a, b int) bool { return out[a].CreatedAt > out[b].CreatedAt })
+	if req.Query != "" {
+		// Text search: rank by semantic relevance (highest cosine first).
+		// Sorting by date here would throw away the vector ranking entirely.
+		sort.SliceStable(out, func(a, b int) bool {
+			return scores[out[a].ID] > scores[out[b].ID]
+		})
+	} else {
+		// POV-only search has no relevance score: newest first.
+		sort.SliceStable(out, func(a, b int) bool { return out[a].CreatedAt > out[b].CreatedAt })
+	}
 	httpx.JSON(w, http.StatusOK, out)
 }
 

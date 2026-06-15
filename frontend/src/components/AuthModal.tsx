@@ -20,6 +20,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     email: "",
     password: "",
     confirmPassword: "",
+    bio: "",
   })
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string>("")
@@ -43,7 +44,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     onSuccess: (user) => {
       onSuccess(user)
       onClose()
-      setFormData({ username: "", email: "", password: "", confirmPassword: "" })
+      setFormData({ username: "", email: "", password: "", confirmPassword: "", bio: "" })
       setAvatarPreview(null)
       setErrorMessage("")
     },
@@ -58,7 +59,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     onSuccess: (user) => {
       onSuccess(user)
       onClose()
-      setFormData({ username: "", email: "", password: "", confirmPassword: "" })
+      setFormData({ username: "", email: "", password: "", confirmPassword: "", bio: "" })
       setErrorMessage("")
     },
     onError: (error: any) => {
@@ -71,13 +72,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     e.preventDefault()
     if (mode === "register") {
       if (formData.password !== formData.confirmPassword) {
-        alert("Passwords do not match")
+        setErrorMessage("Passwords do not match")
         return
       }
       registerMutation.mutate({
         username: formData.username,
         email: formData.email,
         password: formData.password,
+        bio: formData.bio.trim() || undefined,
       })
     } else {
       loginMutation.mutate({
@@ -173,6 +175,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   />
                 </div>
               </div>
+
+              <div>
+                <label className="block text-xs font-medium text-cyan-300/95 mb-1 font-mono">
+                  BIO
+                </label>
+                <textarea
+                  value={formData.bio}
+                  onChange={(e) =>
+                    setFormData({ ...formData, bio: e.target.value.slice(0, 160) })
+                  }
+                  rows={3}
+                  maxLength={160}
+                  className="w-full px-3 py-2 bg-[#2a2a50] border border-cyan-500/15 rounded focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/40 text-cyan-300 placeholder:text-cyan-300/80 font-mono text-sm transition-all resize-none"
+                  placeholder="ひとことプロフィール"
+                />
+                <div className="mt-1 text-right text-[10px] text-cyan-300/60 font-mono">
+                  {formData.bio.length}/160
+                </div>
+              </div>
             </>
           )}
 
@@ -254,7 +275,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               type="button"
               onClick={() => {
                 setMode(mode === "login" ? "register" : "login")
-                setFormData({ username: "", email: "", password: "", confirmPassword: "" })
+                setFormData({ username: "", email: "", password: "", confirmPassword: "", bio: "" })
                 setAvatarPreview(null)
               }}
               className="text-sm text-cyan-300/90 hover:text-cyan-400 font-medium font-mono"

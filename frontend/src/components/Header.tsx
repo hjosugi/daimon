@@ -2,7 +2,7 @@ import type React from "react"
 import { Settings2, User as UserIcon, LogOut, Search, Home, FileText, Bookmark } from "lucide-react"
 import type { User } from "../api/client"
 
-type Page = "timeline" | "search" | "mine" | "saved" | "user"
+type Page = "timeline" | "search" | "mine" | "saved" | "user" | "pov"
 
 interface HeaderProps {
   user: User | null

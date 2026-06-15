@@ -19,9 +19,10 @@ import (
 const sessionExpiryDays = 30
 
 type registerReq struct {
-	Username string `json:"username"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Username string  `json:"username"`
+	Email    string  `json:"email"`
+	Password string  `json:"password"`
+	Bio      *string `json:"bio"`
 }
 
 type loginReq struct {
@@ -34,6 +35,7 @@ type userResp struct {
 	Username  string  `json:"username"`
 	Email     string  `json:"email"`
 	AvatarURL *string `json:"avatar_url"`
+	Bio       *string `json:"bio"`
 	Token     *string `json:"token,omitempty"`
 }
 
@@ -55,6 +57,15 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 	if perr := validate.Password(req.Password); perr != "" {
 		httpx.Error(w, http.StatusBadRequest, perr)
 		return
+	}
+	var bio *string
+	if req.Bio != nil {
+		cleanBio, berr := validate.Bio(*req.Bio)
+		if berr != "" {
+			httpx.Error(w, http.StatusBadRequest, berr)
+			return
+		}
+		bio = &cleanBio
 	}
 
 	ctx := r.Context()
@@ -81,7 +92,7 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 
 	now := time.Now().UTC()
 	id := uuid.NewString()
-	if _, err := s.pool.Exec(ctx, dbq.SQL("auth.insert_user"), id, username, email, string(hash), now); err != nil {
+	if _, err := s.pool.Exec(ctx, dbq.SQL("auth.insert_user"), id, username, email, string(hash), bio, now); err != nil {
 		httpx.Error(w, http.StatusInternalServerError, "Could not create user")
 		return
 	}
@@ -91,7 +102,7 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, http.StatusInternalServerError, "Could not create session")
 		return
 	}
-	httpx.JSON(w, http.StatusOK, userResp{ID: id, Username: username, Email: email, Token: &token})
+	httpx.JSON(w, http.StatusOK, userResp{ID: id, Username: username, Email: email, Bio: bio, Token: &token})
 }
 
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
@@ -104,9 +115,9 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 
 	var (
 		id, username, email, hash string
-		avatar                    *string
+		avatar, bio               *string
 	)
-	err := s.pool.QueryRow(r.Context(), dbq.SQL("auth.login_user"), emailLower, ident).Scan(&id, &username, &email, &hash, &avatar)
+	err := s.pool.QueryRow(r.Context(), dbq.SQL("auth.login_user"), emailLower, ident).Scan(&id, &username, &email, &hash, &avatar, &bio)
 	if errors.Is(err, pgx.ErrNoRows) {
 		httpx.Error(w, http.StatusUnauthorized, "Invalid credentials")
 		return
@@ -125,25 +136,26 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, http.StatusInternalServerError, "Could not create session")
 		return
 	}
-	httpx.JSON(w, http.StatusOK, userResp{ID: id, Username: username, Email: email, AvatarURL: avatar, Token: &token})
+	httpx.JSON(w, http.StatusOK, userResp{ID: id, Username: username, Email: email, AvatarURL: avatar, Bio: bio, Token: &token})
 }
 
 func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 	var (
 		id, username, email string
-		avatar              *string
+		avatar, bio         *string
 	)
-	err := s.pool.QueryRow(r.Context(), dbq.SQL("auth.user_by_id"), userID(r.Context())).Scan(&id, &username, &email, &avatar)
+	err := s.pool.QueryRow(r.Context(), dbq.SQL("auth.user_by_id"), userID(r.Context())).Scan(&id, &username, &email, &avatar, &bio)
 	if err != nil {
 		httpx.Error(w, http.StatusNotFound, "User not found")
 		return
 	}
-	httpx.JSON(w, http.StatusOK, userResp{ID: id, Username: username, Email: email, AvatarURL: avatar})
+	httpx.JSON(w, http.StatusOK, userResp{ID: id, Username: username, Email: email, AvatarURL: avatar, Bio: bio})
 }
 
 type profileUpdateReq struct {
 	Username  *string `json:"username"`
 	AvatarURL *string `json:"avatar_url"`
+	Bio       *string `json:"bio"`
 }
 
 func (s *Server) handleUpdateProfile(w http.ResponseWriter, r *http.Request) {
@@ -178,16 +190,27 @@ func (s *Server) handleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if req.Bio != nil {
+		bio, berr := validate.Bio(*req.Bio)
+		if berr != "" {
+			httpx.Error(w, http.StatusBadRequest, berr)
+			return
+		}
+		if _, err := s.pool.Exec(ctx, dbq.SQL("auth.update_bio"), bio, now, uid); err != nil {
+			httpx.Error(w, http.StatusInternalServerError, "Could not update profile")
+			return
+		}
+	}
 
 	var (
 		id, username, email string
-		avatar              *string
+		avatar, bio         *string
 	)
-	if err := s.pool.QueryRow(ctx, dbq.SQL("auth.user_by_id"), uid).Scan(&id, &username, &email, &avatar); err != nil {
+	if err := s.pool.QueryRow(ctx, dbq.SQL("auth.user_by_id"), uid).Scan(&id, &username, &email, &avatar, &bio); err != nil {
 		httpx.Error(w, http.StatusNotFound, "User not found")
 		return
 	}
-	httpx.JSON(w, http.StatusOK, userResp{ID: id, Username: username, Email: email, AvatarURL: avatar})
+	httpx.JSON(w, http.StatusOK, userResp{ID: id, Username: username, Email: email, AvatarURL: avatar, Bio: bio})
 }
 
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {

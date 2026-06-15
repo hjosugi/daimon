@@ -27,7 +27,9 @@ export const POV_CONSTRAINTS = {
 } as const;
 
 export const POST_CONSTRAINTS = {
-  MAX_TEXT_LENGTH: 10000,
+  // Long-form by design: deep, ErogameScape-style posts that argue a 観点 (POV)
+  // in depth rather than one-liners. Embeddings cover the whole post (chunked).
+  MAX_TEXT_LENGTH: 40000,
   MIN_TEXT_LENGTH: 1,
 } as const;
 

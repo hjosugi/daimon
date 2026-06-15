@@ -1,11 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ArrowLeft, Loader2, UserCheck, UserPlus } from "lucide-react"
+import { ArrowLeft, Loader2, UserCheck, UserPlus, X } from "lucide-react"
 import type React from "react"
 import {
   followUser,
+  getFollowers,
   getUserPosts,
   getUserProfile,
+  removeFollower,
   unfollowUser,
+  type FollowUser,
   type User,
   type UserProfile,
 } from "../api/client"
@@ -38,6 +41,12 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
     queryFn: () => getUserPosts(userId),
     staleTime: 1000 * 30,
   })
+  const { data: followers = [] } = useQuery({
+    queryKey: ["followers", userId],
+    queryFn: () => getFollowers(userId),
+    enabled: !!profile?.is_me,
+    staleTime: 1000 * 30,
+  })
 
   const followMutation = useMutation({
     mutationFn: () => (profile?.is_following ? unfollowUser(userId) : followUser(userId)),
@@ -59,6 +68,30 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
     onSuccess: (data) =>
       qc.setQueryData<UserProfile>(profileKey, (old) =>
         old ? { ...old, is_following: data.following, followers: data.followers } : old,
+      ),
+  })
+
+  const removeFollowerMutation = useMutation({
+    mutationFn: (followerId: string) => removeFollower(followerId),
+    onMutate: async (followerId) => {
+      await qc.cancelQueries({ queryKey: ["followers", userId] })
+      const prevFollowers = qc.getQueryData<FollowUser[]>(["followers", userId])
+      const prevProfile = qc.getQueryData<UserProfile>(profileKey)
+      qc.setQueryData<FollowUser[]>(["followers", userId], (old) =>
+        old ? old.filter((f) => f.id !== followerId) : old,
+      )
+      qc.setQueryData<UserProfile>(profileKey, (old) =>
+        old ? { ...old, followers: Math.max(0, old.followers - 1) } : old,
+      )
+      return { prevFollowers, prevProfile }
+    },
+    onError: (_e, _id, ctx) => {
+      if (ctx?.prevFollowers) qc.setQueryData(["followers", userId], ctx.prevFollowers)
+      if (ctx?.prevProfile) qc.setQueryData(profileKey, ctx.prevProfile)
+    },
+    onSuccess: (data) =>
+      qc.setQueryData<UserProfile>(profileKey, (old) =>
+        old ? { ...old, followers: data.followers } : old,
       ),
   })
 
@@ -93,6 +126,11 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                   <span>フォロワー {profile.followers}</span>
                   <span>フォロー中 {profile.following}</span>
                 </div>
+                {profile.bio && (
+                  <p className="mt-2 text-sm text-cyan-200/85 leading-relaxed break-words">
+                    {profile.bio}
+                  </p>
+                )}
               </div>
               {currentUser && !profile.is_me && (
                 <button
@@ -108,6 +146,58 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                 </button>
               )}
             </div>
+          </div>
+        )}
+
+        {profile?.is_me && (
+          <div className="bg-[#1f1f35] border border-cyan-500/15 rounded p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-bold text-cyan-200 font-mono">FOLLOWERS</h2>
+              <span className="text-xs text-cyan-300/70 font-mono">{followers.length}</span>
+            </div>
+            {followers.length === 0 ? (
+              <div className="text-xs text-cyan-300/60 font-mono">まだフォロワーはいません</div>
+            ) : (
+              <div className="space-y-2">
+                {followers.map((follower) => (
+                  <div
+                    key={follower.id}
+                    className="flex items-center gap-2 rounded border border-cyan-500/12 bg-[#151520] p-2"
+                  >
+                    {follower.avatar_url ? (
+                      <img
+                        src={follower.avatar_url}
+                        alt={follower.username}
+                        className="w-8 h-8 rounded-full border border-cyan-500/20"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-400/90 to-fuchsia-400/90 flex items-center justify-center text-black text-xs font-bold">
+                        {follower.username[0]?.toUpperCase()}
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => onUserClick?.(follower.id)}
+                      className="flex-1 min-w-0 text-left"
+                    >
+                      <div className="truncate text-sm text-cyan-200 font-mono">@{follower.username}</div>
+                      {follower.bio && (
+                        <div className="truncate text-xs text-cyan-300/60">{follower.bio}</div>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeFollowerMutation.mutate(follower.id)}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded border border-red-500/25 text-red-300 hover:bg-red-900/20 hover:border-red-500/45 text-xs font-mono transition-colors"
+                      title="フォロワーから削除"
+                    >
+                      <X size={12} />
+                      remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

@@ -7,11 +7,13 @@ CREATE TABLE IF NOT EXISTS users (
   email         varchar NOT NULL,
   password_hash varchar NOT NULL,
   avatar_url    varchar,
+  bio           text,
   created_at    timestamp NOT NULL,
   updated_at    timestamp NOT NULL
 );
 CREATE UNIQUE INDEX IF NOT EXISTS ix_users_username ON users (username);
 CREATE UNIQUE INDEX IF NOT EXISTS ix_users_email ON users (email);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS bio text;
 
 CREATE TABLE IF NOT EXISTS sessions (
   id         varchar PRIMARY KEY,
@@ -68,6 +70,17 @@ CREATE TABLE IF NOT EXISTS pov_likes (
   CONSTRAINT uq_pov_likes_pov_user UNIQUE (pov, user_id)
 );
 CREATE INDEX IF NOT EXISTS ix_pov_likes_pov ON pov_likes (pov);
+
+CREATE TABLE IF NOT EXISTS pov_comments (
+  id         varchar PRIMARY KEY,
+  pov        varchar NOT NULL,
+  user_id    varchar NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  text       text NOT NULL,
+  stance     varchar NOT NULL DEFAULT 'note',
+  created_at timestamp NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_pov_comments_pov_created ON pov_comments (pov, created_at);
+CREATE INDEX IF NOT EXISTS ix_pov_comments_user ON pov_comments (user_id);
 
 CREATE TABLE IF NOT EXISTS follows (
   id          varchar PRIMARY KEY,
