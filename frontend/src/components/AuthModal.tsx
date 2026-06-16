@@ -143,19 +143,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   if (!isOpen) return null
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-3 sm:p-4"
-      onClick={onClose}
-    >
-      <div
-        className="bg-[#0f0f1f] rounded-lg border border-cyan-500/18 w-full max-w-md mx-auto overflow-hidden max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-3 sm:p-4">
+      <button
+        type="button"
+        aria-label={t("common.close")}
+        className="absolute inset-0 cursor-default"
+        onClick={onClose}
+      />
+      <div className="relative z-10 bg-[#0f0f1f] rounded-lg border border-cyan-500/18 w-full max-w-md mx-auto overflow-hidden max-h-[90vh] overflow-y-auto">
         <div className="bg-[#2a2a50] border-b border-cyan-500/15 p-4 flex items-center justify-between">
           <h2 className="text-xl font-bold text-cyan-300 font-mono">
             {mode === "login" ? t("auth.login") : t("auth.signUp")}
           </h2>
           <button
+            type="button"
             onClick={onClose}
             className="text-cyan-300/90 hover:text-cyan-400 hover:bg-cyan-900/10 rounded p-1 transition-colors"
           >
@@ -174,7 +175,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <>
               {/* Avatar Upload */}
               <div className="flex flex-col items-center gap-2">
-                <label className="cursor-pointer">
+                <label htmlFor="auth-avatar" className="cursor-pointer">
                   <div className="w-20 h-20 rounded-full bg-gradient-to-br from-cyan-400/80 to-fuchsia-400/80 flex items-center justify-center overflow-hidden border-2 border-cyan-500/18">
                     {avatarPreview ? (
                       <img
@@ -187,6 +188,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     )}
                   </div>
                   <input
+                    id="auth-avatar"
                     type="file"
                     accept="image/*"
                     onChange={handleAvatarChange}
@@ -200,7 +202,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
               {/* Username */}
               <div>
-                <label className="block text-xs font-medium text-cyan-300/95 mb-1 font-mono">
+                <label
+                  htmlFor="auth-username"
+                  className="block text-xs font-medium text-cyan-300/95 mb-1 font-mono"
+                >
                   {t("common.username")}
                 </label>
                 <div className="relative">
@@ -209,6 +214,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     size={18}
                   />
                   <input
+                    id="auth-username"
                     type="text"
                     value={formData.username}
                     onChange={(e) =>
@@ -222,10 +228,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-cyan-300/95 mb-1 font-mono">
+                <label
+                  htmlFor="auth-bio"
+                  className="block text-xs font-medium text-cyan-300/95 mb-1 font-mono"
+                >
                   {t("common.bio")}
                 </label>
                 <textarea
+                  id="auth-bio"
                   value={formData.bio}
                   onChange={(e) =>
                     setFormData({
@@ -247,7 +257,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
           {/* Email */}
           <div>
-            <label className="block text-xs font-medium text-cyan-300/95 mb-1 font-mono">
+            <label
+              htmlFor="auth-email"
+              className="block text-xs font-medium text-cyan-300/95 mb-1 font-mono"
+            >
               {mode === "login" ? t("auth.emailOrUsername") : t("common.email")}
             </label>
             <div className="relative">
@@ -256,6 +269,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 size={18}
               />
               <input
+                id="auth-email"
                 type={mode === "login" ? "text" : "email"}
                 value={formData.email}
                 onChange={(e) =>
@@ -274,7 +288,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
           {/* Password */}
           <div>
-            <label className="block text-xs font-medium text-cyan-300/95 mb-1 font-mono">
+            <label
+              htmlFor="auth-password"
+              className="block text-xs font-medium text-cyan-300/95 mb-1 font-mono"
+            >
               {t("common.password")}
             </label>
             <div className="relative">
@@ -283,6 +300,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 size={18}
               />
               <input
+                id="auth-password"
                 type="password"
                 value={formData.password}
                 onChange={(e) =>
@@ -297,7 +315,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
           {mode === "register" && (
             <div>
-              <label className="block text-xs font-medium text-cyan-300/95 mb-1 font-mono">
+              <label
+                htmlFor="auth-confirm-password"
+                className="block text-xs font-medium text-cyan-300/95 mb-1 font-mono"
+              >
                 {t("auth.confirmPassword")}
               </label>
               <div className="relative">
@@ -306,6 +327,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   size={18}
                 />
                 <input
+                  id="auth-confirm-password"
                   type="password"
                   value={formData.confirmPassword}
                   onChange={(e) =>

@@ -11,8 +11,7 @@ Daimon は、投稿本文の意味ベクトルと POV(Point of View / 観点)を
 ```text
 frontend/      React UI (:5173)  ← this workspace
 api/           Go API (:8000)
-ml-service/    Python ML service (:8001)
-backend/       legacy FastAPI + seed + Alembic
+ml-service/    Python ML service (:8001)  ← the only Python
 PostgreSQL     system of record
 Qdrant         vector search index
 Redis          optional read-model cache

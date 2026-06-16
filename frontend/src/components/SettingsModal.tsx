@@ -27,14 +27,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   if (!isOpen) return null
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-3 sm:p-4"
-      onClick={onClose}
-    >
-      <div
-        className="bg-[#0f0f1f] rounded-lg border border-cyan-500/18 w-full max-w-md mx-auto overflow-hidden max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-3 sm:p-4">
+      <button
+        type="button"
+        aria-label={t("common.close")}
+        className="absolute inset-0 cursor-default"
+        onClick={onClose}
+      />
+      <div className="relative z-10 bg-[#0f0f1f] rounded-lg border border-cyan-500/18 w-full max-w-md mx-auto overflow-hidden max-h-[90vh] overflow-y-auto">
         <div className="bg-[#1f1f3a] border-b border-cyan-500/12 p-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Settings2 size={20} className="text-cyan-200/95" />
@@ -43,6 +43,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </h2>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="text-cyan-300/90 hover:text-cyan-400 hover:bg-cyan-900/10 rounded p-1 transition-colors"
           >
@@ -98,6 +99,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 />
                 {boostPopular && (
                   <svg
+                    aria-hidden="true"
+                    focusable="false"
                     className="absolute top-0 left-0 w-5 h-5 pointer-events-none text-black"
                     fill="none"
                     stroke="currentColor"
@@ -126,6 +129,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 />
                 {includeFarPosts && (
                   <svg
+                    aria-hidden="true"
+                    focusable="false"
                     className="absolute top-0 left-0 w-5 h-5 pointer-events-none text-black"
                     fill="none"
                     stroke="currentColor"

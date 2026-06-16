@@ -2,7 +2,7 @@
 
 Daimon の現行実装は、Go API を中心にしたSNS/検索アプリです。Python は本体APIではなく、embedding と POV抽出だけを担当する ML microservice として分離されています。
 
-この文書は、いま実際に動いている構成を正本として説明します。古い `backend/` のFastAPI実装は参照実装・seed・migration周辺として残っていますが、現在の推奨実行経路ではありません。
+この文書は、いま実際に動いている構成を正本として説明します。スタックは Go 中心で、Python は ML microservice（`ml-service/`）だけです。シードもスキーマ・ブートストラップも Go（`api/cmd/seed`、起動時の `CREATE TABLE IF NOT EXISTS`）に統合済みで、別途のマイグレーション手順や Python バックエンドはありません。
 
 ## 全体像
 
@@ -42,9 +42,8 @@ optional read-model cache
 | Path | 責務 |
 | --- | --- |
 | `frontend/` | React + Vite + TypeScript。タイムライン、検索、投稿、POVページ、プロフィール。 |
-| `api/` | Go API。認証、投稿、検索、ランキング、フォロー、保存、POVコメント。 |
-| `ml-service/` | Python ML service。`/embed` と `/povs` のみ。 |
-| `backend/` | 旧FastAPI実装、Alembic、seed、検証用コード。現行APIの本体ではない。 |
+| `api/` | Go API。認証、投稿、検索、ランキング、フォロー、保存、POVコメント。`cmd/server`・`cmd/seed`・`cmd/batch`。 |
+| `ml-service/` | 唯一の Python。`/embed`・`/embed_batch`・`/povs` のみ。 |
 | `docs/` | 共有ドキュメント。 |
 
 ## 設計原則

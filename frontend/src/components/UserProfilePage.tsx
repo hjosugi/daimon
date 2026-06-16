@@ -106,6 +106,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
     <div className="min-h-screen bg-[#151520]">
       <div className="max-w-3xl mx-auto px-3 sm:px-4 py-3 sm:py-4 space-y-3">
         <button
+          type="button"
           onClick={onBack}
           className="flex items-center gap-1 text-sm text-cyan-300/80 hover:text-cyan-200 font-mono transition-colors"
         >
@@ -147,6 +148,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
               </div>
               {currentUser && !profile.is_me && (
                 <button
+                  type="button"
                   onClick={() => followMutation.mutate()}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-mono font-semibold transition-all active:scale-95 ${
                     profile.is_following

@@ -9,7 +9,6 @@
     "all": "make all",
     "setup": "make setup",
     "dev": "make dev",
-    "migrate": "make migrate",
     "seed": "make seed",
     "down": "make down",
     "clean": "make clean",

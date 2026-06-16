@@ -94,6 +94,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
 
       {/* Floating Action Button - Pencil */}
       <button
+        type="button"
         onClick={() => {
           if (!user) {
             onAuthRequired()

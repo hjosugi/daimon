@@ -11,8 +11,7 @@ Daimon は、投稿本文の意味ベクトルと POV(Point of View / 観点)を
 ```text
 frontend/      React UI (:5173)
 api/           Go API (:8000)
-ml-service/    Python ML service (:8001)  ← this workspace
-backend/       legacy FastAPI + seed + Alembic
+ml-service/    Python ML service (:8001)  ← this workspace (the only Python)
 PostgreSQL     system of record
 Qdrant         vector search index
 Redis          optional cache
@@ -91,21 +90,16 @@ Output should remain:
 
 ## Runtime
 
-Install dependencies:
+Install dependencies with uv:
 
 ```bash
-python -m venv .venv
-. .venv/bin/activate
-pip install -r requirements.txt
-python -m spacy download ja_core_news_sm
-python -m spacy download en_core_web_sm
+uv sync --locked
 ```
 
 Run service:
 
 ```bash
-. .venv/bin/activate
-uvicorn app:app --host 0.0.0.0 --port 8001 --reload
+uv run uvicorn app:app --host 0.0.0.0 --port 8001 --reload
 ```
 
 Health check:

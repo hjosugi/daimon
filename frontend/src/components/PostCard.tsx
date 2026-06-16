@@ -185,14 +185,14 @@ const PostCardComponent: React.FC<PostCardProps> = ({
 
       {/* Match Reason Details Modal */}
       {showMatchReasonDetails && post.match_reason && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-          onClick={() => setShowMatchReasonDetails(false)}
-        >
-          <div
-            className="bg-[#0f0f1f] rounded-lg border border-cyan-500/18 w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <button
+            type="button"
+            aria-label={t("common.close")}
+            className="absolute inset-0 cursor-default"
+            onClick={() => setShowMatchReasonDetails(false)}
+          />
+          <div className="relative z-10 bg-[#0f0f1f] rounded-lg border border-cyan-500/18 w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col">
             {/* Header */}
             <div className="bg-[#1f1f3a] border-b border-cyan-500/12 p-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -209,6 +209,7 @@ const PostCardComponent: React.FC<PostCardProps> = ({
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setShowMatchReasonDetails(false)}
                 className="text-cyan-300/90 hover:text-cyan-400 hover:bg-cyan-900/10 rounded p-1 transition-colors"
               >
@@ -302,6 +303,7 @@ const PostCardComponent: React.FC<PostCardProps> = ({
             {/* Footer */}
             <div className="p-4 border-t border-cyan-500/15 bg-[#1f1f3a]">
               <button
+                type="button"
                 onClick={() => setShowMatchReasonDetails(false)}
                 className="w-full py-2.5 px-4 bg-gradient-to-r from-cyan-500/90 to-fuchsia-500/90 text-black rounded font-medium hover:from-cyan-400 hover:to-fuchsia-400 transition-colors font-mono font-bold"
               >
@@ -316,14 +318,14 @@ const PostCardComponent: React.FC<PostCardProps> = ({
       {showMatchDetails &&
         post.match_reason?.similar_to_user_posts &&
         post.match_reason.similar_to_user_posts.length > 0 && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-            onClick={() => setShowMatchDetails(false)}
-          >
-            <div
-              className="bg-[#0f0f1f] rounded-lg border border-fuchsia-500/18 w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col"
-              onClick={(e) => e.stopPropagation()}
-            >
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+            <button
+              type="button"
+              aria-label={t("common.close")}
+              className="absolute inset-0 cursor-default"
+              onClick={() => setShowMatchDetails(false)}
+            />
+            <div className="relative z-10 bg-[#0f0f1f] rounded-lg border border-fuchsia-500/18 w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col">
               {/* Header */}
               <div className="bg-[#1f1f3a] border-b border-fuchsia-500/12 p-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -342,6 +344,7 @@ const PostCardComponent: React.FC<PostCardProps> = ({
                   </div>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setShowMatchDetails(false)}
                   className="text-fuchsia-400/70 hover:text-fuchsia-400 hover:bg-fuchsia-900/10 rounded p-1 transition-colors"
                 >
@@ -354,9 +357,10 @@ const PostCardComponent: React.FC<PostCardProps> = ({
                 {post.match_reason.similar_to_user_posts
                   .slice(0, 3)
                   .map((userPost, index) => (
-                    <div
+                    <button
                       key={userPost.id}
-                      className="p-4 bg-fuchsia-900/20 rounded-lg border border-fuchsia-500/12 hover:border-fuchsia-500/40 transition-colors cursor-pointer"
+                      type="button"
+                      className="w-full text-left p-4 bg-fuchsia-900/20 rounded-lg border border-fuchsia-500/12 hover:border-fuchsia-500/40 transition-colors cursor-pointer"
                       onClick={() => {
                         // Scroll to the post if it exists in the timeline
                         const postElement = document.getElementById(
@@ -399,13 +403,14 @@ const PostCardComponent: React.FC<PostCardProps> = ({
                       <p className="text-xs text-fuchsia-300/95 mt-2 font-medium font-mono">
                         {t("post.clickToView")} →
                       </p>
-                    </div>
+                    </button>
                   ))}
               </div>
 
               {/* Footer */}
               <div className="p-4 border-t border-fuchsia-500/15 bg-[#1f1f3a]">
                 <button
+                  type="button"
                   onClick={() => setShowMatchDetails(false)}
                   className="w-full py-2.5 px-4 bg-gradient-to-r from-cyan-500/90 to-fuchsia-500/90 text-black rounded font-medium hover:from-cyan-400 hover:to-fuchsia-400 transition-colors font-mono font-bold"
                 >
@@ -418,14 +423,14 @@ const PostCardComponent: React.FC<PostCardProps> = ({
 
       {/* Delete Confirmation Dialog */}
       {showDeleteConfirm && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-          onClick={() => setShowDeleteConfirm(false)}
-        >
-          <div
-            className="bg-[#0f0f1f] rounded-lg border border-red-500/30 w-full max-w-md p-6 space-y-4"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <button
+            type="button"
+            aria-label={t("common.close")}
+            className="absolute inset-0 cursor-default"
+            onClick={() => setShowDeleteConfirm(false)}
+          />
+          <div className="relative z-10 bg-[#0f0f1f] rounded-lg border border-red-500/30 w-full max-w-md p-6 space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full bg-red-900/30 border border-red-500/30 flex items-center justify-center">
                 <AlertTriangle className="text-red-400/90" size={24} />
@@ -488,6 +493,7 @@ const PostCardComponent: React.FC<PostCardProps> = ({
         <div className="flex items-center gap-4 sm:gap-8">
           {/* Like Button */}
           <button
+            type="button"
             onClick={handleLike}
             disabled={likeMutation.isPending}
             className={`flex items-center gap-1.5 sm:gap-2 transition-all group px-2 sm:px-3 py-1 sm:py-1.5 rounded font-mono border ${
@@ -511,6 +517,7 @@ const PostCardComponent: React.FC<PostCardProps> = ({
 
           {/* Comment Button */}
           <button
+            type="button"
             onClick={() => setShowComments(!showComments)}
             className={`flex items-center gap-1.5 sm:gap-2 transition-all group px-2 sm:px-3 py-1 sm:py-1.5 rounded font-mono border ${
               showComments
@@ -532,6 +539,7 @@ const PostCardComponent: React.FC<PostCardProps> = ({
           {/* Save / clip button */}
           {currentUser && (
             <button
+              type="button"
               onClick={() => saveMutation.mutate()}
               className={`flex items-center gap-1.5 sm:gap-2 transition-all group px-2 sm:px-3 py-1 sm:py-1.5 rounded font-mono border active:scale-95 ml-auto ${
                 saved

@@ -119,7 +119,7 @@ make web
 1. UI が `POST /posts` を呼ぶ
 2. API が本文と POV を validation する
 3. API が ML service の `POST /embed` に本文を渡す
-4. ML service が `all-MiniLM-L6-v2` で 384 次元 vector を返す
+4. ML service が `paraphrase-multilingual-MiniLM-L12-v2`（多言語）で 384 次元 vector を返す
 5. API が PostgreSQL に投稿と POV を保存する
 6. API が Qdrant `posts` collection に `{post_id, user_id, tags, created_at}` と vector を upsert する
 

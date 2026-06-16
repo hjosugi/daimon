@@ -116,19 +116,20 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   if (!isOpen || !currentUser) return null
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-3 sm:p-4"
-      onClick={onClose}
-    >
-      <div
-        className="bg-[#0f0f1f] rounded-lg border border-cyan-500/18 w-full max-w-md mx-auto overflow-hidden max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-3 sm:p-4">
+      <button
+        type="button"
+        aria-label={t("common.close")}
+        className="absolute inset-0 cursor-default"
+        onClick={onClose}
+      />
+      <div className="relative z-10 bg-[#0f0f1f] rounded-lg border border-cyan-500/18 w-full max-w-md mx-auto overflow-hidden max-h-[90vh] overflow-y-auto">
         <div className="bg-[#1f1f3a] border-b border-cyan-500/12 p-4 flex items-center justify-between">
           <h2 className="text-xl font-bold text-cyan-200/95 font-mono">
             {t("profile.edit")}
           </h2>
           <button
+            type="button"
             onClick={onClose}
             className="text-cyan-300/90 hover:text-cyan-400 hover:bg-cyan-900/10 rounded p-1 transition-colors"
           >
@@ -139,7 +140,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           {/* Avatar Upload */}
           <div className="flex flex-col items-center gap-3">
-            <label className="cursor-pointer">
+            <label htmlFor="profile-avatar" className="cursor-pointer">
               <div className="relative">
                 <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-br from-cyan-400/80 to-fuchsia-400/80 flex items-center justify-center overflow-hidden border-2 border-cyan-500/18">
                   {avatarPreview ? (
@@ -157,6 +158,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 </div>
               </div>
               <input
+                id="profile-avatar"
                 type="file"
                 accept="image/*"
                 onChange={handleAvatarChange}
@@ -179,7 +181,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
           {/* Username */}
           <div>
-            <label className="block text-xs font-medium text-cyan-300/95 mb-2 font-mono">
+            <label
+              htmlFor="profile-username"
+              className="block text-xs font-medium text-cyan-300/95 mb-2 font-mono"
+            >
               {t("common.username")}
             </label>
             <div className="relative">
@@ -188,6 +193,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 size={18}
               />
               <input
+                id="profile-username"
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -199,10 +205,14 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-cyan-300/95 mb-2 font-mono">
+            <label
+              htmlFor="profile-bio"
+              className="block text-xs font-medium text-cyan-300/95 mb-2 font-mono"
+            >
               {t("common.bio")}
             </label>
             <textarea
+              id="profile-bio"
               value={bio}
               onChange={(e) => setBio(e.target.value.slice(0, 160))}
               rows={3}
@@ -217,7 +227,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
           {/* Email (Read-only) */}
           <div>
-            <label className="block text-xs font-medium text-cyan-300/95 mb-2 font-mono">
+            <label
+              htmlFor="profile-email"
+              className="block text-xs font-medium text-cyan-300/95 mb-2 font-mono"
+            >
               {t("common.email")}
             </label>
             <div className="relative">
@@ -226,6 +239,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 size={18}
               />
               <input
+                id="profile-email"
                 type="email"
                 value={email}
                 disabled

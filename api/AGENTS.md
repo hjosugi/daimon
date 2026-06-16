@@ -12,7 +12,6 @@ Daimon は、投稿本文の意味ベクトルと POV(Point of View / 観点)を
 frontend/      React UI (:5173)
 api/           Go API (:8000)  ← this workspace
 ml-service/    Python ML service (:8001)
-backend/       legacy FastAPI + seed + Alembic
 PostgreSQL     system of record
 Qdrant         vector search index
 Redis          optional read-model cache
@@ -164,7 +163,7 @@ Preserve these ideas:
 
 ## Common Pitfalls
 
-- Do not treat `backend/` as the current production API. It is legacy/reference/seed/migration support.
+- The stack is Go-only except `ml-service/` (Python). Seeding is `api/cmd/seed`; schema is bootstrapped by the API (`EnsureSchema`). There is no Python `backend/` and no migration step.
 - Do not change embedding dimension without planning Qdrant reindex/reseed.
 - Do not rely on Redis being present.
 - Do not add DB tables without keeping `schema.sql`, queries, seed/migration expectations, and frontend/API types aligned.

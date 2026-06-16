@@ -28,11 +28,14 @@ COMPOSE := $(shell \
 # Resolve pnpm even when its mise shim isn't on the (non-interactive) PATH yet.
 PNPM := $(shell command -v pnpm >/dev/null 2>&1 && echo pnpm || echo "mise exec -- pnpm")
 
+# Resolve uv for the Python ML microservice.
+UV := $(shell command -v uv >/dev/null 2>&1 && echo uv || echo "mise exec -- uv")
+
 # Env for host-run Go commands: point them at the compose-published ports.
 LOCAL_DB  := DATABASE_URL=postgresql://daimon:daimon@localhost:5432/daimon
 LOCAL_SVC := QDRANT_URL=http://localhost:6333 EMBED_URL=http://localhost:8001 REDIS_URL=redis://localhost:6379
 
-.PHONY: all fresh setup infra infra-db deps-up batch wait-db wait-ml frontend frontend-ensure ensure-pnpm seed seed-large dev docker docker-logs docker-down web down clean
+.PHONY: all fresh setup infra infra-db deps-up batch wait-db wait-ml frontend frontend-ensure ensure-pnpm ml-setup ml-dev seed seed-large dev docker docker-logs docker-down web down clean
 
 # All-in-one (host API): bring up deps, run the Go API + frontend on the host.
 all: dev
@@ -40,6 +43,12 @@ all: dev
 setup: infra wait-db frontend
 	@echo ""
 	@echo "✅ Setup complete. Next: 'make dev'  (or 'make docker' + 'make web')"
+
+ml-setup:
+	cd ml-service && $(UV) sync --locked
+
+ml-dev:
+	cd ml-service && $(UV) run uvicorn app:app --host 0.0.0.0 --port 8001 --reload
 
 infra:
 	@echo "Using compose provider: $(COMPOSE)"

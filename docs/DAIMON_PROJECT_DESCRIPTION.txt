@@ -274,8 +274,8 @@ Daimon は、単なるフィードではなく、ユーザーが作る感性の�
   POV候補を抽出する。
 
 現在の基本モデル:
-  all-MiniLM-L6-v2
-  384次元ベクトル
+  paraphrase-multilingual-MiniLM-L12-v2
+  384次元ベクトル（多言語・日本語対応）
 
 設計方針:
   Go APIからML推論を分離する。
@@ -346,17 +346,19 @@ payload:
   precomputed feed などに使える。
 
 
-4.7 backend/
+4.7 シード・スキーマ（Go）
 
 場所:
-  backend/
+  api/cmd/seed, api/internal/db
 
 役割:
-  Python FastAPI版の旧実装。
-  seed, Alembic, 検証用コードが残っている。
+  テストデータ投入と DBスキーマのブートストラップ。
 
-現在の推奨実行経路:
-  Go API + ml-service + PostgreSQL + Qdrant + Redis
+現在:
+  スタックは Go 中心で、Python は ml-service だけ。
+  スキーマは Go API の起動時に CREATE TABLE IF NOT EXISTS で適用される（マイグレーション手順は不要）。
+  テストデータは Go シーダ（api/cmd/seed）が、埋め込みを ml-service 経由で取得して投入する。
+  旧 Python backend（FastAPI / Alembic / seed.py）は撤去済み。
 
 
 5. 現在できること
