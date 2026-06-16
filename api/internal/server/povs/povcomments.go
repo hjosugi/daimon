@@ -11,6 +11,7 @@ import (
 
 	dbq "daimon/api/internal/db"
 	"daimon/api/internal/httpx"
+	"daimon/api/internal/server/respond"
 	"daimon/api/internal/server/session"
 )
 
@@ -57,7 +58,7 @@ func (h *Handler) HandlePOVComments(w http.ResponseWriter, r *http.Request) {
 	}
 	rows, err := h.pool.Query(r.Context(), dbq.SQL("pov_comments.list"), pov)
 	if err != nil {
-		httpx.Error(w, http.StatusInternalServerError, "Database error")
+		respond.Internal(w, r, h.logger, "Database error", err)
 		return
 	}
 	defer rows.Close()
@@ -68,7 +69,7 @@ func (h *Handler) HandlePOVComments(w http.ResponseWriter, r *http.Request) {
 		var c povCommentResp
 		var created time.Time
 		if err := rows.Scan(&c.ID, &c.Pov, &c.Text, &c.Stance, &c.UserID, &c.Username, &c.AvatarURL, &created); err != nil {
-			httpx.Error(w, http.StatusInternalServerError, "Database error")
+			respond.Internal(w, r, h.logger, "Database error", err)
 			return
 		}
 		c.CreatedAt = created.Format(time.RFC3339)
@@ -76,7 +77,7 @@ func (h *Handler) HandlePOVComments(w http.ResponseWriter, r *http.Request) {
 		out = append(out, c)
 	}
 	if err := rows.Err(); err != nil {
-		httpx.Error(w, http.StatusInternalServerError, "Database error")
+		respond.Internal(w, r, h.logger, "Database error", err)
 		return
 	}
 	httpx.JSON(w, http.StatusOK, out)
@@ -107,7 +108,7 @@ func (h *Handler) HandleAddPOVComment(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().UTC()
 	stance := cleanStance(req.Stance)
 	if _, err := h.pool.Exec(r.Context(), dbq.SQL("pov_comments.insert"), id, pov, uid, text, stance, now); err != nil {
-		httpx.Error(w, http.StatusInternalServerError, "Could not add comment")
+		respond.Internal(w, r, h.logger, "Could not add comment", err)
 		return
 	}
 
@@ -115,7 +116,7 @@ func (h *Handler) HandleAddPOVComment(w http.ResponseWriter, r *http.Request) {
 	var avatar *string
 	var bio *string
 	if err := h.pool.QueryRow(r.Context(), dbq.SQL("follows.profile_user"), uid).Scan(&username, &avatar, &bio); err != nil {
-		httpx.Error(w, http.StatusInternalServerError, "Database error")
+		respond.Internal(w, r, h.logger, "Database error", err)
 		return
 	}
 	httpx.JSON(w, http.StatusOK, povCommentResp{
@@ -126,6 +127,9 @@ func (h *Handler) HandleAddPOVComment(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) HandleDeletePOVComment(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "commentID")
-	_, _ = h.pool.Exec(r.Context(), dbq.SQL("pov_comments.delete_own"), id, session.UserID(r.Context()))
+	if _, err := h.pool.Exec(r.Context(), dbq.SQL("pov_comments.delete_own"), id, session.UserID(r.Context())); err != nil {
+		respond.Internal(w, r, h.logger, "Could not delete comment", err)
+		return
+	}
 	httpx.JSON(w, http.StatusOK, map[string]bool{"deleted": true})
 }

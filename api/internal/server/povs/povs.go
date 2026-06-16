@@ -7,6 +7,7 @@ import (
 
 	dbq "daimon/api/internal/db"
 	"daimon/api/internal/httpx"
+	"daimon/api/internal/server/respond"
 )
 
 type genPOVReq struct {
@@ -25,6 +26,7 @@ func (h *Handler) HandleGeneratePOVs(w http.ResponseWriter, r *http.Request) {
 	}
 	povs, err := h.embed.POVs(r.Context(), req.Text)
 	if err != nil {
+		respond.Warn(h.logger, r, "pov generation failed", err)
 		povs = []string{} // ML service down -> empty, non-fatal
 	}
 	httpx.JSON(w, http.StatusOK, map[string][]string{"povs": povs})
@@ -47,6 +49,7 @@ func (h *Handler) HandleSuggestPOVs(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := h.pool.Query(r.Context(), dbq.SQL("povs.suggest"), q)
 	if err != nil {
+		respond.Warn(h.logger, r, "pov suggestion query failed", err)
 		httpx.JSON(w, http.StatusOK, map[string][]string{"povs": {}})
 		return
 	}
@@ -62,6 +65,11 @@ func (h *Handler) HandleSuggestPOVs(w http.ResponseWriter, r *http.Request) {
 		if rows.Scan(&p.pov, &p.count) == nil {
 			list = append(list, p)
 		}
+	}
+	if err := rows.Err(); err != nil {
+		respond.Warn(h.logger, r, "pov suggestion rows failed", err)
+		httpx.JSON(w, http.StatusOK, map[string][]string{"povs": {}})
+		return
 	}
 
 	sort.SliceStable(list, func(a, b int) bool {

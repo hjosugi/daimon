@@ -10,6 +10,7 @@ import (
 
 	dbq "daimon/api/internal/db"
 	"daimon/api/internal/httpx"
+	"daimon/api/internal/server/respond"
 	"daimon/api/internal/server/session"
 )
 
@@ -26,27 +27,51 @@ func povParam(r *http.Request) string {
 	return pov
 }
 
-func (h *Handler) povLikeCount(r *http.Request, pov string) int {
+func (h *Handler) povLikeCount(r *http.Request, pov string) (int, error) {
 	var n int
-	_ = h.pool.QueryRow(r.Context(), dbq.SQL("pov_likes.count"), pov).Scan(&n)
-	return n
+	err := h.pool.QueryRow(r.Context(), dbq.SQL("pov_likes.count"), pov).Scan(&n)
+	return n, err
 }
 
 func (h *Handler) HandleLikePOV(w http.ResponseWriter, r *http.Request) {
 	pov := povParam(r)
-	_, _ = h.pool.Exec(r.Context(), dbq.SQL("pov_likes.insert"), uuid.NewString(), pov, session.UserID(r.Context()), time.Now().UTC())
-	httpx.JSON(w, http.StatusOK, likeResp{Liked: true, Likes: h.povLikeCount(r, pov)})
+	if _, err := h.pool.Exec(r.Context(), dbq.SQL("pov_likes.insert"), uuid.NewString(), pov, session.UserID(r.Context()), time.Now().UTC()); err != nil {
+		respond.Internal(w, r, h.logger, "Could not like POV", err)
+		return
+	}
+	count, err := h.povLikeCount(r, pov)
+	if err != nil {
+		respond.Internal(w, r, h.logger, "Database error", err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, likeResp{Liked: true, Likes: count})
 }
 
 func (h *Handler) HandleUnlikePOV(w http.ResponseWriter, r *http.Request) {
 	pov := povParam(r)
-	_, _ = h.pool.Exec(r.Context(), dbq.SQL("pov_likes.delete"), pov, session.UserID(r.Context()))
-	httpx.JSON(w, http.StatusOK, likeResp{Liked: false, Likes: h.povLikeCount(r, pov)})
+	if _, err := h.pool.Exec(r.Context(), dbq.SQL("pov_likes.delete"), pov, session.UserID(r.Context())); err != nil {
+		respond.Internal(w, r, h.logger, "Could not unlike POV", err)
+		return
+	}
+	count, err := h.povLikeCount(r, pov)
+	if err != nil {
+		respond.Internal(w, r, h.logger, "Database error", err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, likeResp{Liked: false, Likes: count})
 }
 
 func (h *Handler) HandlePOVLikeStatus(w http.ResponseWriter, r *http.Request) {
 	pov := povParam(r)
 	var liked bool
-	_ = h.pool.QueryRow(r.Context(), dbq.SQL("pov_likes.status"), pov, session.UserID(r.Context())).Scan(&liked)
-	httpx.JSON(w, http.StatusOK, likeResp{Liked: liked, Likes: h.povLikeCount(r, pov)})
+	if err := h.pool.QueryRow(r.Context(), dbq.SQL("pov_likes.status"), pov, session.UserID(r.Context())).Scan(&liked); err != nil {
+		respond.Internal(w, r, h.logger, "Database error", err)
+		return
+	}
+	count, err := h.povLikeCount(r, pov)
+	if err != nil {
+		respond.Internal(w, r, h.logger, "Database error", err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, likeResp{Liked: liked, Likes: count})
 }
