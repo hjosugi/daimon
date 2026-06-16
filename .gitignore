@@ -15,11 +15,9 @@ env/
 # IDEs
 **/.vscode/*
 *.code-workspace
-!.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
-!ml-service/.vscode/settings.json
 !ml-service/.vscode/tasks.json
 !ml-service/.vscode/launch.json
 !ml-service/.vscode/extensions.json
