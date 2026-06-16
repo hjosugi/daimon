@@ -1,11 +1,6 @@
 import { useMutation } from "@tanstack/react-query"
-import {
-  Image as ImageIcon,
-  Lock,
-  Mail,
-  User as UserIcon,
-  X,
-} from "lucide-react"
+import { Lock, Mail, User as UserIcon } from "lucide-react"
+import type React from "react"
 import { useState } from "react"
 import {
   type LoginData,
@@ -15,7 +10,12 @@ import {
   type User,
   updateProfile,
 } from "../api/client"
+import { errorMessage } from "../api/errors"
 import { useI18n } from "../i18n"
+import { readFileAsDataURL } from "../utils/file"
+import { AvatarPicker } from "./ui/AvatarPicker"
+import { IconInput } from "./ui/IconInput"
+import { ModalFrame } from "./ui/ModalFrame"
 
 interface AuthModalProps {
   isOpen: boolean
@@ -23,19 +23,12 @@ interface AuthModalProps {
   onSuccess: (user: User) => void
 }
 
-function getErrorMessage(error: unknown, fallback: string): string {
-  if (typeof error !== "object" || error === null) return fallback
-
-  const candidate = error as {
-    message?: unknown
-    response?: { data?: { detail?: unknown } }
-  }
-  const detail = candidate.response?.data?.detail
-  if (typeof detail === "string" && detail) return detail
-  if (typeof candidate.message === "string" && candidate.message) {
-    return candidate.message
-  }
-  return fallback
+const emptyAuthForm = {
+  username: "",
+  email: "",
+  password: "",
+  confirmPassword: "",
+  bio: "",
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({
@@ -45,47 +38,36 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 }) => {
   const { t } = useI18n()
   const [mode, setMode] = useState<"login" | "register">("login")
-  const [formData, setFormData] = useState({
-    username: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    bio: "",
-  })
+  const [formData, setFormData] = useState(emptyAuthForm)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
-  const [errorMessage, setErrorMessage] = useState<string>("")
+  const [errorMessage, setErrorMessage] = useState("")
+
+  const resetForm = () => {
+    setFormData(emptyAuthForm)
+    setAvatarPreview(null)
+    setErrorMessage("")
+  }
 
   const registerMutation = useMutation({
     mutationFn: async (data: RegisterData) => {
       const user = await register(data)
-      // If avatar was selected, upload it
-      if (avatarPreview) {
-        try {
-          // For MVP, we'll store as base64 in avatar_url
-          // In production, upload to S3/Cloud Storage
-          const updatedUser = await updateProfile({ avatar_url: avatarPreview })
-          return { ...user, avatar_url: updatedUser.avatar_url }
-        } catch (error) {
-          console.error("Failed to upload avatar", error)
-        }
+      if (!avatarPreview) return user
+
+      try {
+        const updatedUser = await updateProfile({ avatar_url: avatarPreview })
+        return { ...user, avatar_url: updatedUser.avatar_url }
+      } catch (error) {
+        console.error("Failed to upload avatar", error)
+        return user
       }
-      return user
     },
     onSuccess: (user) => {
       onSuccess(user)
       onClose()
-      setFormData({
-        username: "",
-        email: "",
-        password: "",
-        confirmPassword: "",
-        bio: "",
-      })
-      setAvatarPreview(null)
-      setErrorMessage("")
+      resetForm()
     },
     onError: (error: unknown) => {
-      setErrorMessage(getErrorMessage(error, t("auth.registrationFailed")))
+      setErrorMessage(errorMessage(error, t("auth.registrationFailed")))
     },
   })
 
@@ -94,19 +76,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     onSuccess: (user) => {
       onSuccess(user)
       onClose()
-      setFormData({
-        username: "",
-        email: "",
-        password: "",
-        confirmPassword: "",
-        bio: "",
-      })
-      setErrorMessage("")
+      resetForm()
     },
     onError: (error: unknown) => {
-      setErrorMessage(getErrorMessage(error, t("auth.loginFailed")))
+      setErrorMessage(errorMessage(error, t("auth.loginFailed")))
     },
   })
+
+  const updateField = (field: keyof typeof emptyAuthForm, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -121,262 +100,146 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         password: formData.password,
         bio: formData.bio.trim() || undefined,
       })
-    } else {
-      loginMutation.mutate({
-        email_or_username: formData.email,
-        password: formData.password,
-      })
+      return
+    }
+
+    loginMutation.mutate({
+      email_or_username: formData.email,
+      password: formData.password,
+    })
+  }
+
+  const handleAvatarSelect = async (file: File) => {
+    try {
+      setAvatarPreview(await readFileAsDataURL(file))
+    } catch (error) {
+      console.error("Failed to read avatar", error)
     }
   }
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setAvatarPreview(reader.result as string)
-      }
-      reader.readAsDataURL(file)
-    }
+  const switchMode = () => {
+    setMode((current) => (current === "login" ? "register" : "login"))
+    resetForm()
   }
 
   if (!isOpen) return null
 
+  const isPending = registerMutation.isPending || loginMutation.isPending
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-3 sm:p-4">
-      <button
-        type="button"
-        aria-label={t("common.close")}
-        className="absolute inset-0 cursor-default"
-        onClick={onClose}
-      />
-      <div className="relative z-10 bg-[#0f0f1f] rounded-lg border border-cyan-500/18 w-full max-w-md mx-auto overflow-hidden max-h-[90vh] overflow-y-auto">
-        <div className="bg-[#2a2a50] border-b border-cyan-500/15 p-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-cyan-300 font-mono">
-            {mode === "login" ? t("auth.login") : t("auth.signUp")}
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-cyan-300/90 hover:text-cyan-400 hover:bg-cyan-900/10 rounded p-1 transition-colors"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Error Message */}
-          {errorMessage && (
-            <div className="p-3 bg-red-900/20 border border-red-500/30 rounded text-sm text-red-400/90 font-mono">
-              [{t("common.error")}] {errorMessage}
-            </div>
-          )}
-          {mode === "register" && (
-            <>
-              {/* Avatar Upload */}
-              <div className="flex flex-col items-center gap-2">
-                <label htmlFor="auth-avatar" className="cursor-pointer">
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-cyan-400/80 to-fuchsia-400/80 flex items-center justify-center overflow-hidden border-2 border-cyan-500/18">
-                    {avatarPreview ? (
-                      <img
-                        src={avatarPreview}
-                        alt="Avatar preview"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <ImageIcon size={32} className="text-black" />
-                    )}
-                  </div>
-                  <input
-                    id="auth-avatar"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAvatarChange}
-                    className="hidden"
-                  />
-                </label>
-                <span className="text-xs text-cyan-300/80 font-mono">
-                  {t("auth.profilePictureOptional")}
-                </span>
-              </div>
-
-              {/* Username */}
-              <div>
-                <label
-                  htmlFor="auth-username"
-                  className="block text-xs font-medium text-cyan-300/95 mb-1 font-mono"
-                >
-                  {t("common.username")}
-                </label>
-                <div className="relative">
-                  <UserIcon
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-300/70"
-                    size={18}
-                  />
-                  <input
-                    id="auth-username"
-                    type="text"
-                    value={formData.username}
-                    onChange={(e) =>
-                      setFormData({ ...formData, username: e.target.value })
-                    }
-                    required={mode === "register"}
-                    className="w-full pl-10 pr-4 py-2 bg-[#2a2a50] border border-cyan-500/15 rounded focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/40 text-cyan-300 placeholder:text-cyan-300/80 font-mono transition-all"
-                    placeholder={t("common.username")}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label
-                  htmlFor="auth-bio"
-                  className="block text-xs font-medium text-cyan-300/95 mb-1 font-mono"
-                >
-                  {t("common.bio")}
-                </label>
-                <textarea
-                  id="auth-bio"
-                  value={formData.bio}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      bio: e.target.value.slice(0, 160),
-                    })
-                  }
-                  rows={3}
-                  maxLength={160}
-                  className="w-full px-3 py-2 bg-[#2a2a50] border border-cyan-500/15 rounded focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/40 text-cyan-300 placeholder:text-cyan-300/80 font-mono text-sm transition-all resize-none"
-                  placeholder={t("auth.bioPlaceholder")}
-                />
-                <div className="mt-1 text-right text-[10px] text-cyan-300/60 font-mono">
-                  {formData.bio.length}/160
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* Email */}
-          <div>
-            <label
-              htmlFor="auth-email"
-              className="block text-xs font-medium text-cyan-300/95 mb-1 font-mono"
-            >
-              {mode === "login" ? t("auth.emailOrUsername") : t("common.email")}
-            </label>
-            <div className="relative">
-              <Mail
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-300/70"
-                size={18}
-              />
-              <input
-                id="auth-email"
-                type={mode === "login" ? "text" : "email"}
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
-                required
-                className="w-full pl-10 pr-4 py-2 bg-[#2a2a50] border border-cyan-500/15 rounded focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/40 text-cyan-300 placeholder:text-cyan-300/80 font-mono transition-all"
-                placeholder={
-                  mode === "login"
-                    ? t("auth.emailOrUsername")
-                    : "EMAIL@EXAMPLE.COM"
-                }
-              />
-            </div>
+    <ModalFrame
+      title={mode === "login" ? t("auth.login") : t("auth.signUp")}
+      onClose={onClose}
+      headerClassName="bg-[#2a2a50] border-cyan-500/15"
+    >
+      <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        {errorMessage && (
+          <div className="p-3 bg-red-900/20 border border-red-500/30 rounded text-sm text-red-400/90 font-mono">
+            [{t("common.error")}] {errorMessage}
           </div>
+        )}
 
-          {/* Password */}
-          <div>
-            <label
-              htmlFor="auth-password"
-              className="block text-xs font-medium text-cyan-300/95 mb-1 font-mono"
-            >
-              {t("common.password")}
-            </label>
-            <div className="relative">
-              <Lock
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-300/70"
-                size={18}
-              />
-              <input
-                id="auth-password"
-                type="password"
-                value={formData.password}
-                onChange={(e) =>
-                  setFormData({ ...formData, password: e.target.value })
-                }
-                required
-                className="w-full pl-10 pr-4 py-2 bg-[#2a2a50] border border-cyan-500/15 rounded focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/40 text-cyan-300 placeholder:text-cyan-300/80 font-mono transition-all"
-                placeholder={t("common.password")}
-              />
-            </div>
-          </div>
+        {mode === "register" && (
+          <>
+            <AvatarPicker
+              id="auth-avatar"
+              preview={avatarPreview}
+              onFileSelect={handleAvatarSelect}
+              helpText={t("auth.profilePictureOptional")}
+            />
 
-          {mode === "register" && (
+            <IconInput
+              id="auth-username"
+              label={t("common.username")}
+              icon={<UserIcon size={18} />}
+              value={formData.username}
+              onChange={(value) => updateField("username", value)}
+              required
+              placeholder={t("common.username")}
+            />
+
             <div>
               <label
-                htmlFor="auth-confirm-password"
+                htmlFor="auth-bio"
                 className="block text-xs font-medium text-cyan-300/95 mb-1 font-mono"
               >
-                {t("auth.confirmPassword")}
+                {t("common.bio")}
               </label>
-              <div className="relative">
-                <Lock
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-300/70"
-                  size={18}
-                />
-                <input
-                  id="auth-confirm-password"
-                  type="password"
-                  value={formData.confirmPassword}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      confirmPassword: e.target.value,
-                    })
-                  }
-                  required
-                  className="w-full pl-10 pr-4 py-2 bg-[#2a2a50] border border-cyan-500/15 rounded focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/40 text-cyan-300 placeholder:text-cyan-300/80 font-mono transition-all"
-                  placeholder={t("auth.confirmPassword")}
-                />
+              <textarea
+                id="auth-bio"
+                value={formData.bio}
+                onChange={(e) => updateField("bio", e.target.value.slice(0, 160))}
+                rows={3}
+                maxLength={160}
+                className="w-full px-3 py-2 bg-[#2a2a50] border border-cyan-500/15 rounded focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/40 text-cyan-300 placeholder:text-cyan-300/80 font-mono text-sm transition-all resize-none"
+                placeholder={t("auth.bioPlaceholder")}
+              />
+              <div className="mt-1 text-right text-[10px] text-cyan-300/60 font-mono">
+                {formData.bio.length}/160
               </div>
             </div>
-          )}
+          </>
+        )}
 
+        <IconInput
+          id="auth-email"
+          label={mode === "login" ? t("auth.emailOrUsername") : t("common.email")}
+          icon={<Mail size={18} />}
+          type={mode === "login" ? "text" : "email"}
+          value={formData.email}
+          onChange={(value) => updateField("email", value)}
+          required
+          placeholder={
+            mode === "login" ? t("auth.emailOrUsername") : "EMAIL@EXAMPLE.COM"
+          }
+        />
+
+        <IconInput
+          id="auth-password"
+          label={t("common.password")}
+          icon={<Lock size={18} />}
+          type="password"
+          value={formData.password}
+          onChange={(value) => updateField("password", value)}
+          required
+          placeholder={t("common.password")}
+        />
+
+        {mode === "register" && (
+          <IconInput
+            id="auth-confirm-password"
+            label={t("auth.confirmPassword")}
+            icon={<Lock size={18} />}
+            type="password"
+            value={formData.confirmPassword}
+            onChange={(value) => updateField("confirmPassword", value)}
+            required
+            placeholder={t("auth.confirmPassword")}
+          />
+        )}
+
+        <button
+          type="submit"
+          disabled={isPending}
+          className="w-full py-3 bg-gradient-to-r from-cyan-500/90 to-fuchsia-500/90 text-black rounded font-semibold hover:from-cyan-400 hover:to-fuchsia-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-mono font-bold"
+        >
+          {isPending
+            ? t("common.processing")
+            : mode === "login"
+              ? t("auth.login")
+              : t("auth.signUp")}
+        </button>
+
+        <div className="text-center">
           <button
-            type="submit"
-            disabled={registerMutation.isPending || loginMutation.isPending}
-            className="w-full py-3 bg-gradient-to-r from-cyan-500/90 to-fuchsia-500/90 text-black rounded font-semibold hover:from-cyan-400 hover:to-fuchsia-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-mono font-bold"
+            type="button"
+            onClick={switchMode}
+            className="text-sm text-cyan-300/90 hover:text-cyan-400 font-medium font-mono"
           >
-            {registerMutation.isPending || loginMutation.isPending
-              ? t("common.processing")
-              : mode === "login"
-                ? t("auth.login")
-                : t("auth.signUp")}
+            {mode === "login" ? t("auth.noAccount") : t("auth.hasAccount")}
           </button>
-
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={() => {
-                setMode(mode === "login" ? "register" : "login")
-                setFormData({
-                  username: "",
-                  email: "",
-                  password: "",
-                  confirmPassword: "",
-                  bio: "",
-                })
-                setAvatarPreview(null)
-              }}
-              className="text-sm text-cyan-300/90 hover:text-cyan-400 font-medium font-mono"
-            >
-              {mode === "login" ? t("auth.noAccount") : t("auth.hasAccount")}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        </div>
+      </form>
+    </ModalFrame>
   )
 }

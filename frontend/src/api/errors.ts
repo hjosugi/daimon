@@ -22,3 +22,18 @@ export async function apiErrorMessage(
     return fallback
   }
 }
+
+export function errorMessage(error: unknown, fallback: string): string {
+  if (typeof error !== "object" || error === null) return fallback
+
+  const candidate = error as {
+    message?: unknown
+    response?: { data?: { detail?: unknown } }
+  }
+  const detail = candidate.response?.data?.detail
+  if (typeof detail === "string" && detail) return detail
+  if (typeof candidate.message === "string" && candidate.message) {
+    return candidate.message
+  }
+  return fallback
+}

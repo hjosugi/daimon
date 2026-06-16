@@ -41,7 +41,11 @@ export const ManualPOVInput: React.FC<ManualPOVInputProps> = ({
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault()
-                if (showSuggestions && suggestions.length > 0 && !value.trim()) {
+                if (
+                  showSuggestions &&
+                  suggestions.length > 0 &&
+                  !value.trim()
+                ) {
                   onSuggestionClick(suggestions[0])
                 } else {
                   onAdd()
