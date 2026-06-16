@@ -10,9 +10,9 @@ import (
 )
 
 type Handler struct {
-	pool  *pgxpool.Pool
-	embed *embed.Client
-	cache *cache.Cache
+	pool   *pgxpool.Pool
+	embed  *embed.Client
+	cache  *cache.Cache
 	logger *slog.Logger
 }
 
