@@ -1,0 +1,38 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Go API (host, deps in Docker)",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/api/cmd/server",
+      "cwd": "${workspaceFolder}/api",
+      "preLaunchTask": "deps up (db+qdrant+ml only)",
+      "env": {
+        "DATABASE_URL": "postgresql://daimon:daimon@localhost:5432/daimon",
+        "QDRANT_URL": "http://localhost:6333",
+        "EMBED_URL": "http://localhost:8001",
+        "CORS_ORIGINS": "http://localhost:5173",
+        "PORT": "8000"
+      }
+    },
+    {
+      "name": "Debug ML service (Python)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["app:app", "--port", "8001", "--reload"],
+      "cwd": "${workspaceFolder}/ml-service",
+      "python": "${workspaceFolder}/ml-service/.venv/bin/python",
+      "env": { "PORT": "8001" },
+      "preLaunchTask": "ML: uv sync"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Debug full backend (Go API + ML)",
+      "configurations": ["Debug ML service (Python)", "Debug Go API (host, deps in Docker)"]
+    }
+  ]
+}

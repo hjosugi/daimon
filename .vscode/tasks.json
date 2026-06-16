@@ -1,0 +1,91 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "🚀 fresh (wipe + build + seed + UI)",
+      "type": "shell",
+      "command": "make fresh",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true }
+    },
+    {
+      "label": "▶ docker up (db+qdrant+ml+api)",
+      "type": "shell",
+      "command": "make docker",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "group": { "kind": "build", "isDefault": true }
+    },
+    {
+      "label": "🎨 web (frontend :5173)",
+      "type": "shell",
+      "command": "make web",
+      "options": { "cwd": "${workspaceFolder}" },
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "🌱 seed",
+      "type": "shell",
+      "command": "make seed",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "📜 logs (api + ml)",
+      "type": "shell",
+      "command": "make docker-logs",
+      "options": { "cwd": "${workspaceFolder}" },
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "⏹ docker down",
+      "type": "shell",
+      "command": "make docker-down",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "deps up (db+qdrant+ml only)",
+      "type": "shell",
+      "command": "make deps-up",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "ML: uv sync",
+      "type": "shell",
+      "command": "make ml-setup",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "ML: uv dev server",
+      "type": "shell",
+      "command": "make ml-dev",
+      "options": { "cwd": "${workspaceFolder}" },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true }
+    },
+    {
+      "label": "go test (api)",
+      "type": "shell",
+      "command": "go test ./...",
+      "options": { "cwd": "${workspaceFolder}/api" },
+      "group": "test",
+      "problemMatcher": ["$go"]
+    },
+    {
+      "label": "go build (api)",
+      "type": "shell",
+      "command": "go build ./...",
+      "options": { "cwd": "${workspaceFolder}/api" },
+      "group": "build",
+      "problemMatcher": ["$go"]
+    }
+  ]
+}
