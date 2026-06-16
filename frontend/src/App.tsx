@@ -81,6 +81,9 @@ function App() {
   )
 
   const queryClient = useQueryClient()
+  const openAuthModal = useCallback(() => setShowAuthModal(true), [])
+  const openProfileModal = useCallback(() => setShowProfileModal(true), [])
+  const openSettingsModal = useCallback(() => setShowSettingsModal(true), [])
 
   // Check if user is logged in
   useEffect(() => {
@@ -133,10 +136,10 @@ function App() {
         user={user}
         currentPage={currentPage}
         onPageChange={setCurrentPage}
-        onAuthClick={() => setShowAuthModal(true)}
-        onProfileClick={() => setShowProfileModal(true)}
+        onAuthClick={openAuthModal}
+        onProfileClick={openProfileModal}
         onLogout={handleLogout}
-        onSettingsClick={() => setShowSettingsModal(true)}
+        onSettingsClick={openSettingsModal}
         similarityWeight={similarityWeight}
       />
 
@@ -147,6 +150,7 @@ function App() {
             onTagsChange={setInitialSearchTags}
             onBack={handleBackToTimeline}
             onUserClick={handleUserClick}
+            currentUser={user}
           />
         ) : currentPage === "mine" ? (
           <MyPostsPage
@@ -163,7 +167,7 @@ function App() {
             onBack={() =>
               setCurrentPage(prevPage === "pov" ? "timeline" : prevPage)
             }
-            onAuthRequired={() => setShowAuthModal(true)}
+            onAuthRequired={openAuthModal}
             onTagClick={handleTagClick}
             onUserClick={handleUserClick}
           />
@@ -182,7 +186,7 @@ function App() {
             similarityWeight={similarityWeight}
             boostPopular={boostPopular}
             includeFarPosts={includeFarPosts}
-            onAuthRequired={() => setShowAuthModal(true)}
+            onAuthRequired={openAuthModal}
             onTagClick={handleTagClick}
             onUserClick={handleUserClick}
           />

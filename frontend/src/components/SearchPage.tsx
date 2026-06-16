@@ -1,13 +1,8 @@
 import { useQuery } from "@tanstack/react-query"
 import { ChevronDown, ChevronUp, Hash, Loader2, Search, X } from "lucide-react"
 import type React from "react"
-import { useEffect, useState } from "react"
-import {
-  getCurrentUser,
-  searchPosts,
-  suggestPOVs,
-  type User,
-} from "../api/client"
+import { useCallback, useEffect, useState } from "react"
+import { searchPosts, suggestPOVs, type User } from "../api/client"
 import { useDebouncedValue } from "../hooks/useDebouncedValue"
 import { SearchPostCard } from "./SearchPostCard"
 
@@ -16,18 +11,19 @@ interface SearchPageProps {
   onTagsChange?: (tags: string[]) => void
   onBack?: () => void
   onUserClick?: (userId: string) => void
+  currentUser?: User | null
 }
 
 export const SearchPage: React.FC<SearchPageProps> = ({
   initialTags = [],
   onTagsChange,
   onUserClick,
+  currentUser = null,
 }) => {
   const [searchQuery, setSearchQuery] = useState<string>("")
   const [searchTags, setSearchTags] = useState<string[]>(initialTags)
   const [searchTagInput, setSearchTagInput] = useState<string>("")
   const [showPOVSearch, setShowPOVSearch] = useState<boolean>(false)
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
 
   const normalizedQuery = searchQuery.trim()
   const debouncedQuery = useDebouncedValue(searchQuery, 250).trim()
@@ -46,16 +42,6 @@ export const SearchPage: React.FC<SearchPageProps> = ({
     enabled: debouncedPOVInput.length > 0,
     staleTime: 1000 * 60 * 5,
   })
-
-  // Get current user
-  useEffect(() => {
-    const token = localStorage.getItem("auth_token")
-    if (token) {
-      getCurrentUser()
-        .then(setCurrentUser)
-        .catch(() => setCurrentUser(null))
-    }
-  }, [])
 
   // Update search tags when initialTags change
   useEffect(() => {
@@ -84,15 +70,20 @@ export const SearchPage: React.FC<SearchPageProps> = ({
     staleTime: 1000 * 60 * 1,
   })
 
-  const addSearchTag = (tag: string) => {
+  const addSearchTag = useCallback((tag: string) => {
     const trimmed = tag.trim()
-    if (!trimmed || searchTags.includes(trimmed)) return
+    if (!trimmed) return
     if (trimmed.length > 300) {
       alert("POV must be 300 characters or less")
       return
     }
-    setSearchTags((prev) => [...prev, trimmed])
-  }
+    setSearchTags((prev) => (prev.includes(trimmed) ? prev : [...prev, trimmed]))
+  }, [])
+
+  const handleResultTagClick = useCallback(
+    (tag: string) => addSearchTag(tag),
+    [addSearchTag],
+  )
 
   const handleSearchTagAdd = () => {
     addSearchTag(searchTagInput)
@@ -331,9 +322,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({
                       post={post}
                       currentUser={currentUser}
                       onUserClick={onUserClick}
-                      onTagClick={(tag) => {
-                        addSearchTag(tag)
-                      }}
+                      onTagClick={handleResultTagClick}
                     />
                   ))}
                 </div>

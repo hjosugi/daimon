@@ -9,7 +9,7 @@
 | 文書 | 役割 |
 | --- | --- |
 | [DAIMON_PROJECT_DESCRIPTION.txt](DAIMON_PROJECT_DESCRIPTION.txt) | プロジェクト全体の長文ブリーフ。面接・説明・思想整理向け。 |
-| [PRODUCT_AND_UX.md](PRODUCT_AND_UX.md) | POV中心のプロダクト設計、グラフ探索、内発的報酬UIの正本。 |
+| [PRODUCT_AND_UX.md](PRODUCT_AND_UX.md) | POV中心のプロダクト設計、sense-distance探索、内発的報酬UIの正本。 |
 | [THEORY_TO_FEATURES.md](THEORY_TO_FEATURES.md) | 理論から機能へ落とした対応表。何を作るべきかの判断軸。 |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 現行実装の構造。Go API、ML service、PostgreSQL、Qdrant、Redisの責務。 |
 | [ROADMAP.md](ROADMAP.md) | いま作るもの、次に作るもの、まだ作らないもの。 |
@@ -35,7 +35,7 @@ Daimon は、投稿ではなく「観点(POV)」を会話の単位にして、�
 4. タイムラインで、意味が近い投稿だけでなく、共通POVを持つ遠い投稿も混ぜる。
 5. POVページで、その観点に対するコメントや関連投稿を見る。
 
-まだ完成していない中核は、`post_pov_assertions` とグラフ探索です。今の `povs: string[]` は入口としては有効ですが、Daimonらしさを出すには「この投稿をこの観点で見るとどうか」という主張を保存する必要があります。
+まだ完成していない中核は、`post_pov_assertions` とsense-distance探索です。今の `povs: string[]` は入口としては有効ですが、Daimonらしさを出すには「この投稿をこの観点で見るとどうか」という主張を保存する必要があります。
 
 ## 正本とローカルメモ
 
