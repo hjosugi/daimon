@@ -10,7 +10,13 @@ import (
 
 	dbq "daimon/api/internal/db"
 	"daimon/api/internal/httpx"
+	"daimon/api/internal/server/session"
 )
+
+type likeResp struct {
+	Liked bool `json:"liked"`
+	Likes int  `json:"likes"`
+}
 
 func povParam(r *http.Request) string {
 	pov := chi.URLParam(r, "pov")

@@ -19,17 +19,23 @@ import (
 	"daimon/api/internal/embed"
 	"daimon/api/internal/httpx"
 	"daimon/api/internal/qdrant"
+	authhandler "daimon/api/internal/server/auth"
 	feedhandler "daimon/api/internal/server/feed"
+	posthandler "daimon/api/internal/server/posts"
+	povhandler "daimon/api/internal/server/povs"
 	"daimon/api/internal/server/session"
+	userhandler "daimon/api/internal/server/users"
 )
 
 type Server struct {
 	pool   *pgxpool.Pool
 	cfg    config.Config
-	embed  *embed.Client
 	qdrant *qdrant.Client
-	cache  *cache.Cache
+	auth   *authhandler.Handler
 	feed   *feedhandler.Handler
+	posts  *posthandler.Handler
+	povs   *povhandler.Handler
+	users  *userhandler.Handler
 }
 
 func New(pool *pgxpool.Pool, cfg config.Config) *Server {
@@ -39,10 +45,12 @@ func New(pool *pgxpool.Pool, cfg config.Config) *Server {
 	return &Server{
 		pool:   pool,
 		cfg:    cfg,
-		embed:  embedClient,
 		qdrant: qdrantClient,
-		cache:  cacheClient,
+		auth:   authhandler.New(pool),
 		feed:   feedhandler.New(pool, embedClient, qdrantClient, cacheClient),
+		posts:  posthandler.New(pool, embedClient, qdrantClient),
+		povs:   povhandler.New(pool, embedClient, cacheClient),
+		users:  userhandler.New(pool),
 	}
 }
 
@@ -73,24 +81,24 @@ func (s *Server) Router() http.Handler {
 	})
 
 	r.Route("/auth", func(r chi.Router) {
-		r.Post("/register", s.handleRegister)
-		r.Post("/login", s.handleLogin)
+		r.Post("/register", s.auth.HandleRegister)
+		r.Post("/login", s.auth.HandleLogin)
 		r.Group(func(r chi.Router) {
 			r.Use(s.requireAuth)
-			r.Get("/me", s.handleMe)
-			r.Put("/profile", s.handleUpdateProfile)
-			r.Post("/logout", s.handleLogout)
-			r.Delete("/account", s.handleDeleteAccount)
+			r.Get("/me", s.auth.HandleMe)
+			r.Put("/profile", s.auth.HandleUpdateProfile)
+			r.Post("/logout", s.auth.HandleLogout)
+			r.Delete("/account", s.auth.HandleDeleteAccount)
 		})
 	})
 
 	r.Route("/posts", func(r chi.Router) {
 		// Public reads.
-		r.Get("/{id}/comments", s.handleGetComments)
-		r.Get("/{id}/likes", s.handleGetLikers) // who liked
-		r.Post("/generate-povs", s.handleGeneratePOVs)
-		r.Get("/povs/suggest", s.handleSuggestPOVs)
-		r.With(s.optionalAuth).Get("/povs/{pov}/comments", s.handlePOVComments)
+		r.Get("/{id}/comments", s.posts.HandleGetComments)
+		r.Get("/{id}/likes", s.posts.HandleGetLikers) // who liked
+		r.Post("/generate-povs", s.povs.HandleGeneratePOVs)
+		r.Get("/povs/suggest", s.povs.HandleSuggestPOVs)
+		r.With(s.optionalAuth).Get("/povs/{pov}/comments", s.povs.HandlePOVComments)
 		r.Get("/by-user/{userID}", s.feed.HandleUserPosts) // a user's other posts
 
 		// Feeds: auth is optional (used for personalization + liked flags).
@@ -103,32 +111,32 @@ func (s *Server) Router() http.Handler {
 		// Authenticated writes.
 		r.Group(func(r chi.Router) {
 			r.Use(s.requireAuth)
-			r.Post("/", s.handleCreatePost)
+			r.Post("/", s.posts.HandleCreatePost)
 			r.Get("/following", s.feed.HandleFollowingFeed)
 			r.Get("/saved", s.feed.HandleSavedFeed)
-			r.Delete("/{id}", s.handleDeletePost)
-			r.Post("/{id}/save", s.handleSavePost)
-			r.Delete("/{id}/save", s.handleUnsavePost)
-			r.Get("/{id}/save-status", s.handleSaveStatus)
-			r.Post("/{id}/like", s.handleLike)
-			r.Delete("/{id}/like", s.handleUnlike)
-			r.Post("/{id}/comments", s.handleAddComment)
-			r.Post("/povs/{pov}/like", s.handleLikePOV)
-			r.Delete("/povs/{pov}/like", s.handleUnlikePOV)
-			r.Get("/povs/{pov}/like-status", s.handlePOVLikeStatus)
-			r.Post("/povs/{pov}/comments", s.handleAddPOVComment)
-			r.Delete("/povs/{pov}/comments/{commentID}", s.handleDeletePOVComment)
+			r.Delete("/{id}", s.posts.HandleDeletePost)
+			r.Post("/{id}/save", s.posts.HandleSavePost)
+			r.Delete("/{id}/save", s.posts.HandleUnsavePost)
+			r.Get("/{id}/save-status", s.posts.HandleSaveStatus)
+			r.Post("/{id}/like", s.posts.HandleLike)
+			r.Delete("/{id}/like", s.posts.HandleUnlike)
+			r.Post("/{id}/comments", s.posts.HandleAddComment)
+			r.Post("/povs/{pov}/like", s.povs.HandleLikePOV)
+			r.Delete("/povs/{pov}/like", s.povs.HandleUnlikePOV)
+			r.Get("/povs/{pov}/like-status", s.povs.HandlePOVLikeStatus)
+			r.Post("/povs/{pov}/comments", s.povs.HandleAddPOVComment)
+			r.Delete("/povs/{pov}/comments/{commentID}", s.povs.HandleDeletePOVComment)
 		})
 	})
 
 	r.Route("/users", func(r chi.Router) {
-		r.With(s.optionalAuth).Get("/{id}", s.handleUserProfile)
-		r.With(s.optionalAuth).Get("/{id}/followers", s.handleFollowers)
+		r.With(s.optionalAuth).Get("/{id}", s.users.HandleUserProfile)
+		r.With(s.optionalAuth).Get("/{id}/followers", s.users.HandleFollowers)
 		r.Group(func(r chi.Router) {
 			r.Use(s.requireAuth)
-			r.Post("/{id}/follow", s.handleFollow)
-			r.Delete("/{id}/follow", s.handleUnfollow)
-			r.Delete("/{id}/follower", s.handleRemoveFollower)
+			r.Post("/{id}/follow", s.users.HandleFollow)
+			r.Delete("/{id}/follow", s.users.HandleUnfollow)
+			r.Delete("/{id}/follower", s.users.HandleRemoveFollower)
 		})
 	})
 
@@ -166,8 +174,4 @@ func (s *Server) userFromToken(r *http.Request) (string, bool) {
 		return "", false
 	}
 	return uid, true
-}
-
-func userID(ctx context.Context) string {
-	return session.UserID(ctx)
 }

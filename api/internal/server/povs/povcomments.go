@@ -11,6 +11,7 @@ import (
 
 	dbq "daimon/api/internal/db"
 	"daimon/api/internal/httpx"
+	"daimon/api/internal/server/session"
 )
 
 type povCommentReq struct {

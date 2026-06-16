@@ -11,6 +11,7 @@ import (
 	dbq "daimon/api/internal/db"
 	"daimon/api/internal/httpx"
 	"daimon/api/internal/qdrant"
+	"daimon/api/internal/server/session"
 )
 
 func (h *Handler) HandleCreatePost(w http.ResponseWriter, r *http.Request) {
