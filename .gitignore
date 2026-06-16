@@ -7,6 +7,7 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+.venv
 .venv/
 venv/
 ENV/
@@ -57,6 +58,7 @@ out/
 .cache/
 
 # ML service (Python venv / caches)
+ml-service/.venv
 ml-service/.venv/
 ml-service/__pycache__/
 ml-service/**/__pycache__/

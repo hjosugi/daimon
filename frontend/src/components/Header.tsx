@@ -2,7 +2,6 @@ import {
   Bookmark,
   FileText,
   Home,
-  Languages,
   LogOut,
   Search,
   Settings2,
@@ -10,7 +9,7 @@ import {
 } from "lucide-react"
 import type React from "react"
 import type { User } from "../api/client"
-import { type Locale, localeLabels, locales, useI18n } from "../i18n"
+import { useI18n } from "../i18n"
 
 type Page = "timeline" | "search" | "mine" | "saved" | "user" | "pov"
 
@@ -35,7 +34,7 @@ export const Header: React.FC<HeaderProps> = ({
   onSettingsClick,
   similarityWeight,
 }) => {
-  const { locale, setLocale, t } = useI18n()
+  const { t } = useI18n()
 
   return (
     <header className="bg-[#151520]/95 backdrop-blur-sm border-b border-cyan-500/15 sticky top-0 z-20">
@@ -112,22 +111,6 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
           </div>
-          <label className="flex items-center gap-1 px-2 py-1 bg-[#1f1f35] border border-cyan-500/15 rounded text-cyan-300/90">
-            <Languages size={14} className="shrink-0" />
-            <span className="sr-only">{t("locale.switch")}</span>
-            <select
-              value={locale}
-              onChange={(e) => setLocale(e.target.value as Locale)}
-              className="bg-transparent text-xs font-mono outline-none cursor-pointer"
-              title={t("locale.switch")}
-            >
-              {locales.map((item) => (
-                <option key={item} value={item} className="bg-[#151520]">
-                  {localeLabels[item]}
-                </option>
-              ))}
-            </select>
-          </label>
           <button
             type="button"
             onClick={onSettingsClick}

@@ -1,6 +1,6 @@
-import { Settings2, X } from "lucide-react"
+import { Languages, Settings2, X } from "lucide-react"
 import type React from "react"
-import { useI18n } from "../i18n"
+import { type Locale, localeLabels, locales, useI18n } from "../i18n"
 
 interface SettingsModalProps {
   isOpen: boolean
@@ -23,7 +23,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   includeFarPosts,
   onIncludeFarPostsChange,
 }) => {
-  const { t } = useI18n()
+  const { locale, setLocale, t } = useI18n()
   if (!isOpen) return null
 
   return (
@@ -148,6 +148,30 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <span className="text-sm text-cyan-300/95 group-hover:text-cyan-400 font-mono">
                 {t("settings.includeDiverse")}
               </span>
+            </label>
+          </div>
+
+          <div className="pt-4 border-t border-cyan-500/15">
+            <label
+              htmlFor="locale-select"
+              className="flex items-center justify-between gap-3 text-sm text-cyan-300/85 font-mono"
+            >
+              <span className="flex items-center gap-2">
+                <Languages size={16} className="text-cyan-300/75" />
+                {t("locale.switch")}
+              </span>
+              <select
+                id="locale-select"
+                value={locale}
+                onChange={(e) => setLocale(e.target.value as Locale)}
+                className="min-w-28 rounded border border-cyan-500/18 bg-[#1f1f35] px-2 py-1 text-xs text-cyan-200 outline-none transition-colors hover:border-cyan-500/35 focus:border-cyan-400/60"
+              >
+                {locales.map((item) => (
+                  <option key={item} value={item} className="bg-[#151520]">
+                    {localeLabels[item]}
+                  </option>
+                ))}
+              </select>
             </label>
           </div>
         </div>
