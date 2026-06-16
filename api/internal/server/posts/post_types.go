@@ -11,27 +11,18 @@ type createPostReq struct {
 	Povs []string `json:"povs"`
 }
 
-type povLikeSummary struct {
-	Liked bool `json:"liked"`
-	Likes int  `json:"likes"`
-}
-
-type povStats map[string]povLikeSummary
-
 type postResp struct {
-	ID           string       `json:"id"`
-	Text         string       `json:"text"`
-	Povs         []string     `json:"povs"`
-	UserID       string       `json:"user_id"`
-	Username     string       `json:"username"`
-	Score        *float32     `json:"score,omitempty"`
-	Likes        int          `json:"likes"`
-	Liked        bool         `json:"liked"`
-	Saved        bool         `json:"saved,omitempty"`
-	CommentCount int          `json:"commentCount"`
-	POVStats     povStats     `json:"pov_stats,omitempty"`
-	MatchReason  *matchReason `json:"match_reason,omitempty"`
-	CreatedAt    string       `json:"created_at"`
+	ID           string   `json:"id"`
+	Text         string   `json:"text"`
+	Povs         []string `json:"povs"`
+	UserID       string   `json:"user_id"`
+	Username     string   `json:"username"`
+	Score        *float32 `json:"score,omitempty"`
+	Likes        int      `json:"likes"`
+	Liked        bool     `json:"liked"`
+	Saved        bool     `json:"saved,omitempty"`
+	CommentCount int      `json:"commentCount"`
+	CreatedAt    string   `json:"created_at"`
 }
 
 type likeResp struct {
