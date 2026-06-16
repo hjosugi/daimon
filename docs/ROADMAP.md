@@ -148,19 +148,23 @@ pov_definitions
 - 似たPOV/隣接POVの表示
 - POV説明の編集履歴
 
-## Phase 5: グラフ探索ビュー
+## Phase 5: 探索ビュー
 
 目的:
 
 POVを地図として探索できるようにする。
 
+ただし、最初からforce-directedの巨大ノードグラフを作りません。内部データはグラフでも、UIは `sense-distance` を歩ける探索空間にします。
+
 最初の範囲:
 
 - POVページ内の `探索` タブ。
-- 現在POV中心のlocal graph。
+- 現在POV中心のlocal map。
 - 1-2 hopまで。
 - 初期30ノード、最大80ノード程度。
 - `POV / Post / User` の3ノードから始める。
+- `near / bridge / far` が読める。
+- 次に進みたくなる情報の匂いを出す。
 
 後で増やす:
 
@@ -168,16 +172,33 @@ POVを地図として探索できるようにする。
 - Comment node
 - similar/adjacent/opposite edges
 - same-axis disagreement edge
-- 保存から広がる個人用graph
+- 保存から広がる個人用map
 
 まだやらない:
 
 - 全体ネットワーク図。
 - 3Dグラフ。
+- force-directed図をそのままプロダクトの主役にすること。
 - 中心性ランキング。
 - 複雑な統計dashboard。
 
-## Phase 6: POV activity timeline
+## Phase 6: Closure beat
+
+目的:
+
+同軸異見を、衝突ではなく「少し分かった」で閉じられる体験にする。
+
+最小フロー:
+
+1. POVに3択で反応する。
+2. 任意で一言理由を書く。
+3. 同じPOVで違うleanの相手が1人出る。
+4. 相手の一言理由を読む。
+5. `違ったところ` と `同じだったところ` が1行ずつ返る。
+
+これは数字報酬ではなく、closure報酬です。終わりがあるので、無限スクロールや通知依存とは違う体験になります。
+
+## Phase 7: POV activity timeline
 
 目的:
 
@@ -197,7 +218,7 @@ POVを地図として探索できるようにする。
 「余韻」という観点で、最近ちがう感じ方が増えています。
 ```
 
-## Phase 7: Ranking refinement
+## Phase 8: Ranking refinement
 
 今のrank:
 
@@ -224,7 +245,7 @@ semantic_similarity
 
 重要なのは、近いものだけを上げないことです。Daimonは、遠いが共通の観点を持つ投稿を出すためのアプリです。
 
-## Phase 8: Moderation and trust
+## Phase 9: Moderation and trust
 
 POV空間は深い議論を扱うため、普通のコメント欄より安全設計が重要です。
 
@@ -249,6 +270,7 @@ POV空間は深い議論を扱うため、普通のコメント欄より安全�
 - 反論通知。
 - 連続ログイン報酬。
 - 巨大グラフを初回画面に出すこと。
+- 満たされないよう設計された報酬ループ。
 - MLが勝手に人の感性を断定すること。
 
 ## MVP完成形
@@ -262,6 +284,6 @@ MVPとして強い状態は次です。
 5. POVページで関連投稿とPOVコメントを読める。
 6. 同じPOVで違う感じ方をしている人に1枚のカードで出会える。
 7. 保存が自分のsenseに反映される。
-8. グラフ探索で観点から観点へ軽く進める。
+8. 探索ビューで観点から観点へ軽く進める。
 
 これができれば、Daimonは単なる投稿SNSではなくなります。

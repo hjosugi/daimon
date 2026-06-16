@@ -22,6 +22,7 @@ import (
 	"daimon/api/internal/embed"
 	"daimon/api/internal/qdrant"
 	"daimon/api/internal/ranking"
+	"daimon/api/internal/vec"
 )
 
 const ttl = time.Hour
@@ -86,7 +87,7 @@ func deepAnalyzeJob(ctx context.Context, pool *pgxpool.Pool, em *embed.Client) {
 	inserted := 0
 	for _, p := range posts {
 		seen := map[string]bool{}
-		for _, chunk := range chunkRunes(p.text, deepChunkRune, deepMaxChunks) {
+		for _, chunk := range vec.ChunkRunes(p.text, deepChunkRune, deepMaxChunks) {
 			povs, err := em.POVs(ctx, chunk)
 			if err != nil {
 				continue
@@ -104,24 +105,6 @@ func deepAnalyzeJob(ctx context.Context, pool *pgxpool.Pool, em *embed.Client) {
 		}
 	}
 	log.Printf("deep-analyze: extracted %d auto-POVs from %d long posts", inserted, len(posts))
-}
-
-// chunkRunes splits s into rune-bounded windows (max maxChunks), so multibyte
-// (Japanese) text is never cut mid-character.
-func chunkRunes(s string, size, maxChunks int) []string {
-	r := []rune(s)
-	if len(r) <= size {
-		return []string{s}
-	}
-	out := make([]string, 0, maxChunks)
-	for i := 0; i < len(r) && len(out) < maxChunks; i += size {
-		end := i + size
-		if end > len(r) {
-			end = len(r)
-		}
-		out = append(out, string(r[i:end]))
-	}
-	return out
 }
 
 // ---- suggest: popular + vector-related POVs ------------------------------
@@ -214,7 +197,7 @@ func timelineJob(ctx context.Context, pool *pgxpool.Pool, qc *qdrant.Client, em 
 	for _, uid := range users {
 		// Blend the user's own-post centroid with their saved-post centroid
 		// (saves are a stronger preference signal).
-		centroid := blendVectors(userCentroid(ctx, qc, uid), savedCentroid(ctx, pool, qc, uid))
+		centroid := vec.BlendSaved(userCentroid(ctx, qc, uid), savedCentroid(ctx, pool, qc, uid))
 		userTags := userTagSet(ctx, pool, uid)
 
 		cands := make([]ranking.Candidate, 0, len(hits))
@@ -318,52 +301,7 @@ func savedCentroid(ctx context.Context, pool *pgxpool.Pool, qc *qdrant.Client, u
 	if err != nil || len(pts) == 0 {
 		return nil
 	}
-	var dim int
-	for _, p := range pts {
-		if len(p.Vector) > dim {
-			dim = len(p.Vector)
-		}
-	}
-	if dim == 0 {
-		return nil
-	}
-	sum := make([]float32, dim)
-	n := 0
-	for _, p := range pts {
-		if len(p.Vector) != dim {
-			continue
-		}
-		for i, v := range p.Vector {
-			sum[i] += v
-		}
-		n++
-	}
-	if n == 0 {
-		return nil
-	}
-	for i := range sum {
-		sum[i] /= float32(n)
-	}
-	return sum
-}
-
-// blendVectors blends the own-post centroid with the saved centroid (saves weighted higher).
-func blendVectors(post, saved []float32) []float32 {
-	if len(saved) == 0 {
-		return post
-	}
-	if len(post) == 0 {
-		return saved
-	}
-	n := len(post)
-	if len(saved) < n {
-		n = len(saved)
-	}
-	out := make([]float32, n)
-	for i := 0; i < n; i++ {
-		out[i] = 0.4*post[i] + 0.6*saved[i]
-	}
-	return out
+	return vec.Mean(pointVectors(pts))
 }
 
 func distinctPosters(ctx context.Context, pool *pgxpool.Pool) []string {
@@ -403,31 +341,16 @@ func userCentroid(ctx context.Context, qc *qdrant.Client, uid string) []float32 
 	if err != nil || len(pts) == 0 {
 		return nil
 	}
-	var dim int
+	return vec.Mean(pointVectors(pts))
+}
+
+// pointVectors extracts the non-empty vectors from a slice of Qdrant points.
+func pointVectors(pts []qdrant.Point) [][]float32 {
+	vs := make([][]float32, 0, len(pts))
 	for _, p := range pts {
-		if len(p.Vector) > dim {
-			dim = len(p.Vector)
+		if len(p.Vector) > 0 {
+			vs = append(vs, p.Vector)
 		}
 	}
-	if dim == 0 {
-		return nil
-	}
-	sum := make([]float32, dim)
-	n := 0
-	for _, p := range pts {
-		if len(p.Vector) != dim {
-			continue
-		}
-		for i, v := range p.Vector {
-			sum[i] += v
-		}
-		n++
-	}
-	if n == 0 {
-		return nil
-	}
-	for i := range sum {
-		sum[i] /= float32(n)
-	}
-	return sum
+	return vs
 }

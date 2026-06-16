@@ -305,9 +305,11 @@ pov_definitions
 
 open vocabulary は維持します。ただし、よく使われるPOVには説明と同義語を与え、検索・統合・安全性を改善します。
 
-### graph read model
+### graph / exploration read model
 
-グラフ探索は、PostgreSQLの正本テーブルから直接巨大グラフを毎回作るのではなく、POV中心の小さなread modelとして作ります。
+探索ビューは、PostgreSQLの正本テーブルから直接巨大グラフを毎回作るのではなく、POV中心の小さなread modelとして作ります。
+
+内部データはグラフで構いません。ただし、UIは巨大なforce-directed graphではなく、`sense-distance` が読めるlocal mapにします。
 
 最初のノード:
 
@@ -326,6 +328,23 @@ open vocabulary は維持します。ただし、よく使われるPOVには説�
 
 MVPでは全体グラフを出しません。1つのPOVを中心に1-2 hopだけを返すAPIにします。
 
+APIの返却イメージ:
+
+```json
+{
+  "center": { "type": "pov", "id": "tempo", "label": "テンポがよい" },
+  "nodes": [],
+  "edges": [],
+  "zones": {
+    "near": [],
+    "bridge": [],
+    "far": []
+  }
+}
+```
+
+`zones` はUIがsense mapとして描画するための補助です。正確な物理シミュレーションより、「近い」「少し遠い」「遠いが同じ軸」が読めることを優先します。
+
 ## 性能方針
 
 ### frontend
@@ -333,7 +352,7 @@ MVPでは全体グラフを出しません。1つのPOVを中心に1-2 hopだけ
 - タイムラインはページ全体を再描画しない。
 - PostCardは小さなcomponentに分割し、memo化しやすくする。
 - POV suggestion はdebounceする。
-- グラフ探索は初期表示を軽くし、ノード上限を決める。
+- 探索ビューは初期表示を軽くし、ノード上限を決める。
 - 100ノードを超える可視化はDOMだけで抱えず、canvas/WebGLか仮想化を検討する。
 
 ### API
@@ -354,5 +373,6 @@ MVPでは全体グラフを出しません。1つのPOVを中心に1-2 hopだけ
 - 全ユーザーを点数化するランキング。
 - グローバルな中心性スコアの露出。
 - 巨大な3Dグラフ可視化。
+- force-directed graphをそのままメインUIにすること。
 - 統計ダッシュボード化したPOVページ。
 - MLがPOVを完全に決定する設計。

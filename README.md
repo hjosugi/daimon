@@ -153,8 +153,14 @@ base   = alpha * near + (1 - alpha) * bridge + 0.15 * has_common_pov
 
 共有用:
 
+- [docs/README.md](docs/README.md)
+- [docs/PRODUCT_AND_UX.md](docs/PRODUCT_AND_UX.md)
+- [docs/THEORY_TO_FEATURES.md](docs/THEORY_TO_FEATURES.md)
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- [docs/ROADMAP.md](docs/ROADMAP.md)
 - [docs/CONTENT_MODERATION.md](docs/CONTENT_MODERATION.md)
+- [docs/CONCEPT_AND_RESEARCH.txt](docs/CONCEPT_AND_RESEARCH.txt)
+- [docs/DAIMON_PROJECT_DESCRIPTION.txt](docs/DAIMON_PROJECT_DESCRIPTION.txt)
 
 ローカル詳細メモ:
 
@@ -195,4 +201,3 @@ make dev QDRANT_PATH=qdrant_local
 ## CI/CD
 
 `.github/workflows/` に CI/CD の設定があります。主に backend / frontend の lint、typecheck、test、build、Docker 検証、deploy を想定しています。
-

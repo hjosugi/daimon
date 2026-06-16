@@ -10,10 +10,16 @@
 | --- | --- |
 | [DAIMON_PROJECT_DESCRIPTION.txt](DAIMON_PROJECT_DESCRIPTION.txt) | プロジェクト全体の長文ブリーフ。面接・説明・思想整理向け。 |
 | [PRODUCT_AND_UX.md](PRODUCT_AND_UX.md) | POV中心のプロダクト設計、グラフ探索、内発的報酬UIの正本。 |
+| [THEORY_TO_FEATURES.md](THEORY_TO_FEATURES.md) | 理論から機能へ落とした対応表。何を作るべきかの判断軸。 |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 現行実装の構造。Go API、ML service、PostgreSQL、Qdrant、Redisの責務。 |
 | [ROADMAP.md](ROADMAP.md) | いま作るもの、次に作るもの、まだ作らないもの。 |
 | [CONTENT_MODERATION.md](CONTENT_MODERATION.md) | POVコメント、ネタバレ、通報、荒れやすい議論の安全設計。 |
 | [CONCEPT_AND_RESEARCH.txt](CONCEPT_AND_RESEARCH.txt) | 研究・参考サービス・理論の圧縮メモ。プロダクト仕様ではなく背景資料。 |
+
+互換用の薄い索引:
+
+- [FEATURES.txt](FEATURES.txt): 機能一覧は [ROADMAP.md](ROADMAP.md) に集約。
+- [SPEC.txt](SPEC.txt): 理論ベースの仕様は [THEORY_TO_FEATURES.md](THEORY_TO_FEATURES.md) に集約。
 
 ## Daimonを一文で
 

@@ -1,0 +1,59 @@
+DAIMON FEATURES
+===============
+
+この文書は互換用の薄い索引です。
+
+機能一覧と優先順位の正本は次に移しました。
+
+- docs/ROADMAP.md
+
+理論から機能への対応表は次です。
+
+- docs/THEORY_TO_FEATURES.md
+
+プロダクト/UXの設計方針は次です。
+
+- docs/PRODUCT_AND_UX.md
+
+
+現時点の要点
+------------
+
+実装済み:
+
+- 投稿
+- POV付与
+- POV自動suggest
+- POV検索
+- POVページ
+- POVコメント
+- follow / unfollow
+- follower削除
+- 簡単なプロフィール
+- 投稿保存
+- Go API
+- Python ML service
+- PostgreSQL
+- Qdrant
+- Redis cache
+- Sense-Distance ranking
+
+次に作るもの:
+
+1. POVページ強化
+2. POVへの3択反応
+3. 同軸異見カード
+4. Closure beat
+5. post_pov_assertions
+6. pov_definitions
+7. sense-distance探索ビュー
+8. POV activity timeline
+
+作らないもの:
+
+- 統計dashboard
+- ユーザー総合スコア
+- POVの勝敗
+- force-directed graphを主役にするUI
+- 連続ログイン報酬
+- 無限スクロール/FOMO/怒り通知

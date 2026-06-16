@@ -13,6 +13,7 @@ import (
 	"daimon/api/internal/httpx"
 	"daimon/api/internal/qdrant"
 	"daimon/api/internal/ranking"
+	"daimon/api/internal/vec"
 )
 
 type timelineReq struct {
@@ -314,36 +315,6 @@ func (b bundle) povStats(tagList []string) povStats {
 	return stats
 }
 
-func meanVectors(vs [][]float32) []float32 {
-	dim := 0
-	for _, v := range vs {
-		if len(v) > dim {
-			dim = len(v)
-		}
-	}
-	if dim == 0 {
-		return nil
-	}
-	sum := make([]float32, dim)
-	n := 0
-	for _, v := range vs {
-		if len(v) != dim {
-			continue
-		}
-		for i := range v {
-			sum[i] += v[i]
-		}
-		n++
-	}
-	if n == 0 {
-		return nil
-	}
-	for i := range sum {
-		sum[i] /= float32(n)
-	}
-	return sum
-}
-
 // userSense loads the user's POV set and centroid vector.
 func (s *Server) userSense(ctx context.Context, uid string) (map[string]bool, []float32) {
 	tags := map[string]bool{}
@@ -368,7 +339,7 @@ func (s *Server) userSense(ctx context.Context, uid string) (map[string]bool, []
 				vs = append(vs, p.Vector)
 			}
 		}
-		centroid = meanVectors(vs)
+		centroid = vec.Mean(vs)
 	}
 	return tags, centroid
 }
@@ -405,27 +376,7 @@ func (s *Server) savedCentroid(ctx context.Context, uid string) []float32 {
 			vs = append(vs, p.Vector)
 		}
 	}
-	return meanVectors(vs)
-}
-
-// blendCentroids combines the user's own-post centroid with their saved-post
-// centroid, weighting saves higher (a stronger preference signal).
-func blendCentroids(post, saved []float32) []float32 {
-	if len(saved) == 0 {
-		return post
-	}
-	if len(post) == 0 {
-		return saved
-	}
-	n := len(post)
-	if len(saved) < n {
-		n = len(saved)
-	}
-	out := make([]float32, n)
-	for i := 0; i < n; i++ {
-		out[i] = 0.4*post[i] + 0.6*saved[i]
-	}
-	return out
+	return vec.Mean(vs)
 }
 
 // userTagSet loads just the user's POV set (no Qdrant centroid call).
@@ -535,7 +486,7 @@ func (s *Server) handleTimeline(w http.ResponseWriter, r *http.Request) {
 	}
 	userTags, centroid := s.userSense(ctx, uid)
 	// Saves are a strong preference signal: blend the saved-post centroid in.
-	centroid = blendCentroids(centroid, s.savedCentroid(ctx, uid))
+	centroid = vec.BlendSaved(centroid, s.savedCentroid(ctx, uid))
 	searchVector := vector
 	if uid != "" && len(centroid) > 0 && defaultTimelineQuery(req.QueryText) {
 		searchVector = centroid

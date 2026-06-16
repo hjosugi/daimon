@@ -4,6 +4,17 @@ DAIMON PROJECT DESCRIPTION
 作成日: 2026-06-16
 対象リポジトリ: hjosugi/daimon
 
+読み方:
+この文書は長文ブリーフである。
+現在の正本は次に分けている。
+
+- docs/README.md: docs全体の入口
+- docs/THEORY_TO_FEATURES.md: 理論から機能への対応表
+- docs/PRODUCT_AND_UX.md: プロダクト/UXの設計方針
+- docs/ARCHITECTURE.md: 現行実装の構造
+- docs/ROADMAP.md: 優先順位
+- docs/CONTENT_MODERATION.md: 安全設計
+
 
 1. このプロジェクトは何か
 --------------------------
