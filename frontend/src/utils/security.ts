@@ -32,7 +32,7 @@ export function sanitizeText(text: string): string {
  * Validate POV (tag) input
  */
 export function validatePOV(pov: string): { valid: boolean; error?: string } {
-  if (!pov || !pov.trim()) {
+  if (!pov?.trim()) {
     return { valid: false, error: "POV cannot be empty" }
   }
 
@@ -57,7 +57,7 @@ export function validatePostText(text: string): {
   valid: boolean
   error?: string
 } {
-  if (!text || !text.trim()) {
+  if (!text?.trim()) {
     return { valid: false, error: "Post text cannot be empty" }
   }
 

@@ -1,4 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <title>Daimon</title>
   <circle cx="50" cy="50" r="40" fill="#646cff"/>
   <text x="50" y="60" font-family="Arial" font-size="40" fill="white" text-anchor="middle" font-weight="bold">D</text>
 </svg>
