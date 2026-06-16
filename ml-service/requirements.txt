@@ -174,7 +174,7 @@ sentence-transformers==2.3.1
     # via daimon-ml-service
 sentencepiece==0.2.1
     # via sentence-transformers
-setuptools==81.0.0
+setuptools==82.0.1
     # via
     #   spacy
     #   thinc
