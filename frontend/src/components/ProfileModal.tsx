@@ -1,7 +1,16 @@
-import { useState, useEffect } from "react"
-import { X, User as UserIcon, Mail, Image as ImageIcon, Save, Trash2, AlertTriangle } from "lucide-react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { updateProfile, deleteAccount, type User } from "../api/client"
+import {
+  AlertTriangle,
+  Image as ImageIcon,
+  Mail,
+  Save,
+  Trash2,
+  User as UserIcon,
+  X,
+} from "lucide-react"
+import { useEffect, useState } from "react"
+import { deleteAccount, type User, updateProfile } from "../api/client"
+import { useI18n } from "../i18n"
 
 interface ProfileModalProps {
   isOpen: boolean
@@ -18,6 +27,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   onDelete,
   currentUser,
 }) => {
+  const { t } = useI18n()
   const [username, setUsername] = useState<string>("")
   const [email, setEmail] = useState<string>("")
   const [bio, setBio] = useState<string>("")
@@ -38,7 +48,11 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   }, [currentUser, isOpen])
 
   const updateProfileMutation = useMutation({
-    mutationFn: async (data: { username?: string; avatar_url?: string; bio?: string }) => {
+    mutationFn: async (data: {
+      username?: string
+      avatar_url?: string
+      bio?: string
+    }) => {
       return await updateProfile(data)
     },
     onSuccess: (user) => {
@@ -61,7 +75,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (avatarFile) {
       const reader = new FileReader()
       reader.onloadend = () => {
@@ -102,16 +116,18 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   if (!isOpen || !currentUser) return null
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-3 sm:p-4"
       onClick={onClose}
     >
-      <div 
+      <div
         className="bg-[#0f0f1f] rounded-lg border border-cyan-500/18 w-full max-w-md mx-auto overflow-hidden max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="bg-[#1f1f3a] border-b border-cyan-500/12 p-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-cyan-200/95 font-mono">EDIT PROFILE</h2>
+          <h2 className="text-xl font-bold text-cyan-200/95 font-mono">
+            {t("profile.edit")}
+          </h2>
           <button
             onClick={onClose}
             className="text-cyan-300/90 hover:text-cyan-400 hover:bg-cyan-900/10 rounded p-1 transition-colors"
@@ -153,35 +169,38 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 onClick={handleRemoveAvatar}
                 className="text-xs text-cyan-300/80 hover:text-cyan-300/95 px-3 py-1.5 bg-cyan-900/10 border border-cyan-500/12 rounded hover:bg-cyan-900/20 transition-colors font-mono"
               >
-                REMOVE IMAGE
+                {t("profile.removeImage")}
               </button>
             </div>
             <span className="text-xs text-cyan-300/70 text-center font-mono">
-              CHANGE PROFILE PICTURE (OPTIONAL)
+              {t("profile.changePicture")}
             </span>
           </div>
 
           {/* Username */}
           <div>
             <label className="block text-xs font-medium text-cyan-300/95 mb-2 font-mono">
-              USERNAME
+              {t("common.username")}
             </label>
             <div className="relative">
-              <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-300/70" size={18} />
+              <UserIcon
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-300/70"
+                size={18}
+              />
               <input
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
                 className="w-full pl-10 pr-4 py-2.5 bg-[#1f1f3a] border border-cyan-500/12 rounded focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/40 text-cyan-200/95 placeholder:text-cyan-500/30 font-mono transition-all"
-                placeholder="USERNAME"
+                placeholder={t("common.username")}
               />
             </div>
           </div>
 
           <div>
             <label className="block text-xs font-medium text-cyan-300/95 mb-2 font-mono">
-              BIO
+              {t("common.bio")}
             </label>
             <textarea
               value={bio}
@@ -189,7 +208,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               rows={3}
               maxLength={160}
               className="w-full px-3 py-2.5 bg-[#1f1f3a] border border-cyan-500/12 rounded focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/40 text-cyan-200/95 placeholder:text-cyan-500/30 font-mono transition-all resize-none"
-              placeholder="ひとことプロフィール"
+              placeholder={t("auth.bioPlaceholder")}
             />
             <div className="mt-1 text-right text-[10px] text-cyan-300/60 font-mono">
               {bio.length}/160
@@ -199,10 +218,13 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           {/* Email (Read-only) */}
           <div>
             <label className="block text-xs font-medium text-cyan-300/95 mb-2 font-mono">
-              EMAIL
+              {t("common.email")}
             </label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-300/70" size={18} />
+              <Mail
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-300/70"
+                size={18}
+              />
               <input
                 type="email"
                 value={email}
@@ -212,7 +234,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               />
             </div>
             <p className="text-xs text-cyan-300/70 mt-1 font-mono">
-              EMAIL CANNOT BE CHANGED
+              {t("profile.emailCannotChange")}
             </p>
           </div>
 
@@ -226,12 +248,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               {updateProfileMutation.isPending ? (
                 <>
                   <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
-                  <span>SAVING...</span>
+                  <span>{t("common.saving")}</span>
                 </>
               ) : (
                 <>
                   <Save size={18} />
-                  <span>SAVE</span>
+                  <span>{t("common.save")}</span>
                 </>
               )}
             </button>
@@ -244,7 +266,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               className="w-full py-2.5 bg-red-900/20 text-red-400/90 rounded font-medium hover:bg-red-900/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-red-500/30 hover:border-red-500/50 flex items-center justify-center gap-2 font-mono"
             >
               <Trash2 size={16} />
-              <span>DELETE ACCOUNT</span>
+              <span>{t("profile.deleteAccount")}</span>
             </button>
           </div>
         </form>
@@ -258,13 +280,16 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                   <AlertTriangle className="text-red-400/90" size={24} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-red-400/90 font-mono">DELETE ACCOUNT</h3>
-                  <p className="text-sm text-red-400/60 font-mono">THIS ACTION CANNOT BE UNDONE</p>
+                  <h3 className="text-lg font-bold text-red-400/90 font-mono">
+                    {t("profile.deleteAccount")}
+                  </h3>
+                  <p className="text-sm text-red-400/60 font-mono">
+                    {t("profile.deleteWarning")}
+                  </p>
                 </div>
               </div>
               <p className="text-sm text-cyan-300/80 font-mono">
-                DELETING YOUR ACCOUNT WILL PERMANENTLY DELETE ALL YOUR POSTS, COMMENTS, AND LIKES.
-                THIS ACTION CANNOT BE UNDONE.
+                {t("profile.deleteBody")}
               </p>
               <div className="flex gap-3 pt-2">
                 <button
@@ -273,7 +298,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                   disabled={deleteAccountMutation.isPending}
                   className="flex-1 py-2.5 px-4 bg-[#1f1f3a] text-cyan-300/95 border border-cyan-500/12 rounded font-medium hover:bg-[#0f0f1f] hover:border-cyan-500/40 transition-colors disabled:opacity-50 font-mono"
                 >
-                  CANCEL
+                  {t("common.cancel")}
                 </button>
                 <button
                   type="button"
@@ -284,12 +309,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                   {deleteAccountMutation.isPending ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>DELETING...</span>
+                      <span>{t("common.deleting")}</span>
                     </>
                   ) : (
                     <>
                       <Trash2 size={16} />
-                      <span>DELETE</span>
+                      <span>{t("common.delete")}</span>
                     </>
                   )}
                 </button>

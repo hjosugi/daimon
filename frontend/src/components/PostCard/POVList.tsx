@@ -2,6 +2,7 @@ import { Heart, Sparkles } from "lucide-react"
 import type React from "react"
 import { memo } from "react"
 import type { Post, User } from "../../api/client"
+import { useI18n } from "../../i18n"
 
 interface POVListProps {
   post: Post
@@ -18,6 +19,8 @@ const POVListComponent: React.FC<POVListProps> = ({
   onPOVLike,
   povLikes,
 }) => {
+  const { t } = useI18n()
+
   if (!post.povs || post.povs.length === 0) {
     return null
   }
@@ -40,7 +43,7 @@ const POVListComponent: React.FC<POVListProps> = ({
                   ? "bg-fuchsia-900/25 text-fuchsia-300 hover:bg-fuchsia-900/35 border-fuchsia-500/18 hover:border-fuchsia-500/45"
                   : "bg-cyan-900/25 text-cyan-300 hover:bg-cyan-900/35 border-cyan-500/18 hover:border-cyan-500/45"
               }`}
-              title={isAutoTag ? "Auto-generated POV" : "Manual POV"}
+              title={isAutoTag ? t("povList.auto") : t("povList.manual")}
             >
               {isAutoTag && (
                 <Sparkles size={10} className="text-fuchsia-300/95" />
@@ -57,7 +60,7 @@ const POVListComponent: React.FC<POVListProps> = ({
                     : "text-cyan-300/80 hover:text-red-300 hover:bg-red-900/10 hover:border-red-500/20"
                 }`}
                 title={
-                  povLikeStatus.liked ? "Unlike this POV" : "Like this POV"
+                  povLikeStatus.liked ? t("povList.unlike") : t("povList.like")
                 }
               >
                 <Heart

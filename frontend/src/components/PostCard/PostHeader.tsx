@@ -2,6 +2,7 @@ import { Trash2 } from "lucide-react"
 import type React from "react"
 import { memo } from "react"
 import type { Post, User } from "../../api/client"
+import { useI18n } from "../../i18n"
 import { formatRelativeDate } from "../../utils/date"
 
 interface PostHeaderProps {
@@ -19,6 +20,7 @@ const PostHeaderComponent: React.FC<PostHeaderProps> = ({
   onMatchDetailsClick,
   onUserClick,
 }) => {
+  const { locale, t } = useI18n()
   const isOwnPost = currentUser && post.user_id === currentUser.id
   const username =
     post.username || `USER_${post.user_id?.slice(0, 8) || post.id.slice(0, 8)}`
@@ -51,7 +53,7 @@ const PostHeaderComponent: React.FC<PostHeaderProps> = ({
           </button>
           {post.created_at && (
             <div className="text-xs text-cyan-300/90 font-mono">
-              {formatRelativeDate(post.created_at)}
+              {formatRelativeDate(post.created_at, locale)}
             </div>
           )}
         </div>
@@ -63,7 +65,7 @@ const PostHeaderComponent: React.FC<PostHeaderProps> = ({
               type="button"
               onClick={onDelete}
               className="p-2 text-cyan-300/80 hover:text-red-300 hover:bg-red-900/15 border border-transparent hover:border-red-500/25 rounded transition-all active:scale-95"
-              title="Delete post"
+              title={t("post.deletePost")}
             >
               <Trash2 size={18} />
             </button>
@@ -73,9 +75,9 @@ const PostHeaderComponent: React.FC<PostHeaderProps> = ({
               {post.match_reason?.is_bridge && (
                 <span
                   className="px-2 py-1 sm:py-1.5 rounded text-xs font-semibold whitespace-nowrap font-mono border bg-amber-900/25 text-amber-300 border-amber-500/25"
-                  title={post.match_reason.reason || "遠い視点だが価値観を共有"}
+                  title={post.match_reason.reason || t("post.bridgeTitle")}
                 >
-                  🌉 BRIDGE
+                  🌉 {t("post.bridge")}
                 </span>
               )}
               {post.match_reason?.pov_match_rate !== undefined && (
@@ -90,11 +92,13 @@ const PostHeaderComponent: React.FC<PostHeaderProps> = ({
                   }`}
                   title={
                     post.match_reason.pov_match_rate === 0
-                      ? "No match"
-                      : "Click to see your posts that contributed to this match"
+                      ? t("post.noMatch")
+                      : t("post.matchTitle")
                   }
                 >
-                  {Math.round(post.match_reason.pov_match_rate * 100)}% MATCH
+                  {t("post.matchPercent", {
+                    percent: Math.round(post.match_reason.pov_match_rate * 100),
+                  })}
                 </button>
               )}
             </div>

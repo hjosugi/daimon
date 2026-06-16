@@ -1,7 +1,21 @@
-import { useState } from "react"
-import { X, User as UserIcon, Mail, Lock, Image as ImageIcon } from "lucide-react"
 import { useMutation } from "@tanstack/react-query"
-import { register, login, updateProfile, type RegisterData, type LoginData, type User } from "../api/client"
+import {
+  Image as ImageIcon,
+  Lock,
+  Mail,
+  User as UserIcon,
+  X,
+} from "lucide-react"
+import { useState } from "react"
+import {
+  type LoginData,
+  login,
+  type RegisterData,
+  register,
+  type User,
+  updateProfile,
+} from "../api/client"
+import { useI18n } from "../i18n"
 
 interface AuthModalProps {
   isOpen: boolean
@@ -9,11 +23,27 @@ interface AuthModalProps {
   onSuccess: (user: User) => void
 }
 
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (typeof error !== "object" || error === null) return fallback
+
+  const candidate = error as {
+    message?: unknown
+    response?: { data?: { detail?: unknown } }
+  }
+  const detail = candidate.response?.data?.detail
+  if (typeof detail === "string" && detail) return detail
+  if (typeof candidate.message === "string" && candidate.message) {
+    return candidate.message
+  }
+  return fallback
+}
+
 export const AuthModal: React.FC<AuthModalProps> = ({
   isOpen,
   onClose,
   onSuccess,
 }) => {
+  const { t } = useI18n()
   const [mode, setMode] = useState<"login" | "register">("login")
   const [formData, setFormData] = useState({
     username: "",
@@ -44,13 +74,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     onSuccess: (user) => {
       onSuccess(user)
       onClose()
-      setFormData({ username: "", email: "", password: "", confirmPassword: "", bio: "" })
+      setFormData({
+        username: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+        bio: "",
+      })
       setAvatarPreview(null)
       setErrorMessage("")
     },
-    onError: (error: any) => {
-      const message = error?.response?.data?.detail || error?.message || "Registration failed"
-      setErrorMessage(message)
+    onError: (error: unknown) => {
+      setErrorMessage(getErrorMessage(error, t("auth.registrationFailed")))
     },
   })
 
@@ -59,12 +94,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     onSuccess: (user) => {
       onSuccess(user)
       onClose()
-      setFormData({ username: "", email: "", password: "", confirmPassword: "", bio: "" })
+      setFormData({
+        username: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+        bio: "",
+      })
       setErrorMessage("")
     },
-    onError: (error: any) => {
-      const message = error?.response?.data?.detail || error?.message || "Login failed"
-      setErrorMessage(message)
+    onError: (error: unknown) => {
+      setErrorMessage(getErrorMessage(error, t("auth.loginFailed")))
     },
   })
 
@@ -72,7 +112,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     e.preventDefault()
     if (mode === "register") {
       if (formData.password !== formData.confirmPassword) {
-        setErrorMessage("Passwords do not match")
+        setErrorMessage(t("auth.passwordMismatch"))
         return
       }
       registerMutation.mutate({
@@ -103,17 +143,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   if (!isOpen) return null
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-3 sm:p-4"
       onClick={onClose}
     >
-      <div 
+      <div
         className="bg-[#0f0f1f] rounded-lg border border-cyan-500/18 w-full max-w-md mx-auto overflow-hidden max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="bg-[#2a2a50] border-b border-cyan-500/15 p-4 flex items-center justify-between">
           <h2 className="text-xl font-bold text-cyan-300 font-mono">
-            {mode === "login" ? "LOGIN" : "SIGN UP"}
+            {mode === "login" ? t("auth.login") : t("auth.signUp")}
           </h2>
           <button
             onClick={onClose}
@@ -127,7 +167,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           {/* Error Message */}
           {errorMessage && (
             <div className="p-3 bg-red-900/20 border border-red-500/30 rounded text-sm text-red-400/90 font-mono">
-              [ERROR] {errorMessage}
+              [{t("common.error")}] {errorMessage}
             </div>
           )}
           {mode === "register" && (
@@ -153,16 +193,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     className="hidden"
                   />
                 </label>
-                <span className="text-xs text-cyan-300/80 font-mono">PROFILE PICTURE (OPTIONAL)</span>
+                <span className="text-xs text-cyan-300/80 font-mono">
+                  {t("auth.profilePictureOptional")}
+                </span>
               </div>
 
               {/* Username */}
               <div>
                 <label className="block text-xs font-medium text-cyan-300/95 mb-1 font-mono">
-                  USERNAME
+                  {t("common.username")}
                 </label>
                 <div className="relative">
-                  <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-300/70" size={18} />
+                  <UserIcon
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-300/70"
+                    size={18}
+                  />
                   <input
                     type="text"
                     value={formData.username}
@@ -171,24 +216,27 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     }
                     required={mode === "register"}
                     className="w-full pl-10 pr-4 py-2 bg-[#2a2a50] border border-cyan-500/15 rounded focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/40 text-cyan-300 placeholder:text-cyan-300/80 font-mono transition-all"
-                    placeholder="USERNAME"
+                    placeholder={t("common.username")}
                   />
                 </div>
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-cyan-300/95 mb-1 font-mono">
-                  BIO
+                  {t("common.bio")}
                 </label>
                 <textarea
                   value={formData.bio}
                   onChange={(e) =>
-                    setFormData({ ...formData, bio: e.target.value.slice(0, 160) })
+                    setFormData({
+                      ...formData,
+                      bio: e.target.value.slice(0, 160),
+                    })
                   }
                   rows={3}
                   maxLength={160}
                   className="w-full px-3 py-2 bg-[#2a2a50] border border-cyan-500/15 rounded focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/40 text-cyan-300 placeholder:text-cyan-300/80 font-mono text-sm transition-all resize-none"
-                  placeholder="ひとことプロフィール"
+                  placeholder={t("auth.bioPlaceholder")}
                 />
                 <div className="mt-1 text-right text-[10px] text-cyan-300/60 font-mono">
                   {formData.bio.length}/160
@@ -200,10 +248,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           {/* Email */}
           <div>
             <label className="block text-xs font-medium text-cyan-300/95 mb-1 font-mono">
-              {mode === "login" ? "EMAIL OR USERNAME" : "EMAIL"}
+              {mode === "login" ? t("auth.emailOrUsername") : t("common.email")}
             </label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-300/70" size={18} />
+              <Mail
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-300/70"
+                size={18}
+              />
               <input
                 type={mode === "login" ? "text" : "email"}
                 value={formData.email}
@@ -212,7 +263,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 }
                 required
                 className="w-full pl-10 pr-4 py-2 bg-[#2a2a50] border border-cyan-500/15 rounded focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/40 text-cyan-300 placeholder:text-cyan-300/80 font-mono transition-all"
-                placeholder={mode === "login" ? "EMAIL OR USERNAME" : "EMAIL@EXAMPLE.COM"}
+                placeholder={
+                  mode === "login"
+                    ? t("auth.emailOrUsername")
+                    : "EMAIL@EXAMPLE.COM"
+                }
               />
             </div>
           </div>
@@ -220,10 +275,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           {/* Password */}
           <div>
             <label className="block text-xs font-medium text-cyan-300/95 mb-1 font-mono">
-              PASSWORD
+              {t("common.password")}
             </label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-300/70" size={18} />
+              <Lock
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-300/70"
+                size={18}
+              />
               <input
                 type="password"
                 value={formData.password}
@@ -232,7 +290,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 }
                 required
                 className="w-full pl-10 pr-4 py-2 bg-[#2a2a50] border border-cyan-500/15 rounded focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/40 text-cyan-300 placeholder:text-cyan-300/80 font-mono transition-all"
-                placeholder="PASSWORD"
+                placeholder={t("common.password")}
               />
             </div>
           </div>
@@ -240,19 +298,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           {mode === "register" && (
             <div>
               <label className="block text-xs font-medium text-cyan-300/95 mb-1 font-mono">
-                CONFIRM PASSWORD
+                {t("auth.confirmPassword")}
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-300/70" size={18} />
+                <Lock
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-300/70"
+                  size={18}
+                />
                 <input
                   type="password"
                   value={formData.confirmPassword}
                   onChange={(e) =>
-                    setFormData({ ...formData, confirmPassword: e.target.value })
+                    setFormData({
+                      ...formData,
+                      confirmPassword: e.target.value,
+                    })
                   }
                   required
                   className="w-full pl-10 pr-4 py-2 bg-[#2a2a50] border border-cyan-500/15 rounded focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/40 text-cyan-300 placeholder:text-cyan-300/80 font-mono transition-all"
-                  placeholder="CONFIRM PASSWORD"
+                  placeholder={t("auth.confirmPassword")}
                 />
               </div>
             </div>
@@ -264,10 +328,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             className="w-full py-3 bg-gradient-to-r from-cyan-500/90 to-fuchsia-500/90 text-black rounded font-semibold hover:from-cyan-400 hover:to-fuchsia-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-mono font-bold"
           >
             {registerMutation.isPending || loginMutation.isPending
-              ? "PROCESSING..."
+              ? t("common.processing")
               : mode === "login"
-                ? "LOGIN"
-                : "SIGN UP"}
+                ? t("auth.login")
+                : t("auth.signUp")}
           </button>
 
           <div className="text-center">
@@ -275,14 +339,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               type="button"
               onClick={() => {
                 setMode(mode === "login" ? "register" : "login")
-                setFormData({ username: "", email: "", password: "", confirmPassword: "", bio: "" })
+                setFormData({
+                  username: "",
+                  email: "",
+                  password: "",
+                  confirmPassword: "",
+                  bio: "",
+                })
                 setAvatarPreview(null)
               }}
               className="text-sm text-cyan-300/90 hover:text-cyan-400 font-medium font-mono"
             >
-              {mode === "login"
-                ? "DON'T HAVE AN ACCOUNT? SIGN UP"
-                : "ALREADY HAVE AN ACCOUNT? LOG IN"}
+              {mode === "login" ? t("auth.noAccount") : t("auth.hasAccount")}
             </button>
           </div>
         </form>

@@ -1,39 +1,60 @@
-/**
- * Format date to relative time (e.g., "2h ago", "3d ago") for recent dates,
- * or absolute date for older dates
- */
-export function formatRelativeDate(date: Date | string): string {
-  const now = new Date()
-  const targetDate = typeof date === "string" ? new Date(date) : date
-  const diffMs = now.getTime() - targetDate.getTime()
-  const diffSec = Math.floor(diffMs / 1000)
-  const diffMin = Math.floor(diffSec / 60)
-  const diffHour = Math.floor(diffMin / 60)
-  const diffDay = Math.floor(diffHour / 24)
-  const diffWeek = Math.floor(diffDay / 7)
-  const diffMonth = Math.floor(diffDay / 30)
-  const diffYear = Math.floor(diffDay / 365)
+import type { Locale } from "../i18n/resources"
 
-  if (diffSec < 60) {
-    return "just now"
-  } else if (diffMin < 60) {
-    return `${diffMin}m ago`
-  } else if (diffHour < 24) {
-    return `${diffHour}h ago`
-  } else if (diffDay < 7) {
-    return `${diffDay}d ago`
-  } else if (diffWeek < 4) {
-    return `${diffWeek}w ago`
-  } else if (diffMonth < 12) {
-    return `${diffMonth}mo ago`
-  } else if (diffYear < 1) {
-    return `${diffYear}y ago`
-  } else {
-    // For dates older than 1 year, show absolute date
-    return targetDate.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: targetDate.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
-    })
+const relativeFormatters: Record<Locale, Intl.RelativeTimeFormat> = {
+  ja: new Intl.RelativeTimeFormat("ja", { numeric: "auto" }),
+  en: new Intl.RelativeTimeFormat("en", { numeric: "auto" }),
+}
+
+const absoluteFormatters: Record<Locale, Intl.DateTimeFormat> = {
+  ja: new Intl.DateTimeFormat("ja-JP", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }),
+  en: new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }),
+}
+
+/**
+ * Format date to relative time for recent dates, or absolute date for old dates.
+ */
+export function formatRelativeDate(
+  date: Date | string,
+  locale: Locale = "en",
+): string {
+  const now = Date.now()
+  const targetDate = typeof date === "string" ? new Date(date) : date
+  const targetTime = targetDate.getTime()
+
+  if (Number.isNaN(targetTime)) return ""
+
+  const diffSec = Math.round((targetTime - now) / 1000)
+  const absSec = Math.abs(diffSec)
+  const rtf = relativeFormatters[locale] ?? relativeFormatters.en
+
+  if (absSec < 60) {
+    return locale === "ja" ? "たった今" : "just now"
   }
+  if (absSec < 60 * 60) {
+    return rtf.format(Math.round(diffSec / 60), "minute")
+  }
+  if (absSec < 60 * 60 * 24) {
+    return rtf.format(Math.round(diffSec / (60 * 60)), "hour")
+  }
+  if (absSec < 60 * 60 * 24 * 7) {
+    return rtf.format(Math.round(diffSec / (60 * 60 * 24)), "day")
+  }
+  if (absSec < 60 * 60 * 24 * 30) {
+    return rtf.format(Math.round(diffSec / (60 * 60 * 24 * 7)), "week")
+  }
+  if (absSec < 60 * 60 * 24 * 365) {
+    return rtf.format(Math.round(diffSec / (60 * 60 * 24 * 30)), "month")
+  }
+
+  return (absoluteFormatters[locale] ?? absoluteFormatters.en).format(
+    targetDate,
+  )
 }

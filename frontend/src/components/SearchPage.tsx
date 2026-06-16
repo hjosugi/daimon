@@ -4,6 +4,7 @@ import type React from "react"
 import { useCallback, useEffect, useState } from "react"
 import { searchPosts, suggestPOVs, type User } from "../api/client"
 import { useDebouncedValue } from "../hooks/useDebouncedValue"
+import { useI18n } from "../i18n"
 import { SearchPostCard } from "./SearchPostCard"
 
 interface SearchPageProps {
@@ -20,6 +21,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({
   onUserClick,
   currentUser = null,
 }) => {
+  const { t } = useI18n()
   const [searchQuery, setSearchQuery] = useState<string>("")
   const [searchTags, setSearchTags] = useState<string[]>(initialTags)
   const [searchTagInput, setSearchTagInput] = useState<string>("")
@@ -70,15 +72,20 @@ export const SearchPage: React.FC<SearchPageProps> = ({
     staleTime: 1000 * 60 * 1,
   })
 
-  const addSearchTag = useCallback((tag: string) => {
-    const trimmed = tag.trim()
-    if (!trimmed) return
-    if (trimmed.length > 300) {
-      alert("POV must be 300 characters or less")
-      return
-    }
-    setSearchTags((prev) => (prev.includes(trimmed) ? prev : [...prev, trimmed]))
-  }, [])
+  const addSearchTag = useCallback(
+    (tag: string) => {
+      const trimmed = tag.trim()
+      if (!trimmed) return
+      if (trimmed.length > 300) {
+        alert(t("postForm.povTooLong"))
+        return
+      }
+      setSearchTags((prev) =>
+        prev.includes(trimmed) ? prev : [...prev, trimmed],
+      )
+    },
+    [t],
+  )
 
   const handleResultTagClick = useCallback(
     (tag: string) => addSearchTag(tag),
@@ -133,7 +140,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({
                     addQueryAsPOVIfExact()
                   }
                 }}
-                placeholder="SEARCH POSTS..."
+                placeholder={t("search.placeholder")}
                 className="w-full pl-9 pr-3 py-2 bg-[#2a2a50] rounded border border-cyan-500/15 focus:border-cyan-500/35 focus:ring-1 focus:ring-cyan-500/20 text-cyan-200 placeholder:text-cyan-300/70 text-sm font-mono transition-all"
               />
               {(searchQuery.trim() || searchTags.length > 0) && (
@@ -150,7 +157,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({
             {normalizedQuery && queryPOVSuggestions.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 <span className="text-[11px] text-cyan-300/70 font-mono self-center">
-                  既存POV:
+                  {t("search.existingPov")}
                 </span>
                 {queryPOVSuggestions.slice(0, 6).map((pov) => (
                   <button
@@ -178,7 +185,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({
                 className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-mono text-fuchsia-100 hover:bg-fuchsia-900/20 border border-fuchsia-500/30 hover:border-fuchsia-500/50 rounded transition-colors"
               >
                 <Hash size={14} />
-                <span>POVで絞り込み</span>
+                <span>{t("search.filterByPov")}</span>
                 {searchTags.length > 0 && (
                   <span className="ml-0.5 min-w-[18px] px-1.5 rounded-full bg-fuchsia-500 text-black text-[11px] font-bold text-center">
                     {searchTags.length}
@@ -197,7 +204,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({
               <div className="rounded border border-fuchsia-500/30 bg-fuchsia-900/15 p-2.5">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs text-fuchsia-100 font-mono">
-                    絞り込み中の POV（{searchTags.length}）
+                    {t("search.activePovs", { count: searchTags.length })}
                   </span>
                   <button
                     type="button"
@@ -205,7 +212,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({
                     className="flex items-center gap-1 text-xs text-fuchsia-200 hover:text-red-300 transition-colors"
                   >
                     <X size={12} />
-                    すべて消す
+                    {t("search.clearAll")}
                   </button>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
@@ -218,8 +225,8 @@ export const SearchPage: React.FC<SearchPageProps> = ({
                       <button
                         type="button"
                         onClick={() => handleSearchTagRemove(tag)}
-                        aria-label={`「${tag}」を外す`}
-                        title={`「${tag}」を外す`}
+                        aria-label={t("search.removeTag", { tag })}
+                        title={t("search.removeTag", { tag })}
                         className="rounded-full hover:bg-black/25 p-0.5 transition-colors"
                       >
                         <X size={13} />
@@ -255,7 +262,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({
                         handleSearchTagAdd()
                       }
                     }}
-                    placeholder="ENTER POV (ENTER TO ADD)"
+                    placeholder={t("search.povInputPlaceholder")}
                     className="flex-1 px-2 py-1.5 bg-[#2a2a50] rounded border border-fuchsia-500/25 focus:ring-1 focus:ring-fuchsia-500/30 focus:border-fuchsia-500/40 text-fuchsia-300 placeholder:text-fuchsia-400/60 text-xs font-mono transition-all"
                   />
                   <button
@@ -301,7 +308,8 @@ export const SearchPage: React.FC<SearchPageProps> = ({
                     <span>
                       {searchQuery.trim() && `"${searchQuery}"`}
                       {searchTags.length > 0 && ` #${searchTags.join(" #")}`}
-                      {posts.length > 0 && ` → ${posts.length} RESULTS`}
+                      {posts.length > 0 &&
+                        ` → ${t("search.results", { count: posts.length })}`}
                     </span>
                   </div>
                 </div>
@@ -312,7 +320,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({
                 </div>
               ) : isError ? (
                 <div className="text-center py-12 text-red-300">
-                  <p className="font-mono">[ERROR] FAILED TO LOAD</p>
+                  <p className="font-mono">{t("search.loadError")}</p>
                 </div>
               ) : posts.length > 0 ? (
                 <div className="bg-[#1f1f35] rounded border border-cyan-500/15 overflow-hidden">
@@ -329,10 +337,10 @@ export const SearchPage: React.FC<SearchPageProps> = ({
               ) : (
                 <div className="text-center py-12 text-cyan-300/80">
                   <div className="font-mono text-xs text-cyan-300/70 mb-2">
-                    [NO RESULTS]
+                    {t("search.noResults")}
                   </div>
                   <p className="text-sm text-cyan-300 font-mono">
-                    TRY DIFFERENT KEYWORDS OR TAGS
+                    {t("search.tryDifferent")}
                   </p>
                 </div>
               )}
@@ -341,10 +349,10 @@ export const SearchPage: React.FC<SearchPageProps> = ({
             <div className="text-center py-16 text-cyan-300/70">
               <Search size={64} className="mx-auto mb-6 opacity-20" />
               <p className="text-xl font-medium text-cyan-300 font-mono">
-                START SEARCHING
+                {t("search.start")}
               </p>
               <p className="text-sm mt-2 text-cyan-300/80 font-mono">
-                SEARCH POSTS BY KEYWORDS OR POVS
+                {t("search.description")}
               </p>
             </div>
           )}

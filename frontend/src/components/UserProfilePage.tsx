@@ -2,16 +2,17 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { ArrowLeft, Loader2, UserCheck, UserPlus, X } from "lucide-react"
 import type React from "react"
 import {
+  type FollowUser,
   followUser,
   getFollowers,
   getUserPosts,
   getUserProfile,
   removeFollower,
-  unfollowUser,
-  type FollowUser,
   type User,
   type UserProfile,
+  unfollowUser,
 } from "../api/client"
+import { useI18n } from "../i18n"
 import { PostCard } from "./PostCard"
 
 interface UserProfilePageProps {
@@ -29,6 +30,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
   onTagClick,
   onUserClick,
 }) => {
+  const { t } = useI18n()
   const qc = useQueryClient()
   const profileKey = ["profile", userId]
 
@@ -49,7 +51,8 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
   })
 
   const followMutation = useMutation({
-    mutationFn: () => (profile?.is_following ? unfollowUser(userId) : followUser(userId)),
+    mutationFn: () =>
+      profile?.is_following ? unfollowUser(userId) : followUser(userId),
     onMutate: async () => {
       await qc.cancelQueries({ queryKey: profileKey })
       const prev = qc.getQueryData<UserProfile>(profileKey)
@@ -64,10 +67,13 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
       )
       return { prev }
     },
-    onError: (_e, _v, ctx) => ctx?.prev && qc.setQueryData(profileKey, ctx.prev),
+    onError: (_e, _v, ctx) =>
+      ctx?.prev && qc.setQueryData(profileKey, ctx.prev),
     onSuccess: (data) =>
       qc.setQueryData<UserProfile>(profileKey, (old) =>
-        old ? { ...old, is_following: data.following, followers: data.followers } : old,
+        old
+          ? { ...old, is_following: data.following, followers: data.followers }
+          : old,
       ),
   })
 
@@ -86,7 +92,8 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
       return { prevFollowers, prevProfile }
     },
     onError: (_e, _id, ctx) => {
-      if (ctx?.prevFollowers) qc.setQueryData(["followers", userId], ctx.prevFollowers)
+      if (ctx?.prevFollowers)
+        qc.setQueryData(["followers", userId], ctx.prevFollowers)
       if (ctx?.prevProfile) qc.setQueryData(profileKey, ctx.prevProfile)
     },
     onSuccess: (data) =>
@@ -102,7 +109,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
           onClick={onBack}
           className="flex items-center gap-1 text-sm text-cyan-300/80 hover:text-cyan-200 font-mono transition-colors"
         >
-          <ArrowLeft size={16} /> 戻る
+          <ArrowLeft size={16} /> {t("common.back")}
         </button>
 
         {profile && (
@@ -120,11 +127,17 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <div className="text-cyan-200 font-bold font-mono truncate">@{profile.username}</div>
+                <div className="text-cyan-200 font-bold font-mono truncate">
+                  @{profile.username}
+                </div>
                 <div className="mt-1 flex gap-3 text-xs font-mono text-cyan-300/75">
-                  <span>投稿 {profile.posts_count}</span>
-                  <span>フォロワー {profile.followers}</span>
-                  <span>フォロー中 {profile.following}</span>
+                  <span>{t("user.posts", { count: profile.posts_count })}</span>
+                  <span>
+                    {t("user.followers", { count: profile.followers })}
+                  </span>
+                  <span>
+                    {t("user.following", { count: profile.following })}
+                  </span>
                 </div>
                 {profile.bio && (
                   <p className="mt-2 text-sm text-cyan-200/85 leading-relaxed break-words">
@@ -141,8 +154,14 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                       : "bg-gradient-to-r from-cyan-500/95 to-fuchsia-500/95 text-black hover:from-cyan-400 hover:to-fuchsia-400"
                   }`}
                 >
-                  {profile.is_following ? <UserCheck size={15} /> : <UserPlus size={15} />}
-                  {profile.is_following ? "フォロー中" : "フォロー"}
+                  {profile.is_following ? (
+                    <UserCheck size={15} />
+                  ) : (
+                    <UserPlus size={15} />
+                  )}
+                  {profile.is_following
+                    ? t("user.followingButton")
+                    : t("user.follow")}
                 </button>
               )}
             </div>
@@ -152,11 +171,17 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
         {profile?.is_me && (
           <div className="bg-[#1f1f35] border border-cyan-500/15 rounded p-4">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-bold text-cyan-200 font-mono">FOLLOWERS</h2>
-              <span className="text-xs text-cyan-300/70 font-mono">{followers.length}</span>
+              <h2 className="text-sm font-bold text-cyan-200 font-mono">
+                {t("user.followersTitle")}
+              </h2>
+              <span className="text-xs text-cyan-300/70 font-mono">
+                {followers.length}
+              </span>
             </div>
             {followers.length === 0 ? (
-              <div className="text-xs text-cyan-300/60 font-mono">まだフォロワーはいません</div>
+              <div className="text-xs text-cyan-300/60 font-mono">
+                {t("user.noFollowers")}
+              </div>
             ) : (
               <div className="space-y-2">
                 {followers.map((follower) => (
@@ -180,19 +205,23 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                       onClick={() => onUserClick?.(follower.id)}
                       className="flex-1 min-w-0 text-left"
                     >
-                      <div className="truncate text-sm text-cyan-200 font-mono">@{follower.username}</div>
+                      <div className="truncate text-sm text-cyan-200 font-mono">
+                        @{follower.username}
+                      </div>
                       {follower.bio && (
-                        <div className="truncate text-xs text-cyan-300/60">{follower.bio}</div>
+                        <div className="truncate text-xs text-cyan-300/60">
+                          {follower.bio}
+                        </div>
                       )}
                     </button>
                     <button
                       type="button"
                       onClick={() => removeFollowerMutation.mutate(follower.id)}
                       className="inline-flex items-center gap-1 px-2 py-1 rounded border border-red-500/25 text-red-300 hover:bg-red-900/20 hover:border-red-500/45 text-xs font-mono transition-colors"
-                      title="フォロワーから削除"
+                      title={t("user.removeFollower")}
                     >
                       <X size={12} />
-                      remove
+                      {t("common.remove")}
                     </button>
                   </div>
                 ))}
@@ -206,11 +235,19 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
             <Loader2 size={32} className="animate-spin" />
           </div>
         ) : posts.length === 0 ? (
-          <div className="text-center py-16 text-cyan-300/70 font-mono text-sm">まだ投稿がありません</div>
+          <div className="text-center py-16 text-cyan-300/70 font-mono text-sm">
+            {t("mine.empty")}
+          </div>
         ) : (
           <div className="space-y-2">
             {posts.map((post) => (
-              <PostCard key={post.id} post={post} onTagClick={onTagClick} onUserClick={onUserClick} currentUser={currentUser} />
+              <PostCard
+                key={post.id}
+                post={post}
+                onTagClick={onTagClick}
+                onUserClick={onUserClick}
+                currentUser={currentUser}
+              />
             ))}
           </div>
         )}

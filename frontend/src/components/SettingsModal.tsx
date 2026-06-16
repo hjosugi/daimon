@@ -1,5 +1,6 @@
-import { X, Settings2 } from "lucide-react"
+import { Settings2, X } from "lucide-react"
 import type React from "react"
+import { useI18n } from "../i18n"
 
 interface SettingsModalProps {
   isOpen: boolean
@@ -22,6 +23,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   includeFarPosts,
   onIncludeFarPostsChange,
 }) => {
+  const { t } = useI18n()
   if (!isOpen) return null
 
   return (
@@ -36,7 +38,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         <div className="bg-[#1f1f3a] border-b border-cyan-500/12 p-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Settings2 size={20} className="text-cyan-200/95" />
-            <h2 className="text-xl font-bold text-cyan-200/95 font-mono">TIMELINE SETTINGS</h2>
+            <h2 className="text-xl font-bold text-cyan-200/95 font-mono">
+              {t("settings.title")}
+            </h2>
           </div>
           <button
             onClick={onClose}
@@ -48,8 +52,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
         <div className="p-6 space-y-5">
           <div>
-            <label htmlFor="similarity-weight" className="text-xs font-medium text-cyan-300/95 mb-3 block font-mono">
-              DISCOVERY VS EMPATHY ({Math.round(similarityWeight * 100)}% EMPATHY)
+            <label
+              htmlFor="similarity-weight"
+              className="text-xs font-medium text-cyan-300/95 mb-3 block font-mono"
+            >
+              {t("settings.discoveryVsEmpathy", {
+                percent: Math.round(similarityWeight * 100),
+              })}
             </label>
             <input
               id="similarity-weight"
@@ -58,7 +67,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               max="1"
               step="0.1"
               value={similarityWeight}
-              onChange={(e) => onSimilarityWeightChange(Number.parseFloat(e.target.value))}
+              onChange={(e) =>
+                onSimilarityWeightChange(Number.parseFloat(e.target.value))
+              }
               className="w-full h-2 bg-[#1f1f3a] rounded-full appearance-none cursor-pointer"
               style={{
                 background: `linear-gradient(to right, rgb(168, 85, 247) 0%, rgb(168, 85, 247) ${similarityWeight * 100}%, rgb(6, 182, 212) ${similarityWeight * 100}%, rgb(6, 182, 212) 100%)`,
@@ -67,11 +78,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <div className="flex justify-between text-xs text-cyan-300/80 mt-2 font-mono">
               <span className="flex items-center gap-1">
                 <span className="w-2 h-2 bg-fuchsia-400/80 rounded-full"></span>
-                DISCOVERY
+                {t("settings.discovery")}
               </span>
               <span className="flex items-center gap-1">
                 <span className="w-2 h-2 bg-cyan-400/80 rounded-full"></span>
-                EMPATHY
+                {t("settings.empathy")}
               </span>
             </div>
           </div>
@@ -93,11 +104,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     strokeWidth="3"
                     viewBox="0 0 24 24"
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                 )}
               </div>
-              <span className="text-sm text-cyan-300/95 group-hover:text-cyan-400 font-mono">BOOST POPULAR POSTS</span>
+              <span className="text-sm text-cyan-300/95 group-hover:text-cyan-400 font-mono">
+                {t("settings.boostPopular")}
+              </span>
             </label>
             <label className="flex items-center gap-3 cursor-pointer group relative">
               <div className="relative flex-shrink-0">
@@ -115,11 +132,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     strokeWidth="3"
                     viewBox="0 0 24 24"
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                 )}
               </div>
-              <span className="text-sm text-cyan-300/95 group-hover:text-cyan-400 font-mono">INCLUDE DIVERSE POSTS (DISCOVERY MODE)</span>
+              <span className="text-sm text-cyan-300/95 group-hover:text-cyan-400 font-mono">
+                {t("settings.includeDiverse")}
+              </span>
             </label>
           </div>
         </div>

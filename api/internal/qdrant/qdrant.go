@@ -77,6 +77,14 @@ func (c *Client) EnsureCollection(ctx context.Context) error {
 	}, nil)
 }
 
+// RecreateCollection drops and recreates the collection (used by `seed --fresh`).
+func (c *Client) RecreateCollection(ctx context.Context) error {
+	_ = c.do(ctx, http.MethodDelete, "/collections/"+Collection, nil, nil)
+	return c.do(ctx, http.MethodPut, "/collections/"+Collection, map[string]any{
+		"vectors": map[string]any{"size": VectorSize, "distance": "Cosine"},
+	}, nil)
+}
+
 func tagFilter(requiredTags []string) map[string]any {
 	if len(requiredTags) == 0 {
 		return nil

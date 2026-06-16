@@ -11,23 +11,20 @@ Daimon は、投稿テキストの意味ベクトルと POV (Point of View) タ�
 
 ## まず知ること
 
-このリポジトリには実行経路が 2 つあります。
+スタックは **Go 中心**で、Python は ML が本当に必要なところ（`ml-service/`: embedding +
+spaCy POV 抽出）だけに絞っています。API・シード・スキーマ管理はすべて Go です。
 
-| 経路 | 主な用途 | 構成 |
-| --- | --- | --- |
-| Docker / Go API | 推奨のアプリ実行経路 | `api/` + `ml-service/` + PostgreSQL + Qdrant + Redis |
-| Python FastAPI | 旧実装・検証・seed/migration 周辺 | `backend/` + PostgreSQL + Qdrant |
-
-現在の `compose.yml` は Go API を `:8000`、Python ML microservice を `:8001` で起動します。`backend/` はまだ seed、Alembic、FastAPI 版の参照実装として残っています。
+`compose.yml` が PostgreSQL / Qdrant / Redis / ML(`:8001`) / Go API(`:8000`) を起動します。
+スキーマは Go API が起動時に冪等にブートストラップ（`CREATE TABLE IF NOT EXISTS`）するので、
+別途のマイグレーション手順はありません。テストデータは Go のシーダ（`api/cmd/seed`）で投入します。
 
 ## ディレクトリ
 
 | Path | 役割 |
 | --- | --- |
 | `frontend/` | React + Vite + TypeScript の UI |
-| `api/` | Go の HTTP API。認証、投稿、検索、タイムライン、ランキングの本体 |
-| `ml-service/` | Python ML microservice。embedding と POV 抽出だけを担当 |
-| `backend/` | Python FastAPI 版、Alembic migration、seed script |
+| `api/` | Go の HTTP API（認証・投稿・検索・タイムライン・ランキング）＋ `cmd/seed`・`cmd/batch` |
+| `ml-service/` | **唯一の Python**。embedding と POV 抽出だけを担当 |
 | `docs/` | 共有ドキュメント。`*.local.md` は gitignore される詳細メモ用 |
 | `compose.yml` | PostgreSQL / Qdrant / Redis / ML / Go API のローカル構成 |
 
@@ -87,23 +84,21 @@ seed 済みユーザーは `seeduser1@example.com` / `password123` のような 
 
 ## Host 開発
 
-Python FastAPI 版で動かす場合:
+Go API（:8000）と frontend（:5173）をホストで動かす場合（依存は compose）:
 
 ```bash
-make all
+make all      # = make dev: deps-up → Go API + frontend
 ```
 
 個別に進める場合:
 
 ```bash
-make infra
-make backend
-make migrate
-make seed
-make dev
+make deps-up        # db + qdrant + redis + ml を compose で起動
+make seed           # Go シーダでテストデータ投入（ML 必須・実埋め込み）
+make dev            # Go API + frontend
 ```
 
-Go API をホストでデバッグしたい場合は、依存サービスだけを先に起動します。
+Go API だけをホストでデバッグしたい場合:
 
 ```bash
 make deps-up
@@ -182,22 +177,6 @@ make down         # compose down
 make clean        # venv / node_modules も削除
 ```
 
-## Qdrant local mode
-
-Python FastAPI 経路では、Qdrant server を使わず qdrant-client の local mode でも動かせます。
-
-```bash
-make infra-db
-make seed QDRANT_PATH=qdrant_local
-make dev QDRANT_PATH=qdrant_local
-```
-
-注意:
-
-- local mode は brute-force なので大規模用途では使わない
-- `QDRANT_PATH` は同時に複数プロセスから開かない
-- 本番や大規模検証は Qdrant server / Qdrant Cloud を使う
-
 ## CI/CD
 
-`.github/workflows/` に CI/CD の設定があります。主に backend / frontend の lint、typecheck、test、build、Docker 検証、deploy を想定しています。
+`.github/dependabot.yml` が frontend(npm) / api(gomod) / ml(pip) / docker の依存更新を管理します。

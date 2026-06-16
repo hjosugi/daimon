@@ -4,6 +4,7 @@ import type React from "react"
 import { memo, useEffect, useState } from "react"
 import type { Post, User } from "../api/client"
 import { likePost, savePost, unlikePost, unsavePost } from "../api/client"
+import { useI18n } from "../i18n"
 import { formatRelativeDate } from "../utils/date"
 
 interface SearchPostCardProps {
@@ -20,6 +21,7 @@ const SearchPostCardComponent: React.FC<SearchPostCardProps> = ({
   onUserClick,
 }) => {
   const queryClient = useQueryClient()
+  const { locale, t } = useI18n()
   const [saved, setSaved] = useState(Boolean(post.saved))
 
   useEffect(() => {
@@ -103,7 +105,7 @@ const SearchPostCardComponent: React.FC<SearchPostCardProps> = ({
             </button>
             {post.created_at && (
               <span className="text-[10px] font-mono text-cyan-300/80">
-                · {formatRelativeDate(post.created_at)}
+                · {formatRelativeDate(post.created_at, locale)}
               </span>
             )}
             {post.score !== null && post.score !== undefined && (
@@ -133,20 +135,24 @@ const SearchPostCardComponent: React.FC<SearchPostCardProps> = ({
             const why = mr.reason
               ? mr.reason
               : mr.pov_matches?.length || mr.common_povs?.length
-                ? `共通の視点: ${(mr.pov_matches?.length
-                    ? mr.pov_matches
-                    : (mr.common_povs ?? [])
-                  )
-                    .slice(0, 3)
-                    .map((p) => `#${p}`)
-                    .join(" ")}`
+                ? t("post.commonPovReason", {
+                    povs: (mr.pov_matches?.length
+                      ? mr.pov_matches
+                      : (mr.common_povs ?? [])
+                    )
+                      .slice(0, 3)
+                      .map((p) => `#${p}`)
+                      .join(" "),
+                  })
                 : null
             if (!why) return null
             return (
               <div className="mb-1.5 text-[11px] font-mono text-cyan-300/60">
                 {why}
                 {mr.is_bridge && (
-                  <span className="ml-1 text-amber-300/75">· bridge</span>
+                  <span className="ml-1 text-amber-300/75">
+                    · {t("post.bridge")}
+                  </span>
                 )}
               </div>
             )
@@ -204,7 +210,7 @@ const SearchPostCardComponent: React.FC<SearchPostCardProps> = ({
                   ? "text-amber-300"
                   : "text-cyan-300/90 hover:text-amber-300"
               }`}
-              title={saved ? "保存済み" : "保存する"}
+              title={saved ? t("post.savedTitle") : t("post.saveTitle")}
             >
               <Bookmark size={12} className={saved ? "fill-amber-300" : ""} />
             </button>

@@ -1,21 +1,19 @@
 # Daimon — one-command local setup & dev (run from repo root).
 #
-#   make fresh   ★★ FROM ZERO (Docker): wipe data → build → migrate → seed → run UI
-#   make all     ★ All-in-one (host): infra + deps (if missing) + migrate + run
-#   make docker  Containerized backend: db + qdrant + backend via compose
-#   make setup   Full (re)install on host: fresh venv + frontend deps + migrate
-#   make dev     Run backend (:8000) and frontend (:5173) on the host
-#   make seed    Load test data (override count: make seed POSTS=50000 via ARGS)
-#   make migrate Apply DB migrations (alembic upgrade head)
-#   make down / make clean   Stop infra / also remove .venv & node_modules
+#   make fresh   ★★ FROM ZERO (Docker): wipe data → build → seed → run UI
+#   make docker  Containerized stack: db + qdrant + redis + ml + Go API via compose
+#   make seed    Load test data via the Go seeder (make seed ARGS="--posts 50000")
+#   make web     Frontend dev server only (use alongside make docker)
+#   make dev     Run the Go API (:8000) + frontend (:5173) on the host
+#   make batch   Run the precompute batch (timeline/suggest) into Redis
+#   make down / make clean   Stop infra / also remove node_modules
 #
-# Confused / want everything in one go:  make fresh
-#
-# Backend is pinned to Python 3.12: sentence-transformers / psycopg2-binary
-# have no wheels for 3.13+, so a newer interpreter would build from source.
+# The ONLY Python in the stack is the ML microservice (ml-service/: embeddings +
+# spaCy POV extraction). Everything else — API, seeding, schema — is Go. The
+# schema is bootstrapped by the Go API on boot (and by the seeder), so there is
+# no separate migration step.
 
 SHELL := /bin/bash
-PY_VERSION := 3.12
 PNPM_VERSION := 9.15.0
 POSTS ?= 12000
 
@@ -30,82 +28,68 @@ COMPOSE := $(shell \
 # Resolve pnpm even when its mise shim isn't on the (non-interactive) PATH yet.
 PNPM := $(shell command -v pnpm >/dev/null 2>&1 && echo pnpm || echo "mise exec -- pnpm")
 
-# Run WITHOUT a Qdrant server: pass QDRANT_PATH (on-disk) or QDRANT_LOCAL=1
-# (in-memory) to any target, e.g.  `make dev QDRANT_PATH=qdrant_local`.
-# Exported so the backend/seed processes inherit it.
-export QDRANT_PATH ?=
-export QDRANT_LOCAL ?=
+# Env for host-run Go commands: point them at the compose-published ports.
+LOCAL_DB  := DATABASE_URL=postgresql://daimon:daimon@localhost:5432/daimon
+LOCAL_SVC := QDRANT_URL=http://localhost:6333 EMBED_URL=http://localhost:8001 REDIS_URL=redis://localhost:6379
 
-.PHONY: all fresh setup infra infra-db deps-up batch wait-db backend backend-ensure frontend frontend-ensure ensure-pnpm migrate seed seed-large dev docker docker-logs docker-down web down clean
+.PHONY: all fresh setup infra infra-db deps-up batch wait-db wait-ml frontend frontend-ensure ensure-pnpm seed seed-large dev docker docker-logs docker-down web down clean
 
-# All-in-one. Installs deps only if missing, so it's safe to run every day.
-all: infra wait-db backend-ensure frontend-ensure migrate dev
+# All-in-one (host API): bring up deps, run the Go API + frontend on the host.
+all: dev
 
-setup: infra wait-db backend frontend migrate
+setup: infra wait-db frontend
 	@echo ""
-	@echo "✅ Setup complete. Next: 'make dev'  (or just 'make all')"
+	@echo "✅ Setup complete. Next: 'make dev'  (or 'make docker' + 'make web')"
 
 infra:
 	@echo "Using compose provider: $(COMPOSE)"
 	$(COMPOSE) up -d
 
-# Start ONLY Postgres (for environments running Qdrant in local/embedded mode).
+# Start ONLY Postgres.
 infra-db:
 	@echo "Using compose provider: $(COMPOSE)"
 	$(COMPOSE) up -d db
 
-# Start only the dependencies (db + qdrant + ml) — for debugging the Go API
-# on the host (so :8000 stays free for the debugger).
+# Start only the dependencies (db + qdrant + redis + ml) — for running the Go
+# API on the host (so :8000 stays free for go run / a debugger).
 deps-up:
 	$(COMPOSE) up -d db qdrant redis ml
 
 # Run the precompute batch (timeline feeds + popular/related POVs) into Redis.
-# Needs the stack up (make docker) so db/qdrant/redis/ml are reachable.
 batch:
-	cd api && REDIS_URL=redis://localhost:6379 \
-	  DATABASE_URL=postgresql://daimon:daimon@localhost:5432/daimon \
-	  QDRANT_URL=http://localhost:6333 EMBED_URL=http://localhost:8001 \
-	  go run ./cmd/batch
+	cd api && $(LOCAL_DB) $(LOCAL_SVC) go run ./cmd/batch
 
-# Portable readiness check: wait for Postgres' published TCP port (no compose
-# exec, which differs between Docker and Podman).
+# Portable readiness checks: wait for the published TCP ports (no compose exec,
+# which differs between Docker and Podman).
 wait-db:
 	@echo "⏳ Waiting for Postgres on 127.0.0.1:5432 ..."
 	@until (exec 3<>/dev/tcp/127.0.0.1/5432) 2>/dev/null; do sleep 1; done
 	@echo "✅ Postgres ready."
 
-backend:
-	cd backend && uv venv --clear --python $(PY_VERSION) .venv
-	cd backend && uv pip install -r requirements.txt
-	cd backend && ./.venv/bin/python -m spacy download ja_core_news_sm
-	cd backend && ./.venv/bin/python -m spacy download en_core_web_sm
-
-# Build the backend venv only if it doesn't exist yet (no wipe, fast re-runs).
-backend-ensure:
-	@test -x backend/.venv/bin/uvicorn || $(MAKE) backend
+# The ML service only answers /health once its model is warm (loaded in the
+# FastAPI lifespan), so this also guarantees embeddings are ready.
+wait-ml:
+	@echo "⏳ Waiting for ML service on :8001 (model warm-up) ..."
+	@until curl -sf http://localhost:8001/health >/dev/null 2>&1; do sleep 2; done
+	@echo "✅ ML ready."
 
 frontend: ensure-pnpm
 	cd frontend && $(PNPM) install
 
-# Install frontend deps only if node_modules is missing.
 frontend-ensure: ensure-pnpm
 	@test -d frontend/node_modules || (cd frontend && $(PNPM) install)
 
-# Apply DB migrations (needs Postgres up).
-migrate:
-	cd backend && ./.venv/bin/alembic upgrade head
-
-# Seed realistic test data: users (@example.com / password123) + ~12k posts
-# with real embeddings + POVs + likes/comments. Override count e.g.:
+# Seed realistic test data: users (@example.com / password123) + ~12k posts with
+# real embeddings (via the ML service) + POVs + likes/comments. Override e.g.:
 #   make seed ARGS="--posts 50000"
 #   make seed ARGS="--fresh"
-seed: infra wait-db backend-ensure migrate
-	cd backend && ./.venv/bin/python seed.py $(ARGS)
+seed: infra wait-db wait-ml
+	cd api && $(LOCAL_DB) $(LOCAL_SVC) go run ./cmd/seed $(ARGS)
 
-# Scale seed with SYNTHETIC vectors (no embedding model) — for load/latency
-# testing at high volume. Default 1,000,000 posts; override with ARGS.
-seed-large: infra wait-db backend-ensure migrate
-	cd backend && ./.venv/bin/python seed.py --posts 1000000 --fake-vectors --no-comments $(ARGS)
+# Scale seed with SYNTHETIC vectors (no ML service) — for load/latency testing
+# at high volume. Default 1,000,000 posts; override with ARGS.
+seed-large: infra wait-db
+	cd api && $(LOCAL_DB) $(LOCAL_SVC) go run ./cmd/seed --posts 1000000 --fake-vectors --no-comments $(ARGS)
 
 # Provide pnpm at the pinned version. Prefer mise (this repo's toolchain),
 # then corepack, then a global npm install as a last resort.
@@ -116,32 +100,34 @@ ensure-pnpm:
 	  elif command -v corepack >/dev/null 2>&1; then corepack enable && corepack prepare pnpm@$(PNPM_VERSION) --activate; \
 	  else npm install -g pnpm@$(PNPM_VERSION); fi
 
-dev:
-	@echo "Starting backend (:8000) + frontend (:5173). Ctrl-C stops both."
+# Run the Go API (:8000) + frontend (:5173) on the host (deps via compose).
+dev: deps-up wait-db frontend-ensure
+	@echo "Starting Go API (:8000) + frontend (:5173). Ctrl-C stops both."
 	@trap 'kill 0' INT TERM; \
-	  ( cd backend && ./.venv/bin/uvicorn app.main:app --reload --port 8000 ) & \
+	  ( cd api && $(LOCAL_DB) $(LOCAL_SVC) PORT=8000 go run ./cmd/server ) & \
 	  ( cd frontend && $(PNPM) dev ) & \
 	  wait
 
-# ★ Everything from zero. Wipes ALL local data (Postgres + Qdrant volumes),
-# rebuilds the backend image, auto-migrates, seeds test data, then runs the UI.
+# ★ Everything from zero (Docker). Wipes ALL local data (Postgres + Qdrant
+# volumes), rebuilds images, seeds test data, then runs the UI.
 # Override seeded count: `make fresh POSTS=50000`.
-fresh: backend-ensure
+fresh:
 	@echo "⚠️  Wiping containers + volumes (all local Postgres + Qdrant data)..."
 	-$(COMPOSE) down -v --remove-orphans
 	$(COMPOSE) up -d --build
 	@echo "⏳ Waiting for Go API (build + schema bootstrap; ML image bakes models)..."
 	@until curl -sf http://localhost:8000/health >/dev/null 2>&1; do sleep 3; done
+	@$(MAKE) wait-ml
 	@echo "🌱 Seeding $(POSTS) posts (users @example.com / password123)..."
-	cd backend && ./.venv/bin/python seed.py --posts $(POSTS)
+	cd api && $(LOCAL_DB) $(LOCAL_SVC) go run ./cmd/seed --posts $(POSTS)
 	@echo "🎨 Starting frontend (:5173). Ctrl-C stops the UI; api keeps running in Docker."
 	@$(MAKE) web
 
-# Fully containerized backend: db + qdrant + backend all in Docker/Podman.
+# Fully containerized stack: db + qdrant + redis + ml + Go API in Docker/Podman.
 # (Frontend stays on the host — run `make web` in another terminal.)
 docker:
 	$(COMPOSE) up -d --build
-	@echo "✅ db + qdrant + backend (:8000) are up. Logs: 'make docker-logs'."
+	@echo "✅ db + qdrant + redis + ml + Go API (:8000) are up. Logs: 'make docker-logs'."
 	@echo "   Start the UI with: make web   (frontend :5173)"
 
 docker-logs:
@@ -158,4 +144,4 @@ down:
 	$(COMPOSE) down
 
 clean: down
-	rm -rf backend/.venv frontend/node_modules
+	rm -rf frontend/node_modules

@@ -3,6 +3,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react"
 import { getCurrentUser, logout, type User } from "./api/client"
 import { Header } from "./components/Header"
 import { TimelinePage } from "./components/TimelinePage"
+import { useI18n } from "./i18n"
 
 const SearchPage = lazy(() =>
   import("./components/SearchPage").then((m) => ({ default: m.SearchPage })),
@@ -37,11 +38,14 @@ const SettingsModal = lazy(() =>
   })),
 )
 
-const RouteFallback = () => (
-  <main className="max-w-3xl mx-auto px-3 sm:px-4 py-8 text-center text-cyan-300/70 font-mono">
-    LOADING...
-  </main>
-)
+const RouteFallback = () => {
+  const { t } = useI18n()
+  return (
+    <main className="max-w-3xl mx-auto px-3 sm:px-4 py-8 text-center text-cyan-300/70 font-mono">
+      {t("app.loading")}
+    </main>
+  )
+}
 
 function App() {
   const [similarityWeight, setSimilarityWeight] = useState<number>(0.7)

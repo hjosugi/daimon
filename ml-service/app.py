@@ -1,5 +1,5 @@
 """
-Daimon ML microservice — the ONLY Python in the stack.
+Daimon ML microservice
 
 Exposes the two things Go can't do well: text embeddings (sentence-transformers)
 and POV phrase extraction (spaCy). Everything else lives in the Go API.
@@ -80,6 +80,16 @@ def health():
 @app.post("/embed")
 def embed(req: TextReq):
     return {"vector": encode_full(req.text or "")}
+
+
+class BatchReq(BaseModel):
+    texts: list[str]
+
+
+@app.post("/embed_batch")
+def embed_batch(req: BatchReq):
+    # Used by the Go seed command: many full-post embeddings in one round-trip.
+    return {"vectors": [encode_full(t or "") for t in (req.texts or [])]}
 
 
 # --- POV extraction (spaCy ja/en, with a regex fallback) -------------------

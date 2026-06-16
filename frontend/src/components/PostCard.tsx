@@ -22,6 +22,7 @@ import {
   unlikePost,
   unsavePost,
 } from "../api/client"
+import { useI18n } from "../i18n"
 import { PostContent } from "./PostCard/PostContent"
 import { PostHeader } from "./PostCard/PostHeader"
 
@@ -38,6 +39,7 @@ const PostCardComponent: React.FC<PostCardProps> = ({
   currentUser,
   onUserClick,
 }) => {
+  const { t } = useI18n()
   const [showComments, setShowComments] = useState(false)
   const [commentText, setCommentText] = useState("")
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -199,10 +201,10 @@ const PostCardComponent: React.FC<PostCardProps> = ({
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-cyan-200/95 font-mono">
-                    WHY THIS MATCHED
+                    {t("post.whyMatched")}
                   </h3>
                   <p className="text-xs text-cyan-300/80 font-mono">
-                    MATCH REASON DETAILS
+                    {t("post.matchReasonDetails")}
                   </p>
                 </div>
               </div>
@@ -221,7 +223,7 @@ const PostCardComponent: React.FC<PostCardProps> = ({
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-lg">🏷️</span>
                     <span className="text-xs font-semibold text-cyan-200/95 font-mono">
-                      COMMON POVS
+                      {t("post.commonPovs")}
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -243,7 +245,7 @@ const PostCardComponent: React.FC<PostCardProps> = ({
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-lg">🏷️</span>
                       <span className="text-xs font-semibold text-fuchsia-300/95 font-mono">
-                        MATCHED POVS
+                        {t("post.matchedPovs")}
                       </span>
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -265,7 +267,7 @@ const PostCardComponent: React.FC<PostCardProps> = ({
                     <div className="flex items-center gap-2 mb-3">
                       <span className="text-lg">🔗</span>
                       <span className="text-xs font-semibold text-cyan-200/95 font-mono">
-                        YOUR POSTS THAT CONTRIBUTED
+                        {t("post.yourPostsContributed")}
                       </span>
                     </div>
                     <div className="space-y-2">
@@ -277,12 +279,12 @@ const PostCardComponent: React.FC<PostCardProps> = ({
                           >
                             <div className="flex items-start justify-between gap-2 mb-1">
                               <span className="text-xs font-medium text-cyan-300/80 font-mono">
-                                POST #{index + 1}
+                                {t("post.postNumber", { index: index + 1 })}
                               </span>
                               {userPost.similarity_score !== undefined && (
                                 <span className="text-xs text-cyan-200/95 font-bold font-mono">
-                                  {Math.round(userPost.similarity_score * 100)}%
-                                  SIMILAR
+                                  {Math.round(userPost.similarity_score * 100)}%{" "}
+                                  {t("post.similar")}
                                 </span>
                               )}
                             </div>
@@ -303,7 +305,7 @@ const PostCardComponent: React.FC<PostCardProps> = ({
                 onClick={() => setShowMatchReasonDetails(false)}
                 className="w-full py-2.5 px-4 bg-gradient-to-r from-cyan-500/90 to-fuchsia-500/90 text-black rounded font-medium hover:from-cyan-400 hover:to-fuchsia-400 transition-colors font-mono font-bold"
               >
-                CLOSE
+                {t("common.close")}
               </button>
             </div>
           </div>
@@ -330,11 +332,12 @@ const PostCardComponent: React.FC<PostCardProps> = ({
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-fuchsia-300/95 font-mono">
-                      MATCH DETAILS
+                      {t("post.matchDetails")}
                     </h3>
                     <p className="text-xs text-fuchsia-400/60 font-mono">
-                      {post.match_reason.similar_to_user_posts.length} OF YOUR
-                      POSTS CONTRIBUTED TO THIS MATCH
+                      {t("post.postsContributed", {
+                        count: post.match_reason.similar_to_user_posts.length,
+                      })}
                     </p>
                   </div>
                 </div>
@@ -386,7 +389,7 @@ const PostCardComponent: React.FC<PostCardProps> = ({
                             {index + 1}
                           </div>
                           <span className="text-xs font-semibold text-fuchsia-300/95 font-mono">
-                            YOUR POST
+                            {t("post.yourPost")}
                           </span>
                         </div>
                       </div>
@@ -394,7 +397,7 @@ const PostCardComponent: React.FC<PostCardProps> = ({
                         {userPost.text}
                       </p>
                       <p className="text-xs text-fuchsia-300/95 mt-2 font-medium font-mono">
-                        CLICK TO VIEW →
+                        {t("post.clickToView")} →
                       </p>
                     </div>
                   ))}
@@ -406,7 +409,7 @@ const PostCardComponent: React.FC<PostCardProps> = ({
                   onClick={() => setShowMatchDetails(false)}
                   className="w-full py-2.5 px-4 bg-gradient-to-r from-cyan-500/90 to-fuchsia-500/90 text-black rounded font-medium hover:from-cyan-400 hover:to-fuchsia-400 transition-colors font-mono font-bold"
                 >
-                  CLOSE
+                  {t("common.close")}
                 </button>
               </div>
             </div>
@@ -429,15 +432,15 @@ const PostCardComponent: React.FC<PostCardProps> = ({
               </div>
               <div>
                 <h3 className="text-lg font-bold text-red-400/90 font-mono">
-                  DELETE POST
+                  {t("post.deletePost")}
                 </h3>
                 <p className="text-sm text-red-400/60 font-mono">
-                  THIS ACTION CANNOT BE UNDONE
+                  {t("post.deletePostWarning")}
                 </p>
               </div>
             </div>
             <p className="text-sm text-cyan-300/80 font-mono">
-              DELETING THIS POST WILL ALSO DELETE ALL COMMENTS AND LIKES.
+              {t("post.deletePostBody")}
             </p>
             <div className="flex gap-3 pt-2">
               <button
@@ -446,7 +449,7 @@ const PostCardComponent: React.FC<PostCardProps> = ({
                 disabled={deletePostMutation.isPending}
                 className="flex-1 py-2.5 px-4 bg-[#1f1f3a] text-cyan-300/95 border border-cyan-500/12 rounded font-medium hover:bg-[#0f0f1f] hover:border-cyan-500/40 transition-colors disabled:opacity-50 font-mono"
               >
-                CANCEL
+                {t("common.cancel")}
               </button>
               <button
                 type="button"
@@ -457,12 +460,12 @@ const PostCardComponent: React.FC<PostCardProps> = ({
                 {deletePostMutation.isPending ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>DELETING...</span>
+                    <span>{t("common.deleting")}</span>
                   </>
                 ) : (
                   <>
                     <Trash2 size={16} />
-                    <span>DELETE</span>
+                    <span>{t("common.delete")}</span>
                   </>
                 )}
               </button>
@@ -535,14 +538,14 @@ const PostCardComponent: React.FC<PostCardProps> = ({
                   ? "text-amber-300 bg-amber-900/15 border-amber-500/25"
                   : "text-cyan-300/90 hover:text-amber-300 hover:bg-amber-900/10 border-transparent hover:border-amber-500/20"
               }`}
-              title={saved ? "保存済み（クリックで解除）" : "保存する"}
+              title={saved ? t("post.savedTitle") : t("post.saveTitle")}
             >
               <Bookmark
                 size={18}
                 className={`sm:w-5 sm:h-5 ${saved ? "fill-amber-300" : ""}`}
               />
               <span className="text-xs sm:text-sm font-semibold hidden sm:inline">
-                {saved ? "保存済み" : "保存"}
+                {saved ? t("post.saved") : t("post.save")}
               </span>
             </button>
           )}
@@ -561,7 +564,7 @@ const PostCardComponent: React.FC<PostCardProps> = ({
                   type="text"
                   value={commentText}
                   onChange={(e) => setCommentText(e.target.value)}
-                  placeholder="ADD A COMMENT..."
+                  placeholder={t("post.addComment")}
                   className="flex-1 px-4 py-2.5 bg-[#2a2a50] rounded border border-cyan-500/15 focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/40 text-cyan-300 placeholder:text-cyan-300/80 text-sm font-mono transition-all"
                 />
                 <button
@@ -570,7 +573,9 @@ const PostCardComponent: React.FC<PostCardProps> = ({
                   className="px-4 py-2.5 bg-gradient-to-r from-cyan-500/95 to-fuchsia-500/95 text-black rounded hover:from-cyan-400 hover:to-fuchsia-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-1 font-mono font-bold"
                 >
                   <Send size={16} />
-                  <span className="text-xs font-medium">SEND</span>
+                  <span className="text-xs font-medium">
+                    {t("common.send")}
+                  </span>
                 </button>
               </div>
             </form>
@@ -579,7 +584,7 @@ const PostCardComponent: React.FC<PostCardProps> = ({
             <div className="space-y-3 max-h-80 overflow-y-auto pr-2">
               {comments.length === 0 ? (
                 <div className="text-center py-6 text-sm text-cyan-300/80 bg-[#1f1f35] rounded-lg border border-cyan-500/15 font-mono">
-                  NO COMMENTS YET
+                  {t("post.noComments")}
                 </div>
               ) : (
                 comments.map((comment) => (
