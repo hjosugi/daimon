@@ -1,4 +1,4 @@
-package server
+package feed
 
 import (
 	"net/http"
@@ -10,37 +10,38 @@ import (
 	dbq "daimon/api/internal/db"
 	"daimon/api/internal/httpx"
 	"daimon/api/internal/ranking"
+	"daimon/api/internal/server/session"
 	"daimon/api/internal/vec"
 )
 
-func (s *Server) handleTimeline(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleTimeline(w http.ResponseWriter, r *http.Request) {
 	var req timelineReq
 	if !httpx.Decode(w, r, &req) {
 		return
 	}
 	ctx := r.Context()
-	uid := userID(ctx)
+	uid := session.UserID(ctx)
 
 	// Fast path: serve the batch-precomputed home feed (default knobs).
 	// Discovery mode (include_far_posts) always computes live.
 	if uid != "" && defaultTimelineKnobs(req) {
 		var ids []string
-		if s.cache.GetJSON(ctx, "feed:"+uid, &ids) && len(ids) > 0 {
-			if out := s.materializeIDs(ctx, ids, uid); len(out) > 0 {
+		if h.cache.GetJSON(ctx, "feed:"+uid, &ids) && len(ids) > 0 {
+			if out := h.materializeIDs(ctx, ids, uid); len(out) > 0 {
 				httpx.JSON(w, http.StatusOK, out)
 				return
 			}
 		}
 	}
 
-	vector, err := s.embed.Embed(ctx, req.QueryText)
+	vector, err := h.embed.Embed(ctx, req.QueryText)
 	if err != nil {
 		httpx.JSON(w, http.StatusOK, []postResp{}) // degrade gracefully
 		return
 	}
-	userTags, centroid := s.userSense(ctx, uid)
+	userTags, centroid := h.userSense(ctx, uid)
 	// Saves are a strong preference signal: blend the saved-post centroid in.
-	centroid = vec.BlendSaved(centroid, s.savedCentroid(ctx, uid))
+	centroid = vec.BlendSaved(centroid, h.savedCentroid(ctx, uid))
 	searchVector := vector
 	if uid != "" && len(centroid) > 0 && defaultTimelineQuery(req.QueryText) {
 		searchVector = centroid
@@ -50,7 +51,7 @@ func (s *Server) handleTimeline(w http.ResponseWriter, r *http.Request) {
 	if req.IncludeFarPosts {
 		limit = 200
 	}
-	hits, err := s.qdrant.Search(ctx, searchVector, limit, nil, true)
+	hits, err := h.qdrant.Search(ctx, searchVector, limit, nil, true)
 	if err != nil || len(hits) == 0 {
 		httpx.JSON(w, http.StatusOK, []postResp{})
 		return
@@ -61,7 +62,7 @@ func (s *Server) handleTimeline(w http.ResponseWriter, r *http.Request) {
 		seenHits[h.ID] = true
 	}
 	if req.BoostPopular && uid != "" && len(userTags) > 0 {
-		if pts, err := s.qdrant.Retrieve(ctx, s.recentPopularMatchedPostIDs(ctx, uid, userTags, 80), true); err == nil {
+		if pts, err := h.qdrant.Retrieve(ctx, h.recentPopularMatchedPostIDs(ctx, uid, userTags, 80), true); err == nil {
 			for _, p := range pts {
 				if seenHits[p.ID] || len(p.Vector) == 0 {
 					continue
@@ -76,8 +77,8 @@ func (s *Server) handleTimeline(w http.ResponseWriter, r *http.Request) {
 	for _, h := range hits {
 		ids = append(ids, h.ID)
 	}
-	b := s.loadBundle(ctx, ids, uid)
-	saveCounts := s.loadCounts(ctx, "bookmarks", ids)
+	b := h.loadBundle(ctx, ids, uid)
+	saveCounts := h.loadCounts(ctx, "bookmarks", ids)
 
 	cands := make([]ranking.Candidate, 0, len(hits))
 	now := time.Now().UTC()
@@ -107,12 +108,12 @@ func (s *Server) handleTimeline(w http.ResponseWriter, r *http.Request) {
 
 	out := make([]postResp, 0, len(ranked))
 	for _, c := range ranked {
-		out = append(out, s.materialize(c, b, userTags))
+		out = append(out, h.materialize(c, b, userTags))
 	}
 	httpx.JSON(w, http.StatusOK, out)
 }
 
-func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleSearch(w http.ResponseWriter, r *http.Request) {
 	var req searchReq
 	if !httpx.Decode(w, r, &req) {
 		return
@@ -121,19 +122,19 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 		req.Limit = 20
 	}
 	ctx := r.Context()
-	uid := userID(ctx)
-	userTags, _ := s.userSense(ctx, uid)
+	uid := session.UserID(ctx)
+	userTags, _ := h.userSense(ctx, uid)
 
 	var ids []string
 	scores := map[string]float32{}
 
 	if req.Query != "" {
-		vector, err := s.embed.Embed(ctx, req.Query)
+		vector, err := h.embed.Embed(ctx, req.Query)
 		if err != nil {
 			httpx.JSON(w, http.StatusOK, []postResp{})
 			return
 		}
-		hits, err := s.qdrant.Search(ctx, vector, min(req.Limit*3, 200), req.Povs, false)
+		hits, err := h.qdrant.Search(ctx, vector, min(req.Limit*3, 200), req.Povs, false)
 		if err != nil {
 			httpx.JSON(w, http.StatusOK, []postResp{})
 			return
@@ -143,7 +144,7 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 			scores[h.ID] = h.Score
 		}
 		if len(req.Povs) == 0 {
-			rows, err := s.pool.Query(ctx, dbq.SQL("feed.search_query_pov_ids"), req.Query, req.Limit)
+			rows, err := h.pool.Query(ctx, dbq.SQL("feed.search_query_pov_ids"), req.Query, req.Limit)
 			if err == nil {
 				seen := map[string]bool{}
 				for _, id := range ids {
@@ -162,7 +163,7 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	} else if len(req.Povs) > 0 {
-		rows, err := s.pool.Query(ctx, dbq.SQL("feed.search_pov_ids"), req.Povs, req.Limit)
+		rows, err := h.pool.Query(ctx, dbq.SQL("feed.search_pov_ids"), req.Povs, req.Limit)
 		if err == nil {
 			for rows.Next() {
 				var pid string
@@ -178,7 +179,7 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	b := s.loadBundle(ctx, ids, uid)
+	b := h.loadBundle(ctx, ids, uid)
 	querySet := map[string]bool{}
 	for _, p := range req.Povs {
 		querySet[p] = true
@@ -238,11 +239,11 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, out)
 }
 
-// handleUserPosts returns a user's own posts (newest first).
-func (s *Server) handleUserPosts(w http.ResponseWriter, r *http.Request) {
+// HandleUserPosts returns a user's own posts (newest first).
+func (h *Handler) HandleUserPosts(w http.ResponseWriter, r *http.Request) {
 	target := chi.URLParam(r, "userID")
 	ctx := r.Context()
-	rows, err := s.pool.Query(ctx, dbq.SQL("feed.user_post_ids"), target)
+	rows, err := h.pool.Query(ctx, dbq.SQL("feed.user_post_ids"), target)
 	if err != nil {
 		httpx.Error(w, http.StatusInternalServerError, "Database error")
 		return
@@ -259,7 +260,7 @@ func (s *Server) handleUserPosts(w http.ResponseWriter, r *http.Request) {
 		httpx.JSON(w, http.StatusOK, []postResp{})
 		return
 	}
-	b := s.loadBundle(ctx, ids, userID(ctx))
+	b := h.loadBundle(ctx, ids, session.UserID(ctx))
 
 	out := make([]postResp, 0, len(ids))
 	for _, id := range ids {

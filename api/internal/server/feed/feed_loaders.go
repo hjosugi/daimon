@@ -1,4 +1,4 @@
-package server
+package feed
 
 import (
 	"context"
@@ -6,9 +6,9 @@ import (
 	dbq "daimon/api/internal/db"
 )
 
-func (s *Server) loadPosts(ctx context.Context, ids []string) map[string]postMeta {
+func (h *Handler) loadPosts(ctx context.Context, ids []string) map[string]postMeta {
 	m := map[string]postMeta{}
-	rows, err := s.pool.Query(ctx, dbq.SQL("feed.load_posts"), ids)
+	rows, err := h.pool.Query(ctx, dbq.SQL("feed.load_posts"), ids)
 	if err != nil {
 		return m
 	}
@@ -23,9 +23,9 @@ func (s *Server) loadPosts(ctx context.Context, ids []string) map[string]postMet
 	return m
 }
 
-func (s *Server) loadPOVs(ctx context.Context, ids []string) map[string][]string {
+func (h *Handler) loadPOVs(ctx context.Context, ids []string) map[string][]string {
 	m := map[string][]string{}
-	rows, err := s.pool.Query(ctx, dbq.SQL("feed.load_povs"), ids)
+	rows, err := h.pool.Query(ctx, dbq.SQL("feed.load_povs"), ids)
 	if err != nil {
 		return m
 	}
@@ -39,7 +39,7 @@ func (s *Server) loadPOVs(ctx context.Context, ids []string) map[string][]string
 	return m
 }
 
-func (s *Server) loadCounts(ctx context.Context, table string, ids []string) map[string]int {
+func (h *Handler) loadCounts(ctx context.Context, table string, ids []string) map[string]int {
 	m := map[string]int{}
 	var query string
 	switch table {
@@ -52,7 +52,7 @@ func (s *Server) loadCounts(ctx context.Context, table string, ids []string) map
 	default:
 		return m
 	}
-	rows, err := s.pool.Query(ctx, query, ids)
+	rows, err := h.pool.Query(ctx, query, ids)
 	if err != nil {
 		return m
 	}
@@ -67,12 +67,12 @@ func (s *Server) loadCounts(ctx context.Context, table string, ids []string) map
 	return m
 }
 
-func (s *Server) loadLikedSet(ctx context.Context, ids []string, uid string) map[string]bool {
+func (h *Handler) loadLikedSet(ctx context.Context, ids []string, uid string) map[string]bool {
 	m := map[string]bool{}
 	if uid == "" {
 		return m
 	}
-	rows, err := s.pool.Query(ctx, dbq.SQL("feed.liked_set"), ids, uid)
+	rows, err := h.pool.Query(ctx, dbq.SQL("feed.liked_set"), ids, uid)
 	if err != nil {
 		return m
 	}
@@ -86,12 +86,12 @@ func (s *Server) loadLikedSet(ctx context.Context, ids []string, uid string) map
 	return m
 }
 
-func (s *Server) loadSavedSet(ctx context.Context, ids []string, uid string) map[string]bool {
+func (h *Handler) loadSavedSet(ctx context.Context, ids []string, uid string) map[string]bool {
 	m := map[string]bool{}
 	if uid == "" {
 		return m
 	}
-	rows, err := s.pool.Query(ctx, dbq.SQL("feed.saved_set"), ids, uid)
+	rows, err := h.pool.Query(ctx, dbq.SQL("feed.saved_set"), ids, uid)
 	if err != nil {
 		return m
 	}
@@ -120,12 +120,12 @@ func uniquePOVs(povs map[string][]string) []string {
 	return out
 }
 
-func (s *Server) loadPOVLikeCounts(ctx context.Context, povs []string) map[string]int {
+func (h *Handler) loadPOVLikeCounts(ctx context.Context, povs []string) map[string]int {
 	m := map[string]int{}
 	if len(povs) == 0 {
 		return m
 	}
-	rows, err := s.pool.Query(ctx, dbq.SQL("pov_likes.counts"), povs)
+	rows, err := h.pool.Query(ctx, dbq.SQL("pov_likes.counts"), povs)
 	if err != nil {
 		return m
 	}
@@ -140,12 +140,12 @@ func (s *Server) loadPOVLikeCounts(ctx context.Context, povs []string) map[strin
 	return m
 }
 
-func (s *Server) loadPOVLikedSet(ctx context.Context, povs []string, uid string) map[string]bool {
+func (h *Handler) loadPOVLikedSet(ctx context.Context, povs []string, uid string) map[string]bool {
 	m := map[string]bool{}
 	if uid == "" || len(povs) == 0 {
 		return m
 	}
-	rows, err := s.pool.Query(ctx, dbq.SQL("pov_likes.liked_set"), povs, uid)
+	rows, err := h.pool.Query(ctx, dbq.SQL("pov_likes.liked_set"), povs, uid)
 	if err != nil {
 		return m
 	}
@@ -161,18 +161,18 @@ func (s *Server) loadPOVLikedSet(ctx context.Context, povs []string, uid string)
 
 // loadBundle bulk-loads post metadata, POVs, counts and viewer-specific flags
 // for a set of post IDs (the shared read path for timeline/search/profile).
-func (s *Server) loadBundle(ctx context.Context, ids []string, uid string) bundle {
-	povs := s.loadPOVs(ctx, ids)
+func (h *Handler) loadBundle(ctx context.Context, ids []string, uid string) bundle {
+	povs := h.loadPOVs(ctx, ids)
 	allPOVs := uniquePOVs(povs)
 	return bundle{
-		meta:          s.loadPosts(ctx, ids),
+		meta:          h.loadPosts(ctx, ids),
 		povs:          povs,
-		likeCounts:    s.loadCounts(ctx, "likes", ids),
-		commentCounts: s.loadCounts(ctx, "comments", ids),
-		liked:         s.loadLikedSet(ctx, ids, uid),
-		saved:         s.loadSavedSet(ctx, ids, uid),
-		povLikeCounts: s.loadPOVLikeCounts(ctx, allPOVs),
-		povLiked:      s.loadPOVLikedSet(ctx, allPOVs, uid),
+		likeCounts:    h.loadCounts(ctx, "likes", ids),
+		commentCounts: h.loadCounts(ctx, "comments", ids),
+		liked:         h.loadLikedSet(ctx, ids, uid),
+		saved:         h.loadSavedSet(ctx, ids, uid),
+		povLikeCounts: h.loadPOVLikeCounts(ctx, allPOVs),
+		povLiked:      h.loadPOVLikedSet(ctx, allPOVs, uid),
 	}
 }
 

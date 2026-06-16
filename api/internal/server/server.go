@@ -19,6 +19,8 @@ import (
 	"daimon/api/internal/embed"
 	"daimon/api/internal/httpx"
 	"daimon/api/internal/qdrant"
+	feedhandler "daimon/api/internal/server/feed"
+	"daimon/api/internal/server/session"
 )
 
 type Server struct {
@@ -27,15 +29,20 @@ type Server struct {
 	embed  *embed.Client
 	qdrant *qdrant.Client
 	cache  *cache.Cache
+	feed   *feedhandler.Handler
 }
 
 func New(pool *pgxpool.Pool, cfg config.Config) *Server {
+	embedClient := embed.New(cfg.EmbedURL)
+	qdrantClient := qdrant.New(cfg.QdrantURL, cfg.QdrantAPIKey)
+	cacheClient := cache.New(cfg.RedisURL)
 	return &Server{
 		pool:   pool,
 		cfg:    cfg,
-		embed:  embed.New(cfg.EmbedURL),
-		qdrant: qdrant.New(cfg.QdrantURL, cfg.QdrantAPIKey),
-		cache:  cache.New(cfg.RedisURL),
+		embed:  embedClient,
+		qdrant: qdrantClient,
+		cache:  cacheClient,
+		feed:   feedhandler.New(pool, embedClient, qdrantClient, cacheClient),
 	}
 }
 
@@ -84,21 +91,21 @@ func (s *Server) Router() http.Handler {
 		r.Post("/generate-povs", s.handleGeneratePOVs)
 		r.Get("/povs/suggest", s.handleSuggestPOVs)
 		r.With(s.optionalAuth).Get("/povs/{pov}/comments", s.handlePOVComments)
-		r.Get("/by-user/{userID}", s.handleUserPosts) // a user's other posts
+		r.Get("/by-user/{userID}", s.feed.HandleUserPosts) // a user's other posts
 
 		// Feeds: auth is optional (used for personalization + liked flags).
 		r.Group(func(r chi.Router) {
 			r.Use(s.optionalAuth)
-			r.Post("/timeline", s.handleTimeline)
-			r.Post("/search", s.handleSearch)
+			r.Post("/timeline", s.feed.HandleTimeline)
+			r.Post("/search", s.feed.HandleSearch)
 		})
 
 		// Authenticated writes.
 		r.Group(func(r chi.Router) {
 			r.Use(s.requireAuth)
 			r.Post("/", s.handleCreatePost)
-			r.Get("/following", s.handleFollowingFeed)
-			r.Get("/saved", s.handleSavedFeed)
+			r.Get("/following", s.feed.HandleFollowingFeed)
+			r.Get("/saved", s.feed.HandleSavedFeed)
 			r.Delete("/{id}", s.handleDeletePost)
 			r.Post("/{id}/save", s.handleSavePost)
 			r.Delete("/{id}/save", s.handleUnsavePost)
@@ -131,15 +138,9 @@ func (s *Server) Router() http.Handler {
 func (s *Server) optionalAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		uid, _ := s.userFromToken(r) // "" when absent/invalid
-		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), userIDKey, uid)))
+		next.ServeHTTP(w, r.WithContext(session.WithUserID(r.Context(), uid)))
 	})
 }
-
-// --- auth context ---------------------------------------------------------
-
-type ctxKey string
-
-const userIDKey ctxKey = "userID"
 
 func (s *Server) requireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -148,7 +149,7 @@ func (s *Server) requireAuth(next http.Handler) http.Handler {
 			httpx.Error(w, http.StatusUnauthorized, "Invalid or expired token")
 			return
 		}
-		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), userIDKey, uid)))
+		next.ServeHTTP(w, r.WithContext(session.WithUserID(r.Context(), uid)))
 	})
 }
 
@@ -168,6 +169,5 @@ func (s *Server) userFromToken(r *http.Request) (string, bool) {
 }
 
 func userID(ctx context.Context) string {
-	v, _ := ctx.Value(userIDKey).(string)
-	return v
+	return session.UserID(ctx)
 }

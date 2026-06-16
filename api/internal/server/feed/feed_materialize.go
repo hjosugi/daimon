@@ -1,4 +1,4 @@
-package server
+package feed
 
 import (
 	"context"
@@ -10,9 +10,9 @@ import (
 
 // materializeIDs builds responses for a fixed, ordered list of post IDs
 // (used for the precomputed-feed cache fast path). Counts are always fresh.
-func (s *Server) materializeIDs(ctx context.Context, ids []string, uid string) []postResp {
-	b := s.loadBundle(ctx, ids, uid)
-	userTags := s.userTagSet(ctx, uid)
+func (h *Handler) materializeIDs(ctx context.Context, ids []string, uid string) []postResp {
+	b := h.loadBundle(ctx, ids, uid)
+	userTags := h.userTagSet(ctx, uid)
 
 	out := make([]postResp, 0, len(ids))
 	for _, id := range ids {
@@ -37,12 +37,12 @@ func (s *Server) materializeIDs(ctx context.Context, ids []string, uid string) [
 	return out
 }
 
-func (s *Server) recentPopularMatchedPostIDs(ctx context.Context, uid string, userTags map[string]bool, limit int) []string {
+func (h *Handler) recentPopularMatchedPostIDs(ctx context.Context, uid string, userTags map[string]bool, limit int) []string {
 	tags := tagSetKeys(userTags)
 	if uid == "" || len(tags) == 0 || limit <= 0 {
 		return nil
 	}
-	rows, err := s.pool.Query(ctx, dbq.SQL("feed.recent_popular_matched_ids"), uid, tags, limit)
+	rows, err := h.pool.Query(ctx, dbq.SQL("feed.recent_popular_matched_ids"), uid, tags, limit)
 	if err != nil {
 		return nil
 	}
@@ -57,7 +57,7 @@ func (s *Server) recentPopularMatchedPostIDs(ctx context.Context, uid string, us
 	return ids
 }
 
-func (s *Server) materialize(c ranking.Candidate, b bundle, userTags map[string]bool) postResp {
+func (h *Handler) materialize(c ranking.Candidate, b bundle, userTags map[string]bool) postResp {
 	pm := b.meta[c.PostID]
 	tagList := b.povs[c.PostID]
 	common := intersect(tagList, userTags)

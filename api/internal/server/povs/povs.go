@@ -1,4 +1,4 @@
-package server
+package povs
 
 import (
 	"net/http"
@@ -13,8 +13,8 @@ type genPOVReq struct {
 	Text string `json:"text"`
 }
 
-// handleGeneratePOVs proxies POV extraction to the Python ML service (spaCy).
-func (s *Server) handleGeneratePOVs(w http.ResponseWriter, r *http.Request) {
+// HandleGeneratePOVs proxies POV extraction to the Python ML service (spaCy).
+func (h *Handler) HandleGeneratePOVs(w http.ResponseWriter, r *http.Request) {
 	var req genPOVReq
 	if !httpx.Decode(w, r, &req) {
 		return
@@ -23,29 +23,29 @@ func (s *Server) handleGeneratePOVs(w http.ResponseWriter, r *http.Request) {
 		httpx.JSON(w, http.StatusOK, map[string][]string{"povs": {}})
 		return
 	}
-	povs, err := s.embed.POVs(r.Context(), req.Text)
+	povs, err := h.embed.POVs(r.Context(), req.Text)
 	if err != nil {
 		povs = []string{} // ML service down -> empty, non-fatal
 	}
 	httpx.JSON(w, http.StatusOK, map[string][]string{"povs": povs})
 }
 
-// handleSuggestPOVs suggests POVs by popularity, matching an optional query.
+// HandleSuggestPOVs suggests POVs by popularity, matching an optional query.
 // Prefix matches rank above substring matches; ties broken by frequency.
 // Uses batch-precomputed popular + vector-related POVs from cache when present.
-func (s *Server) handleSuggestPOVs(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleSuggestPOVs(w http.ResponseWriter, r *http.Request) {
 	q := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("query")))
 
 	// Empty query -> serve precomputed popular list if the batch produced one.
 	if q == "" {
 		var popular []string
-		if s.cache.GetJSON(r.Context(), "suggest:popular", &popular) && len(popular) > 0 {
+		if h.cache.GetJSON(r.Context(), "suggest:popular", &popular) && len(popular) > 0 {
 			httpx.JSON(w, http.StatusOK, map[string][]string{"povs": popular[:min(10, len(popular))]})
 			return
 		}
 	}
 
-	rows, err := s.pool.Query(r.Context(), dbq.SQL("povs.suggest"), q)
+	rows, err := h.pool.Query(r.Context(), dbq.SQL("povs.suggest"), q)
 	if err != nil {
 		httpx.JSON(w, http.StatusOK, map[string][]string{"povs": {}})
 		return
@@ -87,7 +87,7 @@ func (s *Server) handleSuggestPOVs(w http.ResponseWriter, r *http.Request) {
 	// Enrich with batch-precomputed vector-related POVs of the best match.
 	if q != "" && len(out) > 0 {
 		var related []string
-		if s.cache.GetJSON(r.Context(), "suggest:related:"+strings.ToLower(out[0]), &related) {
+		if h.cache.GetJSON(r.Context(), "suggest:related:"+strings.ToLower(out[0]), &related) {
 			for _, rp := range related {
 				if len(out) >= limit {
 					break

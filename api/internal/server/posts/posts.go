@@ -1,4 +1,4 @@
-package server
+package posts
 
 import (
 	"net/http"
@@ -13,7 +13,7 @@ import (
 	"daimon/api/internal/qdrant"
 )
 
-func (s *Server) handleCreatePost(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleCreatePost(w http.ResponseWriter, r *http.Request) {
 	var req createPostReq
 	if !httpx.Decode(w, r, &req) {
 		return
@@ -30,21 +30,21 @@ func (s *Server) handleCreatePost(w http.ResponseWriter, r *http.Request) {
 	povs := cleanPOVs(req.Povs)
 
 	ctx := r.Context()
-	uid := userID(ctx)
+	uid := session.UserID(ctx)
 
 	var username string
-	if err := s.pool.QueryRow(ctx, dbq.SQL("posts.username_by_id"), uid).Scan(&username); err != nil {
+	if err := h.pool.QueryRow(ctx, dbq.SQL("posts.username_by_id"), uid).Scan(&username); err != nil {
 		httpx.Error(w, http.StatusUnauthorized, "User not found")
 		return
 	}
 
 	// Embed (non-fatal: a post can exist without a vector and be reindexed later).
-	vector, embErr := s.embed.Embed(ctx, text)
+	vector, embErr := h.embed.Embed(ctx, text)
 
 	now := time.Now().UTC()
 	id := uuid.NewString()
 
-	tx, err := s.pool.Begin(ctx)
+	tx, err := h.pool.Begin(ctx)
 	if err != nil {
 		httpx.Error(w, http.StatusInternalServerError, "Database error")
 		return
@@ -68,7 +68,7 @@ func (s *Server) handleCreatePost(w http.ResponseWriter, r *http.Request) {
 
 	// Qdrant upsert is best-effort (regenerable index).
 	if embErr == nil && len(vector) > 0 {
-		_ = s.qdrant.Upsert(ctx, []qdrant.Point{{
+		_ = h.qdrant.Upsert(ctx, []qdrant.Point{{
 			ID:     id,
 			Vector: vector,
 			Payload: map[string]any{
@@ -86,12 +86,12 @@ func (s *Server) handleCreatePost(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (s *Server) handleDeletePost(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleDeletePost(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	uid := userID(r.Context())
+	uid := session.UserID(r.Context())
 
 	var owner string
-	if err := s.pool.QueryRow(r.Context(), dbq.SQL("posts.owner"), id).Scan(&owner); err != nil {
+	if err := h.pool.QueryRow(r.Context(), dbq.SQL("posts.owner"), id).Scan(&owner); err != nil {
 		httpx.Error(w, http.StatusNotFound, "Post not found")
 		return
 	}
@@ -99,10 +99,10 @@ func (s *Server) handleDeletePost(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, http.StatusForbidden, "You can only delete your own posts")
 		return
 	}
-	if _, err := s.pool.Exec(r.Context(), dbq.SQL("posts.delete"), id); err != nil {
+	if _, err := h.pool.Exec(r.Context(), dbq.SQL("posts.delete"), id); err != nil {
 		httpx.Error(w, http.StatusInternalServerError, "Could not delete post")
 		return
 	}
-	_ = s.qdrant.Delete(r.Context(), []string{id}) // best-effort
+	_ = h.qdrant.Delete(r.Context(), []string{id}) // best-effort
 	httpx.JSON(w, http.StatusOK, map[string]string{"message": "Post deleted successfully"})
 }

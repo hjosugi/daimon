@@ -1,4 +1,4 @@
-package server
+package posts
 
 // matchReason explains why a post surfaced (sent to the UI).
 type matchReason struct {

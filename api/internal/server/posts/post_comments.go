@@ -1,4 +1,4 @@
-package server
+package posts
 
 import (
 	"net/http"
@@ -12,9 +12,9 @@ import (
 	"daimon/api/internal/httpx"
 )
 
-func (s *Server) handleGetComments(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleGetComments(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	rows, err := s.pool.Query(r.Context(), dbq.SQL("posts.comments"), id)
+	rows, err := h.pool.Query(r.Context(), dbq.SQL("posts.comments"), id)
 	if err != nil {
 		httpx.Error(w, http.StatusInternalServerError, "Database error")
 		return
@@ -36,9 +36,9 @@ func (s *Server) handleGetComments(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, out)
 }
 
-func (s *Server) handleAddComment(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleAddComment(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	uid := userID(r.Context())
+	uid := session.UserID(r.Context())
 	var req addCommentReq
 	if !httpx.Decode(w, r, &req) {
 		return
@@ -54,7 +54,7 @@ func (s *Server) handleAddComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var exists bool
-	_ = s.pool.QueryRow(r.Context(), dbq.SQL("posts.exists"), id).Scan(&exists)
+	_ = h.pool.QueryRow(r.Context(), dbq.SQL("posts.exists"), id).Scan(&exists)
 	if !exists {
 		httpx.Error(w, http.StatusNotFound, "Post not found")
 		return
@@ -62,7 +62,7 @@ func (s *Server) handleAddComment(w http.ResponseWriter, r *http.Request) {
 
 	cid := uuid.NewString()
 	now := time.Now().UTC()
-	if _, err := s.pool.Exec(r.Context(), dbq.SQL("posts.insert_comment"), cid, id, uid, text, now); err != nil {
+	if _, err := h.pool.Exec(r.Context(), dbq.SQL("posts.insert_comment"), cid, id, uid, text, now); err != nil {
 		httpx.Error(w, http.StatusInternalServerError, "Could not add comment")
 		return
 	}
