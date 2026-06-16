@@ -1,5 +1,6 @@
-import React from "react"
 import { Trash2 } from "lucide-react"
+import type React from "react"
+import { memo } from "react"
 import type { Post, User } from "../../api/client"
 import { formatRelativeDate } from "../../utils/date"
 
@@ -11,7 +12,7 @@ interface PostHeaderProps {
   onUserClick?: (userId: string) => void
 }
 
-export const PostHeader: React.FC<PostHeaderProps> = ({
+const PostHeaderComponent: React.FC<PostHeaderProps> = ({
   post,
   currentUser,
   onDelete,
@@ -19,7 +20,8 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
   onUserClick,
 }) => {
   const isOwnPost = currentUser && post.user_id === currentUser.id
-  const username = post.username || `USER_${post.user_id?.slice(0, 8) || post.id.slice(0, 8)}`
+  const username =
+    post.username || `USER_${post.user_id?.slice(0, 8) || post.id.slice(0, 8)}`
   const canOpenUser = !!(onUserClick && post.user_id)
 
   return (
@@ -32,7 +34,9 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
           disabled={!canOpenUser}
           className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-cyan-400/90 via-fuchsia-400/90 to-cyan-500/90 flex items-center justify-center text-black font-bold text-sm sm:text-base border border-cyan-500/18 flex-shrink-0 font-mono ${canOpenUser ? "cursor-pointer hover:brightness-110 active:scale-95 transition-all" : ""}`}
         >
-          {post.username ? post.username.slice(0, 1).toUpperCase() : post.id.slice(0, 1).toUpperCase()}
+          {post.username
+            ? post.username.slice(0, 1).toUpperCase()
+            : post.id.slice(0, 1).toUpperCase()}
         </button>
 
         {/* User info */}
@@ -56,6 +60,7 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
         <div className="flex items-center gap-2">
           {isOwnPost && (
             <button
+              type="button"
               onClick={onDelete}
               className="p-2 text-cyan-300/80 hover:text-red-300 hover:bg-red-900/15 border border-transparent hover:border-red-500/25 rounded transition-all active:scale-95"
               title="Delete post"
@@ -75,6 +80,7 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
               )}
               {post.match_reason?.pov_match_rate !== undefined && (
                 <button
+                  type="button"
                   onClick={onMatchDetailsClick}
                   disabled={post.match_reason.pov_match_rate === 0}
                   className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded text-xs font-semibold whitespace-nowrap transition-all font-mono border ${
@@ -98,3 +104,5 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
     </div>
   )
 }
+
+export const PostHeader = memo(PostHeaderComponent)

@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"daimon/api/internal/cache"
@@ -42,9 +43,85 @@ func main() {
 	em := embed.New(cfg.EmbedURL)
 
 	start := time.Now()
+	deepAnalyzeJob(ctx, pool, em)
 	suggestJob(ctx, pool, em, ca)
 	timelineJob(ctx, pool, qc, em, ca)
 	log.Printf("batch done in %s", time.Since(start).Round(time.Millisecond))
+}
+
+// ---- deep analysis: decompose long posts into multiple 観点 (POVs) --------
+
+// Long, in-depth posts usually argue several distinct viewpoints. The ML /povs
+// endpoint only sees a slice of text per call, so we chunk the full post and
+// union the extracted POVs — turning one deep post into several POV "nodes"
+// people can discover and discuss along. Re-runnable: inserts are deduped.
+const (
+	deepMinChars  = 1500 // only posts longer than this are worth decomposing
+	deepMaxPosts  = 400  // bound work per batch run
+	deepChunkRune = 2000 // ~one analysis window
+	deepMaxChunks = 4     // cap chunks analyzed per post
+	deepMaxPOVs   = 12    // cap new POVs per post
+)
+
+func deepAnalyzeJob(ctx context.Context, pool *pgxpool.Pool, em *embed.Client) {
+	rows, err := pool.Query(ctx, dbq.SQL("batch.long_posts"), deepMinChars, deepMaxPosts)
+	if err != nil {
+		log.Printf("deep-analyze: %v", err)
+		return
+	}
+	type post struct{ id, text string }
+	var posts []post
+	for rows.Next() {
+		var p post
+		if rows.Scan(&p.id, &p.text) == nil {
+			posts = append(posts, p)
+		}
+	}
+	rows.Close()
+	if len(posts) == 0 {
+		return
+	}
+
+	now := time.Now().UTC()
+	inserted := 0
+	for _, p := range posts {
+		seen := map[string]bool{}
+		for _, chunk := range chunkRunes(p.text, deepChunkRune, deepMaxChunks) {
+			povs, err := em.POVs(ctx, chunk)
+			if err != nil {
+				continue
+			}
+			for _, pov := range povs {
+				if seen[pov] || len(seen) >= deepMaxPOVs {
+					continue
+				}
+				seen[pov] = true
+				if _, err := pool.Exec(ctx, dbq.SQL("batch.insert_auto_pov"),
+					uuid.NewString(), p.id, pov, now); err == nil {
+					inserted++
+				}
+			}
+		}
+	}
+	log.Printf("deep-analyze: extracted %d auto-POVs from %d long posts", inserted, len(posts))
+}
+
+// chunkRunes splits s into rune-bounded windows (max maxChunks), so multibyte
+// (Japanese) text is never cut mid-character.
+func chunkRunes(s string, size, maxChunks int) []string {
+	r := []rune(s)
+	if len(r) <= size {
+		return []string{s}
+	}
+	out := make([]string, 0, maxChunks)
+	for i := 0; i < len(r) && len(out) < maxChunks; i += size {
+		end := i + size
+		if end > len(r) {
+			end = len(r)
+		}
+		out = append(out, string(r[i:end]))
+	}
+	return out
 }
 
 // ---- suggest: popular + vector-related POVs ------------------------------

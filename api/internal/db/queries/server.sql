@@ -101,6 +101,9 @@ SELECT post_id FROM bookmarks WHERE user_id=$1 ORDER BY created_at DESC LIMIT 10
 -- name: feed.liked_set
 SELECT post_id FROM likes WHERE post_id = ANY($1) AND user_id=$2
 
+-- name: feed.saved_set
+SELECT post_id FROM bookmarks WHERE post_id = ANY($1) AND user_id=$2
+
 -- name: feed.user_povs
 SELECT p.pov FROM povs p JOIN posts po ON po.id = p.post_id WHERE po.user_id=$1
 
@@ -142,6 +145,12 @@ DELETE FROM pov_likes WHERE pov=$1 AND user_id=$2
 
 -- name: pov_likes.status
 SELECT EXISTS(SELECT 1 FROM pov_likes WHERE pov=$1 AND user_id=$2)
+
+-- name: pov_likes.counts
+SELECT pov, count(*) FROM pov_likes WHERE pov = ANY($1) GROUP BY pov
+
+-- name: pov_likes.liked_set
+SELECT pov FROM pov_likes WHERE pov = ANY($1) AND user_id=$2
 
 -- name: pov_comments.list
 SELECT pc.id, pc.pov, pc.text, pc.stance, pc.user_id, u.username, u.avatar_url, pc.created_at
@@ -218,3 +227,10 @@ SELECT pov, count(*) AS c FROM povs GROUP BY pov ORDER BY c DESC LIMIT 200
 
 -- name: batch.distinct_posters
 SELECT DISTINCT user_id FROM posts
+
+-- name: batch.long_posts
+SELECT id, text FROM posts WHERE char_length(text) > $1 ORDER BY created_at DESC LIMIT $2
+
+-- name: batch.insert_auto_pov
+INSERT INTO povs (id, post_id, pov, is_auto, created_at) VALUES ($1,$2,$3,true,$4)
+ON CONFLICT (post_id, pov) DO NOTHING

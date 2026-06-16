@@ -4,7 +4,7 @@
   * {
     box-sizing: border-box;
   }
-  
+
   html,
   body {
     overflow-x: hidden;
@@ -14,11 +14,19 @@
     margin: 0;
     background: #16161f;
     background-image:
-      radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.022) 0%, transparent 55%),
-      radial-gradient(circle at 80% 80%, rgba(255, 0, 255, 0.022) 0%, transparent 55%),
+      radial-gradient(
+        circle at 20% 50%,
+        rgba(0, 255, 255, 0.022) 0%,
+        transparent 55%
+      ),
+      radial-gradient(
+        circle at 80% 80%,
+        rgba(255, 0, 255, 0.022) 0%,
+        transparent 55%
+      ),
       linear-gradient(135deg, #16161f 0%, #1b1726 100%);
     color: #cbe7f5;
-    font-family: 'Courier New', 'Monaco', 'Menlo', monospace;
+    font-family: "Courier New", "Monaco", "Menlo", monospace;
     min-height: 100vh;
   }
 
@@ -34,5 +42,10 @@
 
   .cyber-glow {
     text-shadow: 0 0 1px currentColor;
+  }
+
+  .post-card {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 360px;
   }
 }

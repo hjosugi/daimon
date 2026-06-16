@@ -1,83 +1,237 @@
-# コンテンツモデレーション実装ガイド
+# Content Moderation
 
-## 主要サービスの実装方法
+Daimon のモデレーションは、一般的なSNSコメント欄より少し難しいです。理由は、Daimonが投稿だけでなく「観点(POV)」を会話の単位にするからです。
 
-### 1. **Twitter/X**
-- **機械学習モデル**: 自社開発のトキシシティ検出モデル
-- **リアルタイム検出**: 投稿前に自動スキャン
-- **段階的対応**: 警告表示 → 非表示 → 削除
-- **人間によるレビュー**: 自動検出後の確認
+普通のコメント欄では、荒れる対象は投稿です。Daimonでは、荒れる対象がPOVそのもの、POVに立つ人、同じPOVで違う感じ方をしている人に広がります。
 
-### 2. **Bluesky**
-- **AT Protocol**: 分散型アーキテクチャ
-- **モデレーションサービス**: オープンソースのモデレーションAPI
-- **コミュニティ主導**: 各インスタンスが独自のルールを設定可能
+この文書は、Daimon向けの安全設計を整理します。
 
-### 3. **Misskey**
-- **キーワードフィルター**: 禁止ワードリスト
-- **AI検出**: オプションでAIモデレーションAPI統合
-- **ユーザー報告**: 報告ベースのモデレーション
+## 守るもの
 
-### 4. **一般的な手法**
+守る対象は4つあります。
 
-#### APIサービス
-- **Perspective API** (Google Jigsaw): トキシシティ検出、無料枠あり
-- **AWS Comprehend**: 感情分析、不適切コンテンツ検出
-- **Azure Content Moderator**: テキスト・画像モデレーション
-- **OpenAI Moderation API**: GPTベースのコンテンツ検出
+1. 投稿者
+2. POVに反応した人
+3. POVコメントを書いた人
+4. POV空間そのもの
 
-#### 自社実装
-- **BERT/RoBERTa**: トキシシティ分類モデル
-- **DistilBERT**: 軽量版、高速推論
-- **多言語対応**: XLM-RoBERTaなど
+特に重要なのは、Daimonの核である「同軸異見」が、攻撃や晒しに変わらないことです。
 
-## Daimonでの実装
+## 基本方針
 
-### 現在の実装（MVP）
-- キーワードベースのフィルタリング
-- スパムパターン検出（URL、メンション数）
-- 投稿長さチェック
+### 1. 衝突ではなく理由を出す
 
-### 推奨される改善
+同軸異見カードは、対立相手を晒すUIではありません。
 
-#### 1. Perspective API統合（簡単）
-```python
-# 環境変数に PERSPECTIVE_API_KEY を設定
-# content_moderation_service.py の check_with_perspective_api を有効化
+悪い表示:
+
+```text
+あなたに反対している人
 ```
 
-#### 2. 機械学習モデル統合（中級）
-```python
-# transformers ライブラリを使用
-from transformers import pipeline
+良い表示:
 
-toxicity_classifier = pipeline(
-    "text-classification",
-    model="unitary/toxic-bert",
-    device=0  # GPU使用時
-)
+```text
+同じ観点で、少し違う感じ方
 ```
 
-#### 3. 段階的対応システム（上級）
-- **レベル1**: 警告表示（投稿は公開）
-- **レベル2**: 非表示（本人のみ閲覧可能）
-- **レベル3**: 削除（自動削除）
+ユーザー名より先に、理由を短く出す方が安全です。人格ではなく観点に注意を向けます。
 
-#### 4. ユーザー報告機能
-- 報告ボタンの追加
-- 報告内容の集計
-- 閾値超過時の自動対応
+### 2. 数字で煽らない
 
-## 実装の優先順位
+Daimonでは次の数字を強く見せない方がよいです。
 
-1. **Phase 1 (現在)**: キーワードフィルター + 基本パターン検出
-2. **Phase 2**: Perspective API統合
-3. **Phase 3**: ユーザー報告機能
-4. **Phase 4**: 機械学習モデル統合
-5. **Phase 5**: 段階的対応システム
+- 反対数
+- 勝敗
+- 炎上度
+- ユーザーの影響力スコア
+- グラフ中心性
 
-## コスト考慮
+数字は内部rankや安全判断に使ってよいですが、UIに出すと競争や攻撃を誘発します。
 
-- **Perspective API**: 無料枠あり（1分あたり1リクエスト）
-- **AWS Comprehend**: 従量課金（$0.0001/100文字）
-- **自社モデル**: 初期コスト高、運用コスト低
+### 3. ネタバレ制御を一級にする
+
+POVコメントは作品・投稿の深い話に入りやすいため、spoiler制御が必要です。
+
+必要な状態:
+
+- 投稿単位のspoiler
+- POV assertion単位のspoiler
+- POVコメント単位のspoiler
+- 一覧ではspoiler本文を隠す
+- ユーザー設定でspoiler表示方針を選べる
+
+### 4. open vocabularyを守りつつ整える
+
+POVはopen vocabularyです。自由に作れるから面白い一方で、荒らし、差別語、個人攻撃、重複、曖昧語が混ざります。
+
+対策:
+
+- 新規POV作成時のvalidation
+- 既存POVのsuggest
+- 同義語統合
+- merged_into
+- 管理者/信頼ユーザーによる説明編集
+- 通報されたPOVの一時非表示
+
+## 現在の実装でできること
+
+現在のGo APIには、次の安全上の土台があります。
+
+- session認証
+- 自分の投稿削除
+- 自分のPOVコメント削除
+- follow / unfollow
+- follower削除
+- profile bio
+- bookmark
+- 入力validation
+- SQL外出し + parameterized query
+
+まだ不足しているもの:
+
+- 通報
+- block / mute
+- 管理者画面
+- spoiler flag
+- POV定義の統合/凍結
+- rate limit
+- 同軸異見カードの安全フィルター
+
+## 次に入れるべき安全機能
+
+### Phase 1: report
+
+最初に必要なのは通報です。
+
+対象:
+
+- post
+- comment
+- pov_comment
+- pov
+- user
+
+最低限のスキーマ:
+
+```text
+reports
+  id
+  target_type
+  target_id
+  reporter_id
+  reason
+  detail
+  created_at
+  status
+```
+
+`target_type` は文字列でもよいですが、API側で許可値を固定します。
+
+### Phase 2: block / mute
+
+同軸異見は「聞く価値がある違い」を出す機能です。見たくない相手を消せないと成立しません。
+
+必要:
+
+- block user
+- mute user
+- mute POV
+- muted/blocked userをranking候補から除外
+- 同軸異見カード候補から除外
+
+### Phase 3: spoiler
+
+`post_pov_assertions` と同時に入れるのが自然です。
+
+```text
+spoiler boolean
+spoiler_scope optional
+```
+
+一覧では本文を伏せ、明示操作で開くようにします。
+
+### Phase 4: rate limit
+
+POVコメントや同軸異見への反応は、短時間に連投されると荒れます。
+
+必要:
+
+- login / signup rate limit
+- post create rate limit
+- comment create rate limit
+- pov_comment create rate limit
+- report spam detection
+
+Redisがあればtoken bucketを置けます。なければDBベースの簡易制限から始めます。
+
+### Phase 5: quality and safety rank
+
+同軸異見カードに出す候補は、単に「違う意見」なら何でもよいわけではありません。
+
+候補に入れる条件:
+
+- 短い理由がある。
+- recentである。
+- 通報が少ない。
+- ブロック関係がない。
+- 侮辱や攻撃表現がない。
+- 同じPOVに立っている。
+
+候補から落とす条件:
+
+- 攻撃的表現。
+- 個人攻撃。
+- 執拗な連投。
+- spoiler違反。
+- 通報が一定以上。
+- ブロック/ミュート関係。
+
+## ML/APIを使う場合の位置づけ
+
+外部APIやMLモデルは補助です。最初から自動判定で投稿を消すより、段階的に使う方が安全です。
+
+使い方:
+
+- 明らかなspam/攻撃をsoft flagする。
+- review queueの優先順位を上げる。
+- 同軸異見カードの候補から外す。
+- ユーザーに投稿前の警告を出す。
+
+避けること:
+
+- 文脈なしにPOVを禁止する。
+- 異論そのものを攻撃とみなす。
+- 説明なしに投稿を消す。
+- MLの判定をUI上で断定的に見せる。
+
+## UI文言
+
+安全な文言:
+
+- `この観点では、少し違う感じ方もあります`
+- `理由を読む`
+- `このPOVをミュート`
+- `この内容を報告`
+- `ネタバレを表示`
+
+避ける文言:
+
+- `反対派`
+- `敵対`
+- `論破`
+- `炎上`
+- `勝っている意見`
+- `負けている意見`
+
+## 運用メモ
+
+初期MVPでは、複雑な自動モデレーションよりも次を優先します。
+
+1. 通報できる。
+2. 自分で消せる。
+3. 見たくない相手やPOVを隠せる。
+4. spoilerを隠せる。
+5. 同軸異見カードに危険候補を出さない。
+
+Daimonの価値は、違う感じ方を安全に聞けることです。安全機能は後付けの管理機能ではなく、プロダクトの中核です。

@@ -1,11 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ArrowLeft, Hash, Loader2, MessageSquare, Send, Trash2 } from "lucide-react"
-import { useState } from "react"
+import { ArrowLeft, Flag, Hash, Loader2, MessageSquare, Send, Trash2 } from "lucide-react"
+import { useMemo, useState } from "react"
 import {
   addPOVComment,
   deletePOVComment,
   getPOVComments,
+  getPOVLikeStatus,
+  likePOV,
   searchPosts,
+  unlikePOV,
   type POVComment,
   type POVCommentStance,
   type User,
@@ -35,6 +38,16 @@ const stanceClasses: Record<POVCommentStance, string> = {
   oppose: "border-rose-500/30 bg-rose-900/20 text-rose-200",
   note: "border-fuchsia-500/30 bg-fuchsia-900/20 text-fuchsia-200",
 }
+
+// Solid fills for the at-a-glance stance distribution (community lean on this 観点).
+const stanceBarColors: Record<POVCommentStance, string> = {
+  support: "bg-emerald-400/80",
+  question: "bg-cyan-400/80",
+  oppose: "bg-rose-400/80",
+  note: "bg-fuchsia-400/80",
+}
+
+const stanceOrder: POVCommentStance[] = ["support", "question", "oppose", "note"]
 
 export const POVDiscussionPage: React.FC<POVDiscussionPageProps> = ({
   pov,
@@ -77,6 +90,44 @@ export const POVDiscussionPage: React.FC<POVDiscussionPageProps> = ({
     },
   })
 
+  // Aggregate the community's lean on this 観点 — ErogameScape-style at-a-glance read.
+  const stanceCounts = useMemo(() => {
+    const c: Record<POVCommentStance, number> = { support: 0, question: 0, oppose: 0, note: 0 }
+    for (const cm of comments) c[cm.stance] += 1
+    return c
+  }, [comments])
+
+  // "この観点に立つ" — endorsing the axis itself (not a post). Identity, not a metric.
+  const standKey = ["pov-stand", pov]
+  const { data: stand } = useQuery({
+    queryKey: standKey,
+    queryFn: () => getPOVLikeStatus(pov),
+    staleTime: 1000 * 30,
+  })
+  const stood = stand?.liked ?? false
+  const standCount = stand?.likes ?? 0
+  const standMutation = useMutation({
+    mutationFn: () => (stood ? unlikePOV(pov) : likePOV(pov)),
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: standKey })
+      const prev = qc.getQueryData<{ liked: boolean; likes: number }>(standKey)
+      qc.setQueryData<{ liked: boolean; likes: number }>(standKey, (old) => {
+        const base = old ?? { liked: false, likes: 0 }
+        return { liked: !base.liked, likes: base.likes + (base.liked ? -1 : 1) }
+      })
+      return { prev }
+    },
+    onError: (_e, _v, ctx) => ctx?.prev && qc.setQueryData(standKey, ctx.prev),
+    onSuccess: (data) => qc.setQueryData(standKey, data),
+  })
+  const toggleStand = () => {
+    if (!user) {
+      onAuthRequired()
+      return
+    }
+    standMutation.mutate()
+  }
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!user) {
@@ -115,7 +166,44 @@ export const POVDiscussionPage: React.FC<POVDiscussionPageProps> = ({
                 <span>{posts.length} posts</span>
                 <span>{comments.length} comments</span>
               </div>
+              {comments.length > 0 && (
+                <div className="mt-3">
+                  <div className="flex h-2 w-full overflow-hidden rounded-full bg-[#151520]">
+                    {stanceOrder.map((k) =>
+                      stanceCounts[k] > 0 ? (
+                        <div
+                          key={k}
+                          className={stanceBarColors[k]}
+                          style={{ width: `${(stanceCounts[k] / comments.length) * 100}%` }}
+                        />
+                      ) : null,
+                    )}
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[10px] font-mono text-cyan-300/70">
+                    {stanceOrder.map((k) => (
+                      <span key={k} className="flex items-center gap-1">
+                        <span className={`inline-block w-2 h-2 rounded-sm ${stanceBarColors[k]}`} />
+                        {stanceLabels[k]} {stanceCounts[k]}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
+            <button
+              type="button"
+              onClick={toggleStand}
+              className={`shrink-0 flex flex-col items-center justify-center gap-0.5 px-3 py-2 rounded border font-mono transition-colors ${
+                stood
+                  ? "border-fuchsia-500/50 bg-fuchsia-900/30 text-fuchsia-100"
+                  : "border-cyan-500/20 text-cyan-300/80 hover:border-fuchsia-500/40 hover:text-fuchsia-200"
+              }`}
+              title={stood ? "この観点から降りる" : "この観点に立つ"}
+            >
+              <Flag size={16} className={stood ? "fill-fuchsia-300/40" : ""} />
+              <span className="text-sm font-bold leading-none">{standCount}</span>
+              <span className="text-[9px] leading-none">{stood ? "立っている" : "立つ"}</span>
+            </button>
           </div>
         </section>
 

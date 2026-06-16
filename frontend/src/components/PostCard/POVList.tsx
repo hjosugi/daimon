@@ -1,5 +1,6 @@
-import React from "react"
 import { Heart, Sparkles } from "lucide-react"
+import type React from "react"
+import { memo } from "react"
 import type { Post, User } from "../../api/client"
 
 interface POVListProps {
@@ -10,7 +11,7 @@ interface POVListProps {
   povLikes: Record<string, { liked: boolean; likes: number }>
 }
 
-export const POVList: React.FC<POVListProps> = ({
+const POVListComponent: React.FC<POVListProps> = ({
   post,
   currentUser,
   onPOVClick,
@@ -28,7 +29,7 @@ export const POVList: React.FC<POVListProps> = ({
         // This can be added later if needed
         const isAutoTag = false
         const povLikeStatus = povLikes[pov] || { liked: false, likes: 0 }
-        
+
         return (
           <div key={pov} className="flex items-center gap-1">
             <button
@@ -55,7 +56,9 @@ export const POVList: React.FC<POVListProps> = ({
                     ? "text-red-300 hover:text-red-300 hover:bg-red-900/15 hover:border-red-500/25"
                     : "text-cyan-300/80 hover:text-red-300 hover:bg-red-900/10 hover:border-red-500/20"
                 }`}
-                title={povLikeStatus.liked ? "Unlike this POV" : "Like this POV"}
+                title={
+                  povLikeStatus.liked ? "Unlike this POV" : "Like this POV"
+                }
               >
                 <Heart
                   size={12}
@@ -74,3 +77,5 @@ export const POVList: React.FC<POVListProps> = ({
     </div>
   )
 }
+
+export const POVList = memo(POVListComponent)

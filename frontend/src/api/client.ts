@@ -51,6 +51,8 @@ export interface Post {
   score?: number
   likes?: number
   liked?: boolean
+  saved?: boolean
+  pov_stats?: Record<string, { liked: boolean; likes: number }>
   comments?: Comment[]
   commentCount?: number
   match_reason?: MatchReason

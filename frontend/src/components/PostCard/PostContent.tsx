@@ -1,7 +1,8 @@
-import React from "react"
-import { POVList } from "./POVList"
+import type React from "react"
+import { memo, useMemo } from "react"
 import type { Post, User } from "../../api/client"
 import { sanitizeText } from "../../utils/security"
+import { POVList } from "./POVList"
 
 interface PostContentProps {
   post: Post
@@ -18,22 +19,25 @@ interface PostContentProps {
 function renderTextWithHashtags(text: string): React.ReactNode {
   // Sanitize text to prevent XSS
   const sanitized = sanitizeText(text)
-  
+
   // Split by hashtags and render
   const parts = sanitized.split(/(#\w+)/g)
-  return parts.map((part, index) => {
+  let offset = 0
+  return parts.map((part) => {
+    const key = `${offset}:${part}`
+    offset += part.length
     if (part.startsWith("#")) {
       return (
-        <span key={index} className="text-fuchsia-300 font-mono">
+        <span key={key} className="text-fuchsia-300 font-mono">
           {part}
         </span>
       )
     }
-    return <span key={index}>{part}</span>
+    return <span key={key}>{part}</span>
   })
 }
 
-export const PostContent: React.FC<PostContentProps> = ({
+const PostContentComponent: React.FC<PostContentProps> = ({
   post,
   currentUser,
   onPOVClick,
@@ -41,10 +45,15 @@ export const PostContent: React.FC<PostContentProps> = ({
   povLikes,
   onTagClick: _onTagClick,
 }) => {
+  const renderedText = useMemo(
+    () => renderTextWithHashtags(post.text),
+    [post.text],
+  )
+
   return (
     <div className="p-4 sm:p-5 bg-[#1f1f35]">
       <p className="text-sm sm:text-base text-cyan-200 mb-3 sm:mb-4 leading-relaxed whitespace-pre-wrap break-words">
-        {renderTextWithHashtags(post.text)}
+        {renderedText}
       </p>
 
       <POVList
@@ -57,3 +66,5 @@ export const PostContent: React.FC<PostContentProps> = ({
     </div>
   )
 }
+
+export const PostContent = memo(PostContentComponent)

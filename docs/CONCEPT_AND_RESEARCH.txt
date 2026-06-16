@@ -1,0 +1,624 @@
+================================================================================
+DAIMON — 観点(POV)を通信の単位にする、深くてカジュアルな対話プラットフォーム
+プロジェクト解説 / アーキテクチャ / 解決する課題 / 関連研究 大全
+================================================================================
+最終更新: 2026-06
+本ドキュメントの目的:
+  (1) daimon が何で、何を解決しようとしているかを詳細に記述する
+  (2) システム構造(アーキテクチャ)を記述する
+  (3) 設計判断の一つ一つを、心理学・脳科学・社会科学・計算機科学の
+      具体的な研究に接続する
+  (4) 関連論文を大量に、領域別に羅列する(§7)。最新研究(2023–2026)も §7.7 に
+  (5) 同じ設計を実証している“成功したサービス例”を列挙する(§8)
+注: 文中 ✓ を付した文献はWeb検索で書誌情報を確認済み。それ以外(*)は記憶ベース
+    のため、引用時は年・巻号の最終確認を推奨。
+
+
+================================================================================
+0. 一行で
+================================================================================
+daimon は「投稿(主観)をそのまま流す」のではなく、主観を“観点(POV / 観点 = the
+axis you are speaking from)”に分解して蓄積することで、意見が違う人同士でも
+「同じ観点を見ている」という一点で安全に・深く接続できるようにする対話空間。
+SNS(人をフォローする)でも純粋な掲示板(ただ議論する)でもなく、
+「POVを通じて他者の感性構造に触れる場所」を目指す。
+
+
+================================================================================
+1. 解決しようとしている課題(なぜ作るか)
+================================================================================
+
+1.1 エンゲージメント最適化フィードの副作用
+  現代の主要SNSは「滞在・反応の最大化」を目的関数にしている。これは構造的に
+  (a) 感情的に強い・分断的なコンテンツを上位化し(怒りは最も伝播する)、
+  (b) フィルターバブル/エコーチェンバーを生み、
+  (c) 異なる立場の人との接触を“衝突”の形でしか起こさない。
+  → 参照: Pariser「The Filter Bubble」, Bakshy et al. 2015(Science), Sunstein
+    「#Republic」, Brady et al.(moral-emotional language の拡散), Iyengar et al.
+    (affective polarization)。
+
+1.2 「意見=好き/嫌い、点数」という粗すぎる単位
+  普通のレビュー/反応は「良い/悪い」「90点/嫌い」で終わる。これだと相手は
+  “全面同意か全面反論”にしかなれない。実際の感性はもっと多軸:
+  「シナリオは良いがテンポは悪い」「世界観は深いが初心者向けではない」。
+  単一スカラーに潰すと、部分的な一致・部分的な不一致という“最も豊かな接続点”が
+  失われる。
+  → ErogameScape(エロゲー批評空間)が実証している構造: 作品を「シナリオがいい/
+    演出が光る/CGが美しい/テンポ悪い…」という観点(POV)に分解し、各観点ごとに
+    賛同・コメント・統計を集約する。POVを“投稿の付属品”ではなく“主役級エンティ
+    ティ”として扱う。これは学術的には Aspect-Based Sentiment Analysis(観点別の
+    意見分解)に対応する。
+
+1.3 フォローグラフの同質性(homophily)
+  「人をフォローする」設計は同類性で閉じる。情報的に価値があるのは“弱い紐帯”
+  (遠いが特定の観点を共有する人)なのに、フォローSNSはそこに導線がない。
+  → Granovetter「弱い紐帯の強さ」, Burt「構造的空隙」。
+
+1.4 「カジュアル ↔ 深い」のジレンマ
+  深い議論プラットフォーム(熟議ツール, Kialo等)は敷居が高く続かない。
+  カジュアルなSNSは深さが出ない。daimon は「ワンタップの所作(立ち位置の表明)」
+  を入口に、その背後で“感性構造の蓄積”という深さを担保する、という二層設計で
+  この溝を埋める。
+
+1.5 daimon が立てる本質的な問い
+  「対立を“比率(ratio)・炎上”にせず、“接続”に変えるコミュニケーション設計は
+  可能か?」
+  鍵となる新プリミティブ = 【同軸異見】= 「意見は違うが、見ている観点は同じ」。
+  普通のSNSではこれは衝突。POV空間では“最も学びのある対話”になる。
+  → 計算democracy(Pol.is)とBridging-based ranking が、これを集団レベルで
+    実証しつつある。daimon はそれを“個人の発見体験”に落とす。
+
+
+================================================================================
+2. 中核アイデア: 観点(POV)を一級市民にする
+================================================================================
+最小データ単位を「投稿 + タグ」ではなく、以下にする:
+
+  post
+    └─ POV assertion(観点主張)
+         ├─ POV        : 例「シナリオがいい」「テンポ悪い」
+         ├─ stance     : 共感 / 問い / 違和感 / 補足 (= ErogameScape の A/B/C 的)
+         ├─ comment    : なぜそう見るのか
+         ├─ user       : 誰が
+         └─ (将来) spoiler / confidence / votes
+
+「投稿へのコメント」と「POVコメント」は別物であることが重要:
+  - 通常コメント = 「この投稿について話す」
+  - POVコメント = 「“この観点で見ると”どうかを話す」
+この差が、対話を“人 vs 人”から“観点という共有の土俵”へ移す。
+
+POVは同時に次の全部を兼ねる(これが設計上の美点):
+  評価軸 / 検索タグ / レコメンド特徴量 / 議論スレッド / 自己紹介 /
+  他者との距離の測定子。
+
+
+================================================================================
+3. Sense-Distance ランキング(daimon の署名機能)
+================================================================================
+発見(timeline)は単なる「意味が近い文章」ではなく、“感性距離”で並べる。
+
+  base = α·near + (1−α)·bridge + 0.15·common_ground
+                 [+ 0.20·popularity + 0.10·recency]
+  最終 = MMR(base, λ)   # 冗長性を削る(多様性確保)
+
+  near        : ユーザのsenseベクトルに近い(共感)
+  bridge      : 自分から“遠い”が、特定POVを共有する(= 弱い紐帯 / 同軸異見)
+  common_ground: 共有POVの被覆
+  popularity  : like + 3·save(saveはlikeより強い選好シグナル)
+  recency     : 新鮮さ
+  MMR         : Carbonell & Goldstein 1998(関連性と多様性のトレードオフ)
+
+将来拡張(理論的に正しい方向):
+  score = semantic_similarity
+        + shared_pov_weight
+        + pov_activity_recency
+        + pov_comment_quality
+        + user_affinity_by_pov
+        + disagreement_but_same_axis_bonus   ← 最重要・最も新しい項
+「見ている観点が同じなら、結論が逆でも上位化する」= Bridging-based ranking の
+個人版。
+
+
+================================================================================
+4. アーキテクチャ / システム構造
+================================================================================
+
+4.1 構成(言語/役割)
+  - フロント : React 19 + Vite + TypeScript + Tailwind v4 + @tanstack/react-query
+  - API      : Go(chi / pgx / 自前Qdrant RESTクライアント)。高速・低コスト・
+               低レイテンシ。SQLは内部レジストリ(dbq.SQL)に集約。
+  - ML       : Python(FastAPI)— Goが不得手な2点だけに限定
+                 /embed : 文埋め込み(sentence-transformers)
+                 /povs  : 観点(名詞句)抽出(spaCy ja/en + 正規表現フォールバック)
+  - ベクトルDB: Qdrant(Cosine, 384次元)。Cloud無料枠 ~1M件想定。
+  - RDB      : PostgreSQL(posts/povs/likes/comments/follows/bookmarks/
+               pov_likes/pov_comments)
+  - キャッシュ: Redis(バッチ事前計算の格納先)
+  - バッチ   : Goの cmd/batch。timeline事前生成 / suggest事前生成 /
+               long-post deep-analyze。
+
+4.2 埋め込みモデルの設計判断(重要)
+  使用: paraphrase-multilingual-MiniLM-L12-v2(384次元・多言語・日本語対応)。
+  理由: 旧 all-MiniLM-L6-v2 は英語専用で、日本語が縮退ベクトルに潰れて検索が
+        一律~40%マッチになり機能しなかった。384次元維持でQdrant改修不要、
+        768次元よりメモリ半分(~1M件のコスト最適)。
+  根拠論文: Reimers & Gurevych 2019(Sentence-BERT), 2020(多言語化のための
+        知識蒸留)。
+
+4.3 長文 × 深い分析
+  投稿上限を 10,000 → 40,000字へ(深いPOV論証を書けるように)。
+  ただし MiniLM系は ~128トークンで切れるため、伸ばすだけでは先頭しか埋め込まれ
+  ない。対策:
+    - max_seq_length=512 に拡張
+    - 1200字超はチャンク分割→平均プール(投稿“全体”をベクトル化, Cosineは
+      スケール不変なので種まき時のplain encodeと整合)
+  バッチ deep-analyze:
+    - 長文をチャンクごとにML /povs にかけ、複数の観点へ自動分解して登録
+      (is_auto=true, (post_id,pov)一意制約で重複無視, 再実行安全)。
+    - 1つの深い投稿 → 複数のPOVノード化 → 議論の土俵が増える。
+  認知科学的含意: 「深く処理されたものほど記憶・接続が強い」
+    → Craik & Lockhart 1972(Levels of Processing)。長文化は単なるUXでなく、
+      “深い符号化”を促す装置。
+
+4.4 POV議論ページ(観点ページ)
+  - そのPOVが付いた関連投稿一覧
+  - POVコメント(stance: 共感/問い/違和感/補足、自分のは削除可、未ログインは閲覧可)
+  - スタンス分布バー(コミュニティの傾きを一目で。統計テーブルにはしない=軽量)
+  - 「この観点に立つ」= POVそのものへの賛同(pov_likes)をヘッダに表示+トグル。
+    “いいね(指標)”でなく“立ち位置(アイデンティティ)”として提示。
+
+
+================================================================================
+5. 設計 ↔ 科学 の対応(本ドキュメントの核心)
+================================================================================
+daimon の各機構を、脳科学→心理学→社会科学→計算機科学の順で接地する。
+
+--------------------------------------------------------------------------------
+5.1 脳科学(なぜ“通信”と“距離”が脳レベルで実在するか)
+--------------------------------------------------------------------------------
+● 通信の成立 = 脳の同期
+  Stephens, Silbert & Hasson (2010, PNAS) ✓「Speaker–listener neural coupling
+  underlies successful communication」。話者と聴者の脳活動が時空間的に結合し、
+  “伝わらない”と結合が消える。先行的(予測的)結合が大きいほど理解が深い。
+  → daimon の含意: 「通信」は比喩でなく脳同期の現象。POVという共有フレームは
+    結合を起こしやすくする“足場”。Friston の予測処理(下記)とも整合。
+
+● 感性の近さ = 神経応答の近さ、しかも社会的距離で減衰
+  Parkinson, Kleinbaum & Wheatley (2018, Nat. Commun. 9:332) ✓「Similar neural
+  responses predict friendship」。自然動画視聴中の神経応答の類似度は親友で最大、
+  社会的距離が増すほど低下。
+  → daimon の含意: 「Sense-Distance(感性距離)」は神経的実在のメタファとして
+    妥当。ベクトル距離は“世界の受け取り方の距離”の代理。bridge(遠いが特定軸を
+    共有)はここに橋を架ける操作。
+
+● 自己開示は本質的に報酬
+  Tamir & Mitchell (2012, PNAS 109(21):8038–8043) ✓「Disclosing information about
+  the self is intrinsically rewarding」。自己開示で中脳辺縁ドーパミン系(側坐核・
+  腹側被蓋野)が活動。人は自己開示のために金銭を手放す。発話の30–40%が自己に
+  関する情報。
+  → daimon の含意: 「自分の観点を書く/立ち位置を示す」こと自体が神経報酬。
+    POV投稿・stance表明を“低摩擦で気持ちよい”所作にすれば内発的に回る。
+
+● メンタライジング(他者の心の推論)ネットワーク
+  内側前頭前皮質(mPFC)、側頭頭頂接合部(TPJ)、楔前部、上側頭溝。
+  Saxe & Kanwisher (2003, TPJ と心の理論), Mitchell, Macrae & Banaji (2006,
+  Neuron: 自分と“似た”他者の判断時に腹側mPFC、“似ていない”他者で背側mPFC)。
+  → daimon の含意: 「似た人/遠い人」で脳の処理系が実際に分かれる。daimon が
+    “遠い人を、共有POV経由で安全に提示”するのは、メンタライジングの負荷を下げる
+    足場づくり。
+
+● 好奇心とドーパミン/海馬学習
+  Loewenstein (1994, 情報ギャップ理論), Kang et al. (2009, Psych. Science:
+  好奇心が尾状核・前頭前野を賦活し記憶を促進), Gruber, Gelman & Ranganath
+  (2014, Neuron: 好奇状態が海馬依存学習を増強)。
+  → daimon の含意: 「同軸異見(同じ観点で逆の結論)」は“予測の裂け目”=情報
+    ギャップを生み、好奇心→学習→記憶の回路を起動する。対立を学習報酬に変換。
+
+● 予測処理 / 自由エネルギー
+  Friston (2010, 自由エネルギー原理), Clark (2013, predictive processing)。
+  脳は予測誤差の最小化器。新規だが“接地可能”な情報(=遠いが共有軸あり)は
+  最良の学習源。
+  → daimon の bridge は「予測誤差が大きすぎず小さすぎない」最適帯を狙う設計。
+
+● 注意・扱い注意の領域(誇張を避ける)
+  ミラーニューロン: 直接的“共感の座”という大衆的解釈は過剰。Hickok「The Myth
+  of Mirror Neurons」批判を併記すべき。オキシトシン=“信頼ホルモン”も再現性問題
+  あり。daimon の主張は neural coupling / 神経類似性 / 自己開示報酬 の頑健な
+  知見に依拠し、ミラーニューロン/オキシトシンには寄りかからない。
+
+--------------------------------------------------------------------------------
+5.2 心理学(なぜ“観点分解”と“距離越え”が人を動かすか)
+--------------------------------------------------------------------------------
+● 接触仮説
+  Allport (1954)「The Nature of Prejudice」, Pettigrew & Tropp (2006, メタ分析)。
+  条件を整えた接触は偏見を減らす。
+  → daimon: 遠い立場の人との“共有POVを足場にした”接触は、まさに条件付き接触。
+
+● 視点取得より“視点聴取”
+  Eyal, Steffel & Epley (2018, JPSP)「Perspective Mistaking」。相手の心は
+  “想像する(perspective-taking)”より“実際に聞く(perspective-getting)”方が当たる。
+  → daimon: POVは「相手の視点を聞く」ための装置にすべき(想像させない)。
+
+● 自己拡張理論 & 親密性の実験的生成
+  Aron et al. (1997, Pers. Soc. Psychol. Bull. 23(4):363–377) ✓「The Experimental
+  Generation of Interpersonal Closeness」(=36の質問)。段階的・相互の自己開示が
+  45分で親密性を生む。Aron の self-expansion model。
+  → daimon: 「カジュアルに深く」は、段階的自己開示の設計に落とせる。POV→stance→
+    なぜ→対話、という漸増は36の質問のSNS版。Reis & Shaver の親密性モデル
+    (開示+応答的反応)も設計指針。
+
+● 処理水準(深さ)
+  Craik & Lockhart (1972)「Levels of Processing」。深く意味処理した情報ほど
+  残る。→ 長文・観点論証は“深い符号化”を促す。
+
+● 認知的不協和・反証回避
+  Festinger (1957). 人は不協和を避け同調情報を選ぶ(確証バイアス, Nickerson
+  1998)。→ だから“対立を接続に変える”足場(同軸異見)を明示的に設計しないと、
+  人は自動的にエコーチェンバーへ向かう。
+
+● 情報ギャップ/好奇心(心理側)
+  Loewenstein (1994). 既知と未知の“ちょうどよい隙間”が好奇心を最大化。
+  → bridge の距離調整(遠すぎず近すぎず)はこの最適隙間の工学化。
+
+● 解釈レベル理論 / 心理的距離
+  Trope & Liberman (2010, Psych. Review). 距離(時間/空間/社会/仮説性)が
+  抽象度を変える。→ “Sense-Distance”を可視化することは、相手をどの解像度で
+  扱うかの調整子になりうる。
+
+● 道徳のリフレーミング / 道徳基盤
+  Haidt (2012)「The Righteous Mind」, Feinberg & Willer (2015, moral reframing:
+  相手の道徳基盤の言語で語ると説得が通る)。
+  → daimon: 同じ事象を“別の観点(=別の道徳軸)”で語り直す土俵を提供する。
+
+● 共有された現実
+  Hardin & Higgins (1996)「Shared Reality」, Echterhoff et al. (2009)。
+  人は他者と現実を共有することで世界を確かにする。→ 共有POVは“小さな共有現実”。
+
+● 知的謙虚さ / 認識的好奇心
+  Leary et al. (2017, 知的謙虚さ尺度), Porter & Schumann (2018)。
+  自分が間違っている確率を口にする態度が対話を柔らかくする。
+  → daimon: stance「問い」「違和感」を一級の選択肢にすることで知的謙虚さを
+    UIに埋め込む。
+
+● 認知欲求 / 最適弁別性
+  Cacioppo & Petty (1982, Need for Cognition), Brewer (1991, Optimal
+  Distinctiveness: 人は同化と差別化の均衡を求める)。
+  → 「同じ観点(同化)で違う立場(差別化)」は最適弁別性そのもの。daimon の同軸
+    異見は心理的に“居心地が良い”理由の説明になる。
+
+--------------------------------------------------------------------------------
+5.3 社会科学 / ネットワーク(なぜ“遠さ”に価値があるか)
+--------------------------------------------------------------------------------
+● 弱い紐帯・構造的空隙・橋渡し資本
+  Granovetter (1973)「The Strength of Weak Ties」, Burt (1992/2004, Structural
+  Holes / “Structural Holes and Good Ideas”), Putnam (2000, bonding vs bridging
+  social capital)。新規情報と良いアイデアは橋渡し位置から来る。
+  → daimon の bridge は、弱い紐帯/構造的空隙の“発見の自動化”。
+
+● 感情的分極・エコーチェンバー
+  Iyengar et al. (2019, affective polarization レビュー), Sunstein (2017,
+  #Republic), Bail (2021)「Breaking the Social Media Prism」(反対意見への
+  単純曝露はむしろ硬化させうる—曝露の“やり方”が重要)。
+  → daimon: 単なる反対意見曝露でなく“共有軸を足場にした”曝露にする根拠。
+
+● 意見ダイナミクス(数理)
+  Hegselmann & Krause (2002, bounded confidence), Deffuant et al. (2000),
+  Axelrod (1997, 文化伝播)。人は“信頼区間内”の意見としか収束しない。
+  → daimon: bridge は各人の bounded confidence の縁を狙って提示する操作と解釈
+    できる(縁の外は届かない/縁の内は変化を生む)。
+
+--------------------------------------------------------------------------------
+5.4 熟議 / シビックテック / HCI(集団レベルの先行実装)
+--------------------------------------------------------------------------------
+● Pol.is(最重要の先行例)
+  Small, Bjorkegren, Erkkilä, Shaw & Megill (2021, RECERCA 26(2)) ✓「Polis:
+  Scaling Deliberation by Mapping High Dimensional Opinion Spaces」。賛否投票を
+  次元圧縮し意見空間に人を配置、“異なるグループ間で合意される発言”を浮上。
+  台湾 vTaiwan で政策合意に使用。
+  → daimon: Sense-Distance + bridge は Pol.is の“個人発見体験”版。
+
+● Bridging-based ranking / Community Notes
+  Ovadya (2022, bridging-based ranking の提唱), Wojcik, Hilgard, Judd, Mocanu,
+  Ragain, Hunzaker, Coleman & Baxter (2022, arXiv:2210.15723) ✓「Birdwatch:
+  Crowd Wisdom and Bridging Algorithms…」。対立する立場の双方から有用評価を得た
+  ものだけを上げる行列分解。X(Twitter)の Community Notes 本体。
+  → daimon の disagreement_but_same_axis_bonus の直接の理論的根拠。
+
+● 構造化熟議UI
+  Kriplean et al. (2012, CSCW)「ConsiderIt」(賛否をpro/con論点に分解),
+  Kriplean et al. (2012, “Reflect”: 傾聴の足場), Kialo(議論ツリー)。
+  → daimon の stance/POVコメントの先行UI。
+
+● 通信における共通基盤
+  Clark & Brennan (1991)「Grounding in Communication」。会話は共通基盤の逐次
+  構築。→ POVは共通基盤を“明示的な単位”にしたもの。
+
+--------------------------------------------------------------------------------
+5.5 計算機科学 / NLP / IR / RecSys(実装の背骨)
+--------------------------------------------------------------------------------
+● 文埋め込み
+  Reimers & Gurevych (2019, EMNLP)「Sentence-BERT」✓概念, (2020, EMNLP)
+  「Making Monolingual Sentence Embeddings Multilingual using Knowledge
+  Distillation」(daimon採用モデル系列の元), Mikolov et al. (2013, word2vec),
+  Devlin et al. (2019, BERT)。
+
+● 観点分解 = Aspect-Based Sentiment Analysis / Stance
+  Pontiki et al. (2014, SemEval-2014 Task 4: ABSA), Hu & Liu (2004, feature-based
+  opinion mining), Mohammad et al. (2016, SemEval stance detection),
+  ALDONAr/各種ABSAニューラルモデル。
+  → 「作品全体の好悪」でなく“観点ごと”に切る研究系譜。POV自動抽出の理論。
+
+● 多様性・セレンディピティ・脱フィルターバブル
+  Carbonell & Goldstein (1998, SIGIR)「Maximal Marginal Relevance」(daimon
+  使用), Ge, Delgado-Battenfeld & Jannach (2010, RecSys: beyond accuracy—
+  coverage & serendipity), Zhang et al. (2012, WSDM)「Auralist」(serendipity),
+  Pariser (2011, Filter Bubble), Nguyen et al. (2014, WWW: filter bubble 実証),
+  Bakshy, Messing & Adamic (2015, Science)。
+
+● ベクトル検索基盤
+  Johnson, Douze & Jégou (2017, FAISS / billion-scale ANN), Malkov & Yashunin
+  (2018, HNSW)。Qdrantはこの系譜。
+
+
+================================================================================
+6. 新しいコミュニケーション機構(科学に接地した提案)
+================================================================================
+6.1 観点フォロー(follow-the-axis)
+  人でなく“観点”を購読。タイムラインが「人の集合」でなく「気にしている軸の集合」
+  で形成される。SNSの根本プリミティブの置換。
+  根拠: Granovetter(弱い紐帯) / Pol.is(opinion space)。
+
+6.2 同軸異見コネクト(daimon の核・最も新しい)
+  「同じ観点に立っていて、あなたと逆に感じている人」をそっと提示し対話に誘う。
+  対立を ratio でなく接続に変える。
+  根拠: Bridging-based ranking(Wojcik et al. / Ovadya), 接触仮説(Allport,
+  Pettigrew & Tropp), 好奇心の情報ギャップ(Loewenstein, Kang et al.),
+  最適弁別性(Brewer)。
+
+6.3 スタンス=“いいね”でなく“立ち位置”
+  ワンタップの 共感/問い/違和感 が、その人の sense ベクトルを更新。カジュアルな
+  所作が深いML結果に直結。自己開示の神経報酬(Tamir & Mitchell)で内発的に回る。
+
+6.4 漸増する自己開示(カジュアル→深い)
+  POV → stance → なぜ → 対話、という段階設計。
+  根拠: Aron et al.(36の質問 / self-expansion), Reis & Shaver(親密性=開示+
+  応答的反応)。
+
+6.5 知的謙虚さの埋め込み
+  「問い」「違和感」を一級の反応に。正しさの主張前に“間違っている確率”を出せる
+  UI。根拠: Leary et al.(知的謙虚さ), Bail(単純曝露の限界)。
+
+
+================================================================================
+7. 関連論文 大全(領域別・羅列)
+================================================================================
+[凡例] ✓ = 書誌確認済み。* = 著者/年は確かだが巻号は要確認。
+
+--- 7.1 脳科学 / 社会神経科学 -------------------------------------------------
+✓ Stephens, G. J., Silbert, L. J., & Hasson, U. (2010). Speaker–listener neural
+   coupling underlies successful communication. PNAS, 107(32), 14425–14430.
+✓ Parkinson, C., Kleinbaum, A. M., & Wheatley, T. (2018). Similar neural
+   responses predict friendship. Nature Communications, 9, 332.
+✓ Tamir, D. I., & Mitchell, J. P. (2012). Disclosing information about the self
+   is intrinsically rewarding. PNAS, 109(21), 8038–8043.
+*  Saxe, R., & Kanwisher, N. (2003). People thinking about thinking people: the
+   role of the temporo-parietal junction in “theory of mind”. NeuroImage.
+*  Mitchell, J. P., Macrae, C. N., & Banaji, M. R. (2006). Dissociable medial
+   prefrontal contributions to judgments of similar and dissimilar others.
+   Neuron, 50(4), 655–663.
+*  Kang, M. J., et al. (2009). The wick in the candle of learning: epistemic
+   curiosity activates reward circuitry and enhances memory. Psychological
+   Science, 20(8), 963–973.
+*  Gruber, M. J., Gelman, B. D., & Ranganath, C. (2014). States of curiosity
+   modulate hippocampus-dependent learning via the dopaminergic circuit.
+   Neuron, 84(2), 486–496.
+*  Friston, K. (2010). The free-energy principle: a unified brain theory?
+   Nature Reviews Neuroscience, 11(2), 127–138.
+*  Clark, A. (2013). Whatever next? Predictive brains, situated agents, and the
+   future of cognitive science. Behavioral and Brain Sciences, 36(3).
+*  Lieberman, M. D. (2013). Social: Why Our Brains Are Wired to Connect.
+*  Hasson, U., Ghazanfar, A. A., Galantucci, B., Garrod, S., & Keysers, C.
+   (2012). Brain-to-brain coupling: a mechanism for creating and sharing a
+   social world. Trends in Cognitive Sciences, 16(2), 114–121.
+*  Schultz, W. (1998). Predictive reward signal of dopamine neurons. J.
+   Neurophysiology.
+[批判的に扱う / 誇張回避]
+*  Hickok, G. (2014). The Myth of Mirror Neurons. (ミラーニューロン過剰解釈批判)
+*  Nave, G., et al. (2015). Does oxytocin increase trust in humans? A critical
+   review. (オキシトシン再現性)
+
+--- 7.2 心理学(社会・認知・対人) ---------------------------------------------
+✓ Aron, A., Melinat, E., Aron, E. N., Vallone, R. D., & Bator, R. J. (1997).
+   The experimental generation of interpersonal closeness. Pers. Soc. Psychol.
+   Bull., 23(4), 363–377.
+*  Allport, G. W. (1954). The Nature of Prejudice. (接触仮説)
+*  Pettigrew, T. F., & Tropp, L. R. (2006). A meta-analytic test of intergroup
+   contact theory. JPSP, 90(5), 751–783.
+*  Eyal, T., Steffel, M., & Epley, N. (2018). Perspective mistaking: accurately
+   understanding the mind of another requires getting perspective, not taking
+   it. JPSP, 114(4), 547–571.
+*  Reis, H. T., & Shaver, P. (1988). Intimacy as an interpersonal process.
+*  Aron, A., & Aron, E. N. (1986). Love and the Expansion of Self
+   (self-expansion model).
+*  Craik, F. I. M., & Lockhart, R. S. (1972). Levels of processing: a framework
+   for memory research. J. Verbal Learning & Verbal Behavior, 11(6), 671–684.
+*  Festinger, L. (1957). A Theory of Cognitive Dissonance.
+*  Nickerson, R. S. (1998). Confirmation bias: a ubiquitous phenomenon in many
+   guises. Review of General Psychology, 2(2), 175–220.
+*  Loewenstein, G. (1994). The psychology of curiosity: a review and
+   reinterpretation. Psychological Bulletin, 116(1), 75–98.
+*  Trope, Y., & Liberman, N. (2010). Construal-level theory of psychological
+   distance. Psychological Review, 117(2), 440–463.
+*  Cacioppo, J. T., & Petty, R. E. (1982). The need for cognition. JPSP, 42(1).
+*  Brewer, M. B. (1991). The social self: on being the same and different at the
+   same time (optimal distinctiveness). Pers. Soc. Psychol. Bull., 17(5).
+*  Hardin, C. D., & Higgins, E. T. (1996). Shared reality: how social
+   verification makes the subjective objective.
+*  Echterhoff, G., Higgins, E. T., & Levine, J. M. (2009). Shared reality:
+   experiencing commonality with others’ inner states about the world.
+   Perspectives on Psychological Science, 4(5).
+*  Leary, M. R., et al. (2017). Cognitive and interpersonal features of
+   intellectual humility. Pers. Soc. Psychol. Bull., 43(6).
+*  Feinberg, M., & Willer, R. (2015). From gulf to bridge: when do moral
+   arguments facilitate political influence? (moral reframing). PSPB, 41(12).
+*  Haidt, J. (2012). The Righteous Mind (moral foundations).
+
+--- 7.3 社会学 / ネットワーク / 政治コミュニケーション -------------------------
+*  Granovetter, M. S. (1973). The strength of weak ties. American Journal of
+   Sociology, 78(6), 1360–1380.
+*  Burt, R. S. (1992). Structural Holes: The Social Structure of Competition.
+*  Burt, R. S. (2004). Structural holes and good ideas. AJS, 110(2).
+*  Putnam, R. D. (2000). Bowling Alone (bonding vs bridging social capital).
+*  Iyengar, S., Lelkes, Y., Levendusky, M., Malhotra, N., & Westwood, S. J.
+   (2019). The origins and consequences of affective polarization. Annual Review
+   of Political Science, 22, 129–146.
+*  Sunstein, C. R. (2017). #Republic: Divided Democracy in the Age of Social
+   Media.
+*  Bail, C. (2021). Breaking the Social Media Prism.
+*  Bail, C., et al. (2018). Exposure to opposing views on social media can
+   increase political polarization. PNAS, 115(37).
+*  Brady, W. J., et al. (2017). Emotion shapes the diffusion of moralized
+   content in social networks. PNAS, 114(28).
+*  Hegselmann, R., & Krause, U. (2002). Opinion dynamics and bounded confidence.
+   JASSS, 5(3).
+*  Deffuant, G., et al. (2000). Mixing beliefs among interacting agents.
+   Advances in Complex Systems.
+*  Axelrod, R. (1997). The dissemination of culture. J. Conflict Resolution.
+
+--- 7.4 熟議 / シビックテック / HCI -------------------------------------------
+✓ Small, C., Bjorkegren, M., Erkkilä, T., Shaw, L., & Megill, C. (2021). Polis:
+   scaling deliberation by mapping high dimensional opinion spaces. RECERCA,
+   26(2).
+✓ Wojcik, S., Hilgard, S., Judd, N., Mocanu, D., Ragain, S., Hunzaker, M. B. F.,
+   Coleman, K., & Baxter, J. (2022). Birdwatch: crowd wisdom and bridging
+   algorithms can inform understanding and reduce the spread of misinformation.
+   arXiv:2210.15723.
+*  Ovadya, A. (2022). Bridging-based ranking. (Belfer Center / GETTING-Plurality)
+*  Thorburn, L., Bengani, P., & Ovadya, A. (2022–). Bridging systems / What does
+   it mean to bridge? (Understanding Recommenders series)
+*  Kriplean, T., Morgan, J., Freelon, D., Borning, A., & Bennett, L. (2012).
+   Supporting reflective public thought with ConsiderIt. CSCW.
+*  Kriplean, T., et al. (2012). Is this what you meant? Promoting listening on
+   the web with Reflect. CHI.
+*  Clark, H. H., & Brennan, S. E. (1991). Grounding in communication. In
+   Perspectives on Socially Shared Cognition.
+*  Bakshy, E., Messing, S., & Adamic, L. A. (2015). Exposure to ideologically
+   diverse news and opinion on Facebook. Science, 348(6239).
+
+--- 7.5 NLP / 埋め込み / 意見分解 / 検索 / 推薦 -------------------------------
+*  Reimers, N., & Gurevych, I. (2019). Sentence-BERT: sentence embeddings using
+   Siamese BERT-networks. EMNLP-IJCNLP.
+*  Reimers, N., & Gurevych, I. (2020). Making monolingual sentence embeddings
+   multilingual using knowledge distillation. EMNLP. (daimon採用モデル系列)
+*  Devlin, J., et al. (2019). BERT. NAACL.
+*  Mikolov, T., et al. (2013). Efficient estimation of word representations in
+   vector space (word2vec).
+*  Pontiki, M., et al. (2014). SemEval-2014 Task 4: aspect based sentiment
+   analysis.
+*  Hu, M., & Liu, B. (2004). Mining and summarizing customer reviews. KDD.
+*  Mohammad, S., et al. (2016). SemEval-2016 Task 6: detecting stance in tweets.
+*  Carbonell, J., & Goldstein, J. (1998). The use of MMR, diversity-based
+   reranking for reordering documents and producing summaries. SIGIR.
+*  Ge, M., Delgado-Battenfeld, C., & Jannach, D. (2010). Beyond accuracy:
+   evaluating recommender systems by coverage and serendipity. RecSys.
+*  Zhang, Y. C., et al. (2012). Auralist: introducing serendipity into music
+   recommendation. WSDM.
+*  Pariser, E. (2011). The Filter Bubble.
+*  Nguyen, T. T., et al. (2014). Exploring the filter bubble: the effect of using
+   recommender systems on content diversity. WWW.
+*  Johnson, J., Douze, M., & Jégou, H. (2017). Billion-scale similarity search
+   with GPUs (FAISS).
+*  Malkov, Yu. A., & Yashunin, D. A. (2018). Efficient and robust approximate
+   nearest neighbor search using HNSW graphs. IEEE TPAMI.
+
+--- 7.6 哲学 / 対話理論(背景思想) -------------------------------------------
+*  Bakhtin, M. (1981). The Dialogic Imagination (dialogism / 多声性).
+*  Habermas, J. (1984). The Theory of Communicative Action (熟議的合理性).
+*  Buber, M. (1923). I and Thou (我と汝 / 対話的関係).
+
+--- 7.7 最新研究(2023–2026): AI媒介熟議 / 生成的社会選択 / Bridging検証 ---------
+✓ Tessler, M. H., Summerfield, C., et al. (2024). AI can help humans find common
+   ground in democratic deliberation. Science, 386(6719). DeepMind「Habermas
+   Machine」。~5,700名規模。LLMが各人の自由記述から“重なり”を抽出して集団声明を
+   生成し、人間ファシリテータより明確・公平と評価され、討議後に集団の分断が低下。
+   → daimon の「同軸異見 → 共通基盤」の AI 媒介版。最重要の最新例。
+✓ Fish, S., Gölz, P., Procaccia, A. D., et al. (2023, arXiv:2309.01291;
+   2025「The Next Generation」). Generative Social Choice. 提出された文だけでなく
+   “あらゆる発言”を候補とみなし、LLMで合意文を生成しつつ各人の選好を予測。
+*  PoliCon (2025, arXiv:2505.19558). 欧州議会13年分(2009–2022)2,225件の熟議
+   記録で、LLMの合意決議草案能力を評価するベンチマーク。
+*  Community Notes 限界の検証 (2024–2025): PNAS「Understanding the strengths and
+   limitations of community-based responses to misinformation」(2025) ほか。
+   表示される note は ~10% に留まり減少傾向、評価者バイアスに敏感、分断的話題ほど
+   正確な note が表示されにくい(2024米大統領選で正確noteの74%が非表示と報告)。
+   → bridging は有望だが“規模と分断”が難所。daimon は小さな共有軸から積む設計で
+     この難所を避ける(設計上の重要な含意)。
+*  Voelkel, J. G., Willer, R., et al. (2024, Science). Megastudy(米国 ~32,000名,
+   25 介入を比較)。有効: 反対派の共感的人物の提示 / 共有アイデンティティの強調 /
+   相手の誤認の訂正。ただし効果は約2週間で減衰 → “一回の介入”でなく“日常の体験
+   設計”が必要、という根拠。
+*  Voelkel, J. G., et al. (2023, Nature Human Behaviour). 感情的分極を下げる介入が
+   必ずしも反民主的態度を改善しない(分極と民主規範は別問題)。介入設計の注意点。
+*  Argyle, L. P., et al. (2023). AI チャット補助が分断的話題の会話の質を高めうる
+   (応答候補の提示による会話媒介)。※венル要確認。
+
+
+================================================================================
+8. 成功したサービス例(設計の実証 — 既に世界が部分的に証明していること)
+================================================================================
+daimon の各設計判断は、既に大規模に成功した実サービスで部分的に実証済み。
+daimon は粗く言えば「これらの良いとこ取り + 同軸異見(bridging)」である。
+
+8.1 観点(POV)を一級にする = アスペクト分解レビュー文化
+  - ErogameScape(エロゲー批評空間): 直接の着想源。作品を観点(シナリオ/演出/CG/
+    テンポ…)へ分解し、観点ごとに賛同・コメント・統計を集約。20年続く濃いDB。
+  - Letterboxd(映画): カジュアルな短評 + リスト文化で“レビューを社交”にして急成長。
+    長文でも軽い空気 ← daimon の「カジュアルに深く」の好例。
+  - RateYourMusic / Discogs(音楽): 細粒度ジャンル・ディスクリプタ = 観点。
+  - The StoryGraph(読書): mood・pace など“観点別”タグで Goodreads に対抗。
+  - Untappd / Vivino / BeerAdvocate(酒): 見た目・香り・味の多軸評価。
+  - MyAnimeList / AniList(アニメ): タグ + ユーザ間 affinity%(= 素朴な感性距離)。
+  - BoardGameGeek: 重厚な観点別評価 + リスト + 議論文化。
+  - Genius: 歌詞を“行単位”で注釈 = 断片への POV。
+  → 学び: 「全体評価」より「観点別」の方が、書く側も読む側も豊かになる。
+
+8.2 Bridging / 横断的合意 = daimon の中核思想の大規模実証
+  - Community Notes(X): bridging アルゴリズムが本番運用。「対立する双方から有用」と
+    評価された note だけ表示。daimon の同軸異見ボーナスの実在証明(限界は §7.7)。
+  - Pol.is + vTaiwan(台湾): 実際の政策合意形成に使用(Uber規制等)。意見空間
+    マッピング + 橋渡し発言の浮上。daimon の Sense-Distance の集団版。
+  - Wikipedia: NPOV + 合意編集。地球最大の“視点を越えた合意”装置。
+  → 学び: 「横断的に支持される」をランキング信号にすると質が上がる。
+
+8.3 構造化で“深いのに使える”= Q&A・投票・コミュニティ
+  - Stack Overflow: 構造化Q&A + 評判 + 投票で、雑談フォーラムを“永続知識”に変えた。
+  - Reddit: コミュニティ(= 話題/軸) + 投票。「subreddit = 軸」モデルが巨大化。
+  - Metaculus / 予測市場: 主観(予測)を構造化して集合知に。
+  - Kialo: 賛否を議論ツリーへ構造化(深い議論UIの実例)。
+  → 学び: 主観を“構造”に載せると、カジュアルでも蓄積・再利用できる。
+
+8.4 フォローグラフを超える発見 = 興味グラフ / セレンディピティ
+  - TikTok: フォローでなく“興味”でフィード。「人より軸」が主流化しうる最大の証明
+    → daimon の「観点フォロー(follow-the-axis)」の追い風。
+  - Pinterest: ソーシャルグラフでなく興味グラフでの発見。
+  - Spotify「Discover Weekly」: セレンディピティの本番実装(MMR的多様化)。
+  - Are.na: チャンネル横断で“アイデアを繋ぐ”静かで深いキュレーション文化。
+  → 学び: 「誰をフォローするか」でなく「何の軸に関心があるか」で十分強い。
+
+8.5 一言で
+  ErogameScape の観点分解 ×(Community Notes / Pol.is の橋渡し)×(Letterboxd の
+  カジュアルな深さ)×(TikTok の興味グラフ)を、一つの“感性距離で繋ぐ”体験に統合
+  する — それが daimon の立ち位置。
+
+
+================================================================================
+9. 一段落でのまとめ(面接で言うなら)
+================================================================================
+daimon は「主観をそのまま流すSNS」への反命題である。主観を“観点(POV)”という
+共有可能な軸に分解して蓄積し、感性距離(Sense-Distance)で人とコンテンツを並べ、
+「意見は違うが観点は同じ」という関係を上位化(bridging)することで、対立を炎上
+ではなく学習と接続に変換する。これは Pol.is と Bridging-based ranking が集団
+レベルで示した方向を、神経科学(通信=脳同期 / 感性近接=神経類似 / 自己開示=
+報酬)と対人心理学(接触仮説 / 視点聴取 / 漸増的自己開示 / 最適弁別性)に接地し、
+個人の発見体験へ落とし込む試みである。
+================================================================================

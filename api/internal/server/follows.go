@@ -141,7 +141,8 @@ func (s *Server) handleFollowingFeed(w http.ResponseWriter, r *http.Request) {
 		}
 		out = append(out, postResp{
 			ID: id, Text: pm.text, Povs: b.povs[id], UserID: pm.userID, Username: pm.username,
-			Likes: b.likeCounts[id], Liked: b.liked[id], CommentCount: b.commentCounts[id],
+			Likes: b.likeCounts[id], Liked: b.liked[id], Saved: b.saved[id],
+			CommentCount: b.commentCounts[id], POVStats: b.povStats(b.povs[id]),
 			CreatedAt: pm.createdAt.Format(time.RFC3339),
 		})
 	}

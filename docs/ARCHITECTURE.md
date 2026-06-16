@@ -1,523 +1,358 @@
-# Architecture: Daimon SNS
+# Architecture
 
-> Current note: the Docker stack now runs the Go API in `api/` plus the Python
-> ML microservice in `ml-service/`. The Python FastAPI implementation in
-> `backend/` still exists as a reference/local path and owns seed/migration
-> tooling. See `docs/ARCHITECTURE.local.md` and `docs/ML_VECTOR.local.md` for
-> the more detailed local implementation notes.
+Daimon の現行実装は、Go API を中心にしたSNS/検索アプリです。Python は本体APIではなく、embedding と POV抽出だけを担当する ML microservice として分離されています。
 
-## Overview
+この文書は、いま実際に動いている構成を正本として説明します。古い `backend/` のFastAPI実装は参照実装・seed・migration周辺として残っていますが、現在の推奨実行経路ではありません。
 
-Daimon is a "Sense Distance" SNS that connects users based on value similarity using Vector Search and POVs (Points of View). The system uses a hybrid approach combining explicit POV-based matching with implicit vector-based similarity.
+## 全体像
 
-## Design Philosophy
+```text
+React / Vite frontend
+        |
+        | REST
+        v
+Go API
+        | SQL                         | HTTP
+        v                             v
+PostgreSQL                    Python ML service
+System of Record              embedding / POV extraction
+        |
+        | IDs, relations, metadata
+        v
+Qdrant
+System of Search
 
-**PostgreSQL = System of Record (真実のDB)**  
-**Qdrant = System of Search (検索・推薦のための近似インデックス)**
-
-This separation ensures:
-- **Strong consistency** for critical data (PostgreSQL)
-- **High performance** for similarity search (Qdrant)
-- **Regenerable index** (Qdrant can be rebuilt from PostgreSQL)
-- **Scalability** through independent scaling strategies
-
----
-
-## System Architecture
-
-```
-┌─────────────┐
-│   Client    │ (React + TypeScript)
-└──────┬──────┘
-       │ HTTP/REST
-┌──────▼─────────────────────────────────────┐
-│         FastAPI Backend                     │
-│  ┌──────────────────────────────────────┐  │
-│  │  Authentication (Token-based)        │  │
-│  │  - User registration/login           │  │
-│  │  - Session management                 │  │
-│  └──────────────────────────────────────┘  │
-│  ┌──────────────────────────────────────┐  │
-│  │  Content Moderation                  │  │
-│  │  - Text validation                   │  │
-│  │  - Security checks                   │  │
-│  └──────────────────────────────────────┘  │
-│  ┌──────────────────────────────────────┐  │
-│  │  Embedding Service (Async)            │  │
-│  │  - Sentence Transformers              │  │
-│  │  - ThreadPoolExecutor                 │  │
-│  └──────────────────────────────────────┘  │
-│  ┌──────────────────────────────────────┐  │
-│  │  POV Generation (spaCy)              │  │
-│  │  - Japanese (Janome)                 │  │
-│  │  - English (NLTK)                    │  │
-│  └──────────────────────────────────────┘  │
-└──────┬──────────────────┬──────────────────┘
-       │                  │
-       ▼                  ▼
-┌──────────────┐   ┌──────────────┐
-│  PostgreSQL  │   │    Qdrant    │
-│ (System of   │   │ (System of   │
-│  Record)     │   │  Search)     │
-└──────────────┘   └──────────────┘
+Redis
+optional read-model cache
 ```
 
----
+ローカルの `compose.yml` では次のポートで起動します。
 
-## Data Storage Strategy
+| Component | Port | Role |
+| --- | --- | --- |
+| frontend | `5173` | React UI |
+| api | `8000` | Go HTTP API |
+| ml | `8001` | Python ML service |
+| PostgreSQL | `5432` | 正本DB |
+| Qdrant | `6333` | vector index |
+| Redis | `6379` | optional cache |
 
-### PostgreSQL (System of Record)
+## ディレクトリの責務
 
-Stores all metadata and content that requires:
-- Strong consistency (transactions, foreign keys, constraints)
-- Relationships (JOIN operations)
-- Aggregations and sorting
-- Uniqueness constraints (duplicate prevention)
+| Path | 責務 |
+| --- | --- |
+| `frontend/` | React + Vite + TypeScript。タイムライン、検索、投稿、POVページ、プロフィール。 |
+| `api/` | Go API。認証、投稿、検索、ランキング、フォロー、保存、POVコメント。 |
+| `ml-service/` | Python ML service。`/embed` と `/povs` のみ。 |
+| `backend/` | 旧FastAPI実装、Alembic、seed、検証用コード。現行APIの本体ではない。 |
+| `docs/` | 共有ドキュメント。 |
 
-**Tables:**
+## 設計原則
 
-1. **`posts`**
-   - `id`: UUID (primary key)
-   - `user_id`: Foreign key to user
-   - `text`: Full post content
-   - `tags`: Array of POVs (Points of View)
-   - `auto_tags`: Array of auto-generated POVs (subset of tags)
-   - `created_at`, `updated_at`: Timestamps
+### PostgreSQL は正本
 
-2. **`likes`**
-   - `id`: UUID (primary key)
-   - `post_id`: Foreign key to posts (CASCADE delete)
-   - `user_id`: User who liked
-   - Unique constraint: (post_id, user_id)
+消えてはいけないデータは PostgreSQL に置きます。
 
-3. **`comments`**
-   - `id`: UUID (primary key)
-   - `post_id`: Foreign key to posts (CASCADE delete)
-   - `user_id`: User who commented
-   - `text`: Comment content
-   - `created_at`: Timestamp
+- users
+- sessions
+- posts
+- povs
+- likes
+- comments
+- pov_likes
+- pov_comments
+- follows
+- bookmarks
 
-4. **`pov_likes`**
-   - `id`: UUID (primary key)
-   - `pov`: POV (tag) name (indexed)
-   - `user_id`: User who liked the POV
-   - Unique constraint: (pov, user_id)
+Qdrant や Redis は再生成できる派生データです。Qdrant への書き込みが失敗しても、投稿そのものは PostgreSQL に残ります。
 
-**Stored in PostgreSQL:**
-- Post text, tags (POVs), auto_tags, created_at
-- User authentication data (in-memory for MVP, can migrate to PostgreSQL)
-- Likes (with uniqueness constraint)
-- Comments
-- POV likes
-- All relationships
+### Qdrant は検索インデックス
 
-### Qdrant (System of Search)
+Qdrant の `posts` collection は 384次元 cosine vector を保存します。payload は検索補助用です。
 
-Stores only minimal information needed for:
-- Vector similarity search
-- Fast filtering (tags, user_id, created_at)
-
-**Stored in Qdrant payload:**
-- `post_id`: Reference to PostgreSQL (required)
-- `user_id`: For filtering (e.g., block user's posts)
-- `tags`: For tag-based filtering (lightweight, normalized)
-- `created_at`: For time-based filtering (epoch timestamp)
-
-**Vector:**
-- 384-dimensional embedding (all-MiniLM-L6-v2)
-- Cosine similarity for matching
-
-**NOT stored in Qdrant:**
-- Full text (retrieved from PostgreSQL)
-- Author details (can change)
-- Likes/comments count (frequently updated)
-- Complex relationships
-
----
-
-## Core Concepts
-
-### POVs (Points of View)
-
-POVs are user-defined or auto-generated tags that represent perspectives, interests, or viewpoints. They enable:
-- **Explicit matching**: Users can search and filter by specific POVs
-- **Match rate calculation**: Jaccard similarity between user's POVs and post POVs
-- **Recommendation**: Prioritize posts with matching POVs
-
-**Constraints:**
-- Maximum length: 300 characters
-- Maximum per post: 100 POVs
-- Can contain spaces (multi-word POVs)
-- Auto-generated POVs are extracted using spaCy (Japanese/English)
-
-### Hybrid Recommendation Logic
-
-The system combines two matching strategies:
-
-1. **Vector Similarity** (Implicit)
-   - Cosine similarity between embeddings
-   - Captures semantic meaning
-   - Weight: `similarity_weight` (default 0.7)
-
-2. **POV Matching** (Explicit)
-   - Jaccard similarity: `len(common_povs) / len(union_povs)`
-   - Tag-based filtering
-   - Weight: `1 - similarity_weight`
-
-**Final Score:**
-```
-score = α * vector_similarity + β * pov_match_rate
+```text
+collection: posts
+vector size: 384
+distance: Cosine
+payload:
+  post_id
+  user_id
+  tags
+  created_at
 ```
 
-Where:
-- `α = similarity_weight` (default 0.7)
-- `β = 1 - similarity_weight` (default 0.3)
+Qdrant は候補生成に使います。最終表示に必要な本文、ユーザー名、POV、like/comment/save数は PostgreSQL から bulk load します。
 
-### Sense-Distance Discovery Ranking (Echo-Chamber Breaker)
+### ML service は薄く保つ
 
-Pure similarity ranking creates an echo chamber: you only ever see what you
-already agree with. Daimon's timeline ranker (`services/discovery_service.py`)
-deliberately surfaces **bridges** — posts that are semantically *distant* from
-the user's own "sense" yet share a common-ground POV ("different conclusion,
-shared value") — and then de-duplicates the feed with **MMR (Maximal Marginal
-Relevance)** so it stays diverse instead of ten near-identical takes.
+`ml-service/app.py` は次の3エンドポイントだけを持ちます。
 
-Per-candidate base score (then MMR rerank):
+| Endpoint | Input | Output |
+| --- | --- | --- |
+| `GET /health` | none | health |
+| `POST /embed` | `{"text": "..."}` | `{"vector": [...]}` |
+| `POST /povs` | `{"text": "..."}` | `{"povs": [...]}` |
+
+embedding model は `paraphrase-multilingual-MiniLM-L12-v2` です。日本語を扱える 384次元モデルなので、Qdrant の vector size は変えずに済みます。
+
+長文は先頭だけを見るのではなく、約1200文字単位に分割して embedding し、平均ベクトルにします。これで長い投稿の複数論点が1つの投稿vectorにある程度反映されます。
+
+### Redis は任意のread-model cache
+
+Redis は未設定でも動作します。設定されている場合は、次のような派生データを置きます。
+
+- `feed:{userId}`: ユーザー別に事前計算したホームフィードID列
+- `suggest:popular`: よく使われるPOV
+- `suggest:related:{pov}`: 意味的に近いPOV候補
+
+Redisが落ちても正本は失われません。APIはライブ計算に戻すか、空に近いレスポンスへ安全に劣化します。
+
+## 現在のデータモデル
+
+### users
+
+アカウント、表示名、メール、password hash、avatar、bioを保持します。簡単なプロフィール登録はここで完結します。
+
+### sessions
+
+ログインセッションです。現在はcookie/sessionベースの素朴な認証です。
+
+### posts
+
+投稿本文と投稿者を保持します。投稿本文は意味ベクトル化され、Qdrantにも同じIDで登録されます。
+
+### povs
+
+投稿に付く POV です。現在は `post_id + pov` の組で重複を防いでいます。
+
+現状の限界は、POVがまだタグに近いことです。将来的には `post_pov_assertions` に移し、次の情報を持たせます。
+
+```text
+post_id
+pov_id or pov_text
+grade: A/B/C or lean
+comment
+spoiler
+confidence
+created_by
+created_at
 ```
-near   = cos(user_centroid, post)          # closeness to the user's sense
+
+### pov_comments
+
+投稿ではなくPOVそのものに対するコメントです。
+
+普通のコメントは「この投稿について話す」ためのものです。POVコメントは「この観点で見るとどうかを話す」ためのものです。この違いがDaimonの中核です。
+
+### pov_likes
+
+「このPOVに立つ」「この観点を追う」に近い軽い反応です。現状は like として実装されていますが、将来的にはPOV followやstanceに寄せていきます。
+
+### follows
+
+人へのfollowです。Daimonでは人followを完全には消しません。ただし、ネットワークの背骨は人ではなくPOVに寄せます。人はコンテンツと信頼の手がかり、POVは探索の地図です。
+
+### bookmarks
+
+投稿の保存・クリップです。保存はlikeより強い嗜好シグナルとして扱い、タイムラインの user sense centroid に強めに混ぜます。
+
+## SQLの管理
+
+SQLはGoコード内に直書きせず、`api/internal/db/queries/server.sql` に名前付きで外出ししています。
+
+```sql
+-- name: feed.load_posts
+SELECT id, user_id, COALESCE(username,''), text, created_at
+FROM posts
+WHERE id = ANY($1)
+```
+
+Go側は `db.SQL("feed.load_posts")` のように参照します。実装は標準の `embed` と軽いパーサです。
+
+今の規模ではこの方式で十分です。クエリ数が増え、型安全性やコード生成のメリットが上回った段階で `sqlc` の導入を検討します。
+
+## 主なリクエストフロー
+
+### 投稿作成
+
+1. frontend が `POST /posts` を呼ぶ。
+2. Go API が本文と POV をvalidateする。
+3. Go API が ML service `POST /embed` に本文を渡す。
+4. PostgreSQL に `posts` と `povs` を保存する。
+5. embeddingが取れていれば、Qdrant `posts` collection に upsert する。
+6. Qdrant が失敗しても投稿保存は成功扱いにできる。検索インデックスは後で再構築できるため。
+
+### POV生成
+
+1. frontend が本文を `POST /posts/generate-povs` に送る。
+2. Go API が ML service `POST /povs` を呼ぶ。
+3. ML service は spaCy の noun chunks と日本語名詞列、fallback regex で短い候補を返す。
+4. frontend は候補として表示し、ユーザーが採用する。
+
+POVは自動抽出だけで決めません。最終的に人間が選ぶことが、Daimonのランキングにとって重要です。
+
+### タイムライン
+
+1. frontend が `POST /posts/timeline` を呼ぶ。
+2. Go API が query text か user centroid を検索vectorにする。
+3. Qdrantから候補を100-200件取る。
+4. PostgreSQLから本文、POV、like/comment/save数をbulk loadする。
+5. ユーザー自身の投稿vectorと保存投稿vectorから sense centroid を作る。
+6. `RankBySenseDistance` で並べ替える。
+7. MMRで似すぎた候補を間引く。
+
+現在のランキングは次の思想です。
+
+```text
+near   = similarity(user_centroid, post_vector)
 far    = 1 - near
-bridge = far * 1[post.tags ∩ user.tags]    # distant AND shares a value
-base   = α·near + (1-α)·bridge + 0.15·common_ground [+ 0.20·popularity]
+common = shares_pov(user, post)
+bridge = far * common
+
+score =
+  alpha * near
+  + (1 - alpha) * bridge
+  + common_pov_bonus
+  + optional popularity / recency
 ```
 
-- `user_centroid` = mean of the user's own post embeddings.
-- `α = similarity_weight`: the UI slider becomes a real "near opinions ↔ far-but-bridged" dial.
-- `include_far_posts` toggles the bridge term (otherwise "far" is just noise).
-- `boost_popular` adds the popularity term.
+保存はlikeより強いシグナルとして扱います。`bookmark` は「あとで読みたい」だけでなく、「この投稿は自分の感性モデルに残す価値がある」というML改善の材料です。
 
-This makes the previously-inert tuning knobs functional, and the result is
-**explainable**: each post returns a `reason`, a `sense_distance` (0=near,
-1=far) and an `is_bridge` flag, surfaced in the UI (🌉 BRIDGE badge).
+### 検索
 
-This is the same family of ideas as bridging-based ranking (Twitter Community
-Notes, Polis): rank for *constructive cross-perspective contact*, not just
-agreement.
+検索は2系統を混ぜます。
 
----
+- text query: ML serviceでquery embeddingを作り、Qdrantで意味検索する。
+- POV query: PostgreSQLの `povs` を直接引き、存在するPOVを拾う。
 
-## API Patterns
+これにより、意味的に近い文章だけでなく、既に存在するPOVを直接suggestできます。
 
-### Pattern A: Qdrant → PostgreSQL (Recommended)
+### POVページ
 
-**Use case:** Vector similarity search, recommendations
+POVページは、単なるタグ一覧ではなく「その観点で議論する部屋」です。
 
-1. **Qdrant**: Get candidate post IDs (100-200 candidates)
-2. **PostgreSQL**: Batch fetch details, apply permissions, JOIN relationships
-3. **PostgreSQL**: Final sorting (popularity, time decay, POV match rate)
+現状:
 
-**Example:** `get_timeline()`, `search_posts()` with query text
+- 関連投稿を検索する。
+- POVコメントを一覧する。
+- POVに対する軽い反応を保存する。
 
-**Benefits:**
-- Qdrant excels at finding similar posts quickly
-- PostgreSQL ensures data accuracy and permissions
-- Can filter out deleted/blocked posts in PostgreSQL step
-- Calculate POV match rates from PostgreSQL data
+次に強化するもの:
 
-### Pattern B: PostgreSQL Only (Cost-Effective)
+- 最近のPOVコメント
+- 人気のPOVコメント
+- そのPOVに強いユーザー
+- 似たPOV、隣接POV、反対/緊張関係にあるPOV
+- 同じ観点で違う感じ方をしている人/投稿
 
-**Use case:** Simple queries that don't need vector search
+## Batch jobs
 
-**Examples:**
-- Tag-only search (exact match)
-- User's own posts
-- Recent posts (time-sorted)
-- POV suggestions (popular POVs)
+`api/cmd/batch` は重い読み取りモデルを事前計算します。
 
-**When to use:**
-- No semantic similarity needed
-- Simple filtering/sorting is sufficient
-- Avoid unnecessary Qdrant overhead
+### deepAnalyzeJob
 
----
+長文投稿を分割し、各チャンクから追加POVを抽出します。深い投稿は複数の観点を含むため、投稿1件を複数のPOVノードへ分解するための処理です。
 
-## Implementation Details
+### suggestJob
 
-### Creating a Post
+人気POVと、意味的に近いPOVをRedisにcacheします。
 
-```python
-# 1. Sanitize and validate input (security)
-sanitized_text = sanitize_text(post.text)
-validate_post_text(sanitized_text)
-validate_pov(tag) for each tag
-
-# 2. Content moderation check
-is_safe = content_moderation_service.check_content(sanitized_text)
-
-# 3. Generate embedding asynchronously (non-blocking)
-vector = await embedding_service.embed_text_async(sanitized_text)
-
-# 4. Save to PostgreSQL (System of Record) - Transaction
-db_post = PostModel(
-    id=post_id,
-    user_id=user_id,
-    text=sanitized_text,
-    tags=final_tags,
-    auto_tags=auto_tags,
-    created_at=timestamp
-)
-db.add(db_post)
-db.commit()
-
-# 5. Save to Qdrant (System of Search) - Can fail, not fatal
-qdrant_service.upsert_post(
-    vector=vector,
-    post_id=post_id,
-    user_id=user_id,
-    tags=final_tags,
-    created_at=created_at_epoch
-)
+```text
+suggest:popular
+suggest:related:{pov}
 ```
 
-**Key points:**
-- PostgreSQL transaction ensures consistency
-- Qdrant upsert can fail without being fatal (regenerable)
-- Embedding generation is async (non-blocking)
-- Input sanitization prevents XSS attacks
+### timelineJob
 
-### Searching Posts (Timeline/Recommendations)
+ユーザーごとにホームフィード候補を事前計算し、Redisに `feed:{userId}` として保存します。
 
-```python
-# Step 1: Generate query embedding (async)
-vector = await embedding_service.embed_text_async(query_text)
+## 今後のアーキテクチャ拡張
 
-# Step 2: Qdrant - Get candidates (System of Search)
-hits = qdrant_service.search_similar(vector, limit=200)
+### post_pov_assertions
 
-# Step 3: PostgreSQL - Batch fetch details (System of Record)
-post_ids = [hit.id for hit in hits]
-db_posts_dict = {
-    post.id: post 
-    for post in db.query(PostModel)
-    .filter(PostModel.id.in_(post_ids))
-    .all()
-}
+現在の `povs` はタグです。次は、投稿とPOVの関係を主張として保存します。
 
-# Step 4: Calculate POV match rates (Jaccard similarity)
-for post in db_posts:
-    common_povs = post.tags & user_post_tags
-    total_povs = len(post.tags | user_post_tags)
-    pov_match_rate = len(common_povs) / total_povs if total_povs > 0 else 0.0
-
-# Step 5: Combine scores and sort
-results.sort(key=lambda x: (
-    similarity_weight * x.vector_similarity + 
-    (1 - similarity_weight) * x.pov_match_rate
-), reverse=True)
+```text
+post_pov_assertions
+  id
+  post_id
+  pov_id
+  lean or grade
+  comment
+  spoiler
+  confidence
+  created_by
+  created_at
 ```
 
-### Deleting a Post
+これにより、「この投稿にはこのPOVがある」ではなく、「この投稿をこのPOVで見るとこう感じる」を保存できます。
 
-```python
-# 1. Delete from PostgreSQL (cascade deletes likes/comments)
-db.delete(db_post)
-db.commit()
+### pov_definitions
 
-# 2. Delete from Qdrant (can fail - not fatal)
-try:
-    qdrant_service.client.delete(
-        collection_name=COLLECTION_NAME,
-        points_selector=PointIdsList(points=[post_id])
-    )
-except Exception as e:
-    logger.warning("Qdrant deletion failed - can regenerate")
+POV自体にも説明を持たせます。
+
+```text
+pov_definitions
+  id
+  title
+  category
+  description
+  examples
+  synonyms
+  parent_pov
+  merged_into
 ```
 
----
+open vocabulary は維持します。ただし、よく使われるPOVには説明と同義語を与え、検索・統合・安全性を改善します。
 
-## Security Architecture
+### graph read model
 
-### Input Validation
+グラフ探索は、PostgreSQLの正本テーブルから直接巨大グラフを毎回作るのではなく、POV中心の小さなread modelとして作ります。
 
-**Frontend (`frontend/src/utils/security.ts`):**
-- `sanitizeText()`: XSS prevention
-- `validatePOV()`: POV input validation
-- `validatePostText()`: Post text validation
-- `escapeHtml()`: HTML escaping
+最初のノード:
 
-**Backend (`backend/app/utils/security.py`):**
-- `sanitize_text()`: Text sanitization
-- `validate_pov()`: POV validation (max 300 chars, dangerous patterns)
-- `validate_post_text()`: Post text validation
-- `sanitize_sql_input()`: SQL injection prevention (defense-in-depth)
+- POV
+- Post
+- User
 
-### Authentication
+最初のエッジ:
 
-- **Token-based**: UUID session tokens
-- **Header-based**: `Authorization: Bearer <token>`
-- **Dependency injection**: `get_current_user()` in FastAPI
-- **In-memory storage**: For MVP (can migrate to PostgreSQL)
+- post has POV
+- user asserted POV
+- user commented on POV
+- user saved post
+- POV similar to POV
+- same-axis disagreement
 
-### Content Moderation
+MVPでは全体グラフを出しません。1つのPOVを中心に1-2 hopだけを返すAPIにします。
 
-- Keyword-based filtering
-- Spam pattern detection
-- Length validation
-- (Can integrate Perspective API, AWS Comprehend, etc.)
+## 性能方針
 
----
+### frontend
 
-## Component Architecture
+- タイムラインはページ全体を再描画しない。
+- PostCardは小さなcomponentに分割し、memo化しやすくする。
+- POV suggestion はdebounceする。
+- グラフ探索は初期表示を軽くし、ノード上限を決める。
+- 100ノードを超える可視化はDOMだけで抱えず、canvas/WebGLか仮想化を検討する。
 
-### Frontend Structure
+### API
 
-```
-frontend/src/
-├── components/
-│   ├── PostCard/
-│   │   ├── PostHeader.tsx      # User info, match details
-│   │   ├── PostContent.tsx     # Text and POVs
-│   │   ├── POVList.tsx         # POV display with likes
-│   │   └── PostActions.tsx     # Like, comment actions
-│   ├── PostInputForm/
-│   │   └── POVInput.tsx        # POV input with suggestions
-│   ├── PostCard.tsx            # Main post component
-│   ├── PostInputForm.tsx       # Post creation form
-│   ├── TimelinePage.tsx        # Timeline view
-│   ├── SearchPage.tsx          # Search view
-│   └── ...
-├── api/
-│   └── client.ts               # API client with types
-├── types/
-│   └── enums.ts                # TypeScript enums
-└── utils/
-    └── security.ts             # Security utilities
-```
+- N+1 queryを避け、ID列からbulk loadする。
+- Qdrantは候補生成、PostgreSQLは正本と最終表示の材料に分ける。
+- Redisは高速化のために使い、正しさのためには使わない。
+- ML service失敗時は空候補やfallbackに劣化し、投稿/閲覧の基本動線を止めない。
 
-### Backend Structure
+### ML/vector
 
-```
-backend/app/
-├── routers/
-│   ├── auth.py                 # Authentication endpoints
-│   └── posts.py                # Post endpoints
-├── services/
-│   ├── embedding_service.py   # Async embedding generation
-│   ├── qdrant_service.py      # Qdrant operations
-│   └── content_moderation_service.py
-├── models/
-│   └── api.py                 # Pydantic models
-├── database.py                # SQLAlchemy models
-├── utils/
-│   ├── enums.py               # Python enums
-│   └── security.py            # Security utilities
-└── main.py                    # FastAPI app
-```
+- model変更時は、既存投稿を全件re-embedする。
+- Qdrantのvector dimensionを変える変更はmigration扱いにする。
+- 検索品質はsemantic similarityだけで判断しない。POV一致、保存、recency、同軸異見を合わせて見る。
 
----
+## まだやらないこと
 
-## Error Handling
-
-### Qdrant Failures
-- **Not fatal**: Qdrant is a regenerable index
-- **Recovery**: Can rebuild from PostgreSQL data
-- **Logging**: Log warnings but continue operation
-- **Graceful degradation**: Return results from PostgreSQL only
-
-### PostgreSQL Failures
-- **Fatal**: PostgreSQL is the source of truth
-- **Transaction rollback**: Ensure data consistency
-- **Error propagation**: Return appropriate HTTP errors
-- **Validation**: Pydantic models validate input before database operations
-
-### Embedding Generation Failures
-- **Async handling**: Non-blocking, uses ThreadPoolExecutor
-- **Fallback**: Can use cached embeddings or default vectors
-- **Timeout**: Set reasonable timeouts for embedding generation
-
----
-
-## Performance Considerations
-
-### Batch Operations
-- Use `IN` queries for batch fetching from PostgreSQL
-- Aggregate likes/comments counts in single queries
-- Avoid N+1 query problems
-- Batch POV like status checks
-
-### Caching Opportunities
-- User's own posts (for match reason calculation)
-- Popular POVs (for suggestions)
-- User preferences
-- Embedding cache (for repeated queries)
-
-### Async Processing
-- **Embedding generation**: Async with ThreadPoolExecutor
-- **Qdrant upsert**: Can be async (background job in production)
-- **POV generation**: Debounced (800ms) to reduce API calls
-- **Background jobs**: For heavy operations (future)
-
-### Database Indexing
-- `posts.user_id`: Indexed for user queries
-- `posts.created_at`: Indexed for time-based sorting
-- `likes.post_id`, `likes.user_id`: Indexed for like queries
-- `pov_likes.pov`, `pov_likes.user_id`: Indexed for POV like queries
-
----
-
-## Interview Talking Points
-
-### 1. Separation of Concerns
-- PostgreSQL handles consistency and relationships
-- Qdrant handles similarity search performance
-- Clear boundaries: System of Record vs System of Search
-
-### 2. Regenerable Index
-- Qdrant can be rebuilt from PostgreSQL
-- Failures in Qdrant don't affect data integrity
-- Eventual consistency acceptable for search index
-
-### 3. Hybrid Recommendation
-- Combines explicit (POV) and implicit (vector) signals
-- Tunable weights for different use cases
-- Explainable: Users can see why posts matched
-
-### 4. Security First
-- Input validation at multiple layers
-- XSS prevention (React + sanitization)
-- SQL injection prevention (ORM + validation)
-- Content moderation integration
-
-### 5. Scalability
-- PostgreSQL scales for transactional workloads
-- Qdrant scales for vector search workloads
-- Independent scaling strategies
-- Async processing prevents blocking
-
-### 6. Code Quality
-- Component-based architecture (frontend)
-- Service-oriented architecture (backend)
-- Type safety (TypeScript + Pydantic)
-- Enum usage for constants
-- Security utilities for common patterns
-
----
-
-## Future Improvements
-
-### Short-term
-- [ ] Migrate user authentication to PostgreSQL
-- [ ] Add Redis caching layer
-- [ ] Implement rate limiting
-- [ ] Add comprehensive test coverage
-
-### Medium-term
-- [ ] Background job queue (Celery/RQ)
-- [ ] Real-time updates (WebSockets)
-- [ ] Advanced content moderation (ML models)
-- [ ] User blocking/muting features
-
-### Long-term
-- [ ] Multi-region deployment
-- [ ] GraphQL API option
-- [ ] Mobile app support
-- [ ] Advanced recommendation algorithms (collaborative filtering)
+- 全ユーザーを点数化するランキング。
+- グローバルな中心性スコアの露出。
+- 巨大な3Dグラフ可視化。
+- 統計ダッシュボード化したPOVページ。
+- MLがPOVを完全に決定する設計。
