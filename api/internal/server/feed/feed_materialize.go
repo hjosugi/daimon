@@ -44,6 +44,7 @@ func (h *Handler) recentPopularMatchedPostIDs(ctx context.Context, uid string, u
 	}
 	rows, err := h.pool.Query(ctx, dbq.SQL("feed.recent_popular_matched_ids"), uid, tags, limit)
 	if err != nil {
+		h.logger.WarnContext(ctx, "recent popular matched ids failed", "error", err)
 		return nil
 	}
 	defer rows.Close()
@@ -53,6 +54,10 @@ func (h *Handler) recentPopularMatchedPostIDs(ctx context.Context, uid string, u
 		if rows.Scan(&id) == nil {
 			ids = append(ids, id)
 		}
+	}
+	if err := rows.Err(); err != nil {
+		h.logger.WarnContext(ctx, "recent popular matched rows failed", "error", err)
+		return nil
 	}
 	return ids
 }

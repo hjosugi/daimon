@@ -14,10 +14,10 @@ import (
 	"daimon/api/internal/server/session"
 )
 
-func (h *Handler) likesCount(ctx context.Context, postID string) int {
+func (h *Handler) likesCount(ctx context.Context, postID string) (int, error) {
 	var n int
-	_ = h.pool.QueryRow(ctx, dbq.SQL("posts.like_count"), postID).Scan(&n)
-	return n
+	err := h.pool.QueryRow(ctx, dbq.SQL("posts.like_count"), postID).Scan(&n)
+	return n, err
 }
 
 func (h *Handler) HandleLike(w http.ResponseWriter, r *http.Request) {
@@ -27,7 +27,12 @@ func (h *Handler) HandleLike(w http.ResponseWriter, r *http.Request) {
 		respond.Internal(w, r, h.logger, "Could not like post", err)
 		return
 	}
-	httpx.JSON(w, http.StatusOK, likeResp{Liked: true, Likes: h.likesCount(r.Context(), id)})
+	count, err := h.likesCount(r.Context(), id)
+	if err != nil {
+		respond.Internal(w, r, h.logger, "Database error", err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, likeResp{Liked: true, Likes: count})
 }
 
 func (h *Handler) HandleUnlike(w http.ResponseWriter, r *http.Request) {
@@ -37,7 +42,12 @@ func (h *Handler) HandleUnlike(w http.ResponseWriter, r *http.Request) {
 		respond.Internal(w, r, h.logger, "Could not unlike post", err)
 		return
 	}
-	httpx.JSON(w, http.StatusOK, likeResp{Liked: false, Likes: h.likesCount(r.Context(), id)})
+	count, err := h.likesCount(r.Context(), id)
+	if err != nil {
+		respond.Internal(w, r, h.logger, "Database error", err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, likeResp{Liked: false, Likes: count})
 }
 
 // HandleGetLikers returns who liked a post (newest first).

@@ -7,6 +7,7 @@ import (
 
 	dbq "daimon/api/internal/db"
 	"daimon/api/internal/httpx"
+	"daimon/api/internal/server/respond"
 	"daimon/api/internal/server/session"
 )
 
@@ -16,7 +17,7 @@ func (h *Handler) HandleSavedFeed(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	rows, err := h.pool.Query(ctx, dbq.SQL("bookmarks.feed"), uid)
 	if err != nil {
-		httpx.Error(w, http.StatusInternalServerError, "Database error")
+		respond.Internal(w, r, h.logger, "Database error", err)
 		return
 	}
 	var ids []string
@@ -27,6 +28,10 @@ func (h *Handler) HandleSavedFeed(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	rows.Close()
+	if err := rows.Err(); err != nil {
+		respond.Internal(w, r, h.logger, "Database error", err)
+		return
+	}
 	if len(ids) == 0 {
 		httpx.JSON(w, http.StatusOK, []postResp{})
 		return
@@ -41,7 +46,7 @@ func (h *Handler) HandleFollowingFeed(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	rows, err := h.pool.Query(ctx, dbq.SQL("follows.feed"), uid)
 	if err != nil {
-		httpx.Error(w, http.StatusInternalServerError, "Database error")
+		respond.Internal(w, r, h.logger, "Database error", err)
 		return
 	}
 	var ids []string
@@ -52,6 +57,10 @@ func (h *Handler) HandleFollowingFeed(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	rows.Close()
+	if err := rows.Err(); err != nil {
+		respond.Internal(w, r, h.logger, "Database error", err)
+		return
+	}
 	if len(ids) == 0 {
 		httpx.JSON(w, http.StatusOK, []postResp{})
 		return

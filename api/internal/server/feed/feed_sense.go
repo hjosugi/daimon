@@ -22,6 +22,11 @@ func (h *Handler) userSense(ctx context.Context, uid string) (map[string]bool, [
 			}
 		}
 		rows.Close()
+		if err := rows.Err(); err != nil {
+			h.logger.WarnContext(ctx, "user pov rows failed", "error", err)
+		}
+	} else {
+		h.logger.WarnContext(ctx, "user pov query failed", "error", err)
 	}
 	var centroid []float32
 	if pts, err := h.qdrant.UserPoints(ctx, uid, 200); err == nil && len(pts) > 0 {
@@ -32,6 +37,8 @@ func (h *Handler) userSense(ctx context.Context, uid string) (map[string]bool, [
 			}
 		}
 		centroid = vec.Mean(vs)
+	} else if err != nil {
+		h.logger.WarnContext(ctx, "user qdrant points failed", "error", err)
 	}
 	return tags, centroid
 }
@@ -45,6 +52,7 @@ func (h *Handler) savedCentroid(ctx context.Context, uid string) []float32 {
 	}
 	rows, err := h.pool.Query(ctx, dbq.SQL("feed.user_saved_ids"), uid)
 	if err != nil {
+		h.logger.WarnContext(ctx, "saved centroid ids failed", "error", err)
 		return nil
 	}
 	var ids []string
@@ -55,11 +63,18 @@ func (h *Handler) savedCentroid(ctx context.Context, uid string) []float32 {
 		}
 	}
 	rows.Close()
+	if err := rows.Err(); err != nil {
+		h.logger.WarnContext(ctx, "saved centroid rows failed", "error", err)
+		return nil
+	}
 	if len(ids) == 0 {
 		return nil
 	}
 	pts, err := h.qdrant.Retrieve(ctx, ids, true)
 	if err != nil || len(pts) == 0 {
+		if err != nil {
+			h.logger.WarnContext(ctx, "saved centroid qdrant retrieve failed", "error", err)
+		}
 		return nil
 	}
 	vs := make([][]float32, 0, len(pts))
@@ -86,6 +101,11 @@ func (h *Handler) userTagSet(ctx context.Context, uid string) map[string]bool {
 			}
 		}
 		rows.Close()
+		if err := rows.Err(); err != nil {
+			h.logger.WarnContext(ctx, "user tag rows failed", "error", err)
+		}
+	} else {
+		h.logger.WarnContext(ctx, "user tag query failed", "error", err)
 	}
 	return tags
 }

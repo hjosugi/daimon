@@ -10,6 +10,7 @@ import (
 	dbq "daimon/api/internal/db"
 	"daimon/api/internal/httpx"
 	"daimon/api/internal/ranking"
+	"daimon/api/internal/server/respond"
 	"daimon/api/internal/server/session"
 	"daimon/api/internal/vec"
 )
@@ -36,6 +37,7 @@ func (h *Handler) HandleTimeline(w http.ResponseWriter, r *http.Request) {
 
 	vector, err := h.embed.Embed(ctx, req.QueryText)
 	if err != nil {
+		respond.Warn(h.logger, r, "timeline embedding failed", err)
 		httpx.JSON(w, http.StatusOK, []postResp{}) // degrade gracefully
 		return
 	}
@@ -53,6 +55,9 @@ func (h *Handler) HandleTimeline(w http.ResponseWriter, r *http.Request) {
 	}
 	hits, err := h.qdrant.Search(ctx, searchVector, limit, nil, true)
 	if err != nil || len(hits) == 0 {
+		if err != nil {
+			respond.Warn(h.logger, r, "timeline qdrant search failed", err)
+		}
 		httpx.JSON(w, http.StatusOK, []postResp{})
 		return
 	}
@@ -70,6 +75,8 @@ func (h *Handler) HandleTimeline(w http.ResponseWriter, r *http.Request) {
 				seenHits[p.ID] = true
 				hits = append(hits, qdrantPointToHit(p, searchVector))
 			}
+		} else {
+			respond.Warn(h.logger, r, "timeline popular qdrant retrieve failed", err)
 		}
 	}
 
@@ -131,11 +138,13 @@ func (h *Handler) HandleSearch(w http.ResponseWriter, r *http.Request) {
 	if req.Query != "" {
 		vector, err := h.embed.Embed(ctx, req.Query)
 		if err != nil {
+			respond.Warn(h.logger, r, "search embedding failed", err)
 			httpx.JSON(w, http.StatusOK, []postResp{})
 			return
 		}
 		hits, err := h.qdrant.Search(ctx, vector, min(req.Limit*3, 200), req.Povs, false)
 		if err != nil {
+			respond.Warn(h.logger, r, "search qdrant search failed", err)
 			httpx.JSON(w, http.StatusOK, []postResp{})
 			return
 		}
@@ -159,7 +168,12 @@ func (h *Handler) HandleSearch(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 				rows.Close()
+				if err := rows.Err(); err != nil {
+					respond.Warn(h.logger, r, "search query pov rows failed", err)
+				}
 				ids = append(povIDs, ids...)
+			} else {
+				respond.Warn(h.logger, r, "search query pov ids failed", err)
 			}
 		}
 	} else if len(req.Povs) > 0 {
@@ -172,6 +186,11 @@ func (h *Handler) HandleSearch(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			rows.Close()
+			if err := rows.Err(); err != nil {
+				respond.Warn(h.logger, r, "search pov rows failed", err)
+			}
+		} else {
+			respond.Warn(h.logger, r, "search pov ids failed", err)
 		}
 	}
 	if len(ids) == 0 {
@@ -245,7 +264,7 @@ func (h *Handler) HandleUserPosts(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	rows, err := h.pool.Query(ctx, dbq.SQL("feed.user_post_ids"), target)
 	if err != nil {
-		httpx.Error(w, http.StatusInternalServerError, "Database error")
+		respond.Internal(w, r, h.logger, "Database error", err)
 		return
 	}
 	var ids []string
@@ -256,6 +275,10 @@ func (h *Handler) HandleUserPosts(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	rows.Close()
+	if err := rows.Err(); err != nil {
+		respond.Internal(w, r, h.logger, "Database error", err)
+		return
+	}
 	if len(ids) == 0 {
 		httpx.JSON(w, http.StatusOK, []postResp{})
 		return

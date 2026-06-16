@@ -10,6 +10,7 @@ func (h *Handler) loadPosts(ctx context.Context, ids []string) map[string]postMe
 	m := map[string]postMeta{}
 	rows, err := h.pool.Query(ctx, dbq.SQL("feed.load_posts"), ids)
 	if err != nil {
+		h.logger.WarnContext(ctx, "load posts failed", "error", err)
 		return m
 	}
 	defer rows.Close()
@@ -27,6 +28,7 @@ func (h *Handler) loadPOVs(ctx context.Context, ids []string) map[string][]strin
 	m := map[string][]string{}
 	rows, err := h.pool.Query(ctx, dbq.SQL("feed.load_povs"), ids)
 	if err != nil {
+		h.logger.WarnContext(ctx, "load povs failed", "error", err)
 		return m
 	}
 	defer rows.Close()
@@ -54,6 +56,7 @@ func (h *Handler) loadCounts(ctx context.Context, table string, ids []string) ma
 	}
 	rows, err := h.pool.Query(ctx, query, ids)
 	if err != nil {
+		h.logger.WarnContext(ctx, "load counts failed", "error", err, "table", table)
 		return m
 	}
 	defer rows.Close()
@@ -74,6 +77,7 @@ func (h *Handler) loadLikedSet(ctx context.Context, ids []string, uid string) ma
 	}
 	rows, err := h.pool.Query(ctx, dbq.SQL("feed.liked_set"), ids, uid)
 	if err != nil {
+		h.logger.WarnContext(ctx, "load liked set failed", "error", err)
 		return m
 	}
 	defer rows.Close()
@@ -93,6 +97,7 @@ func (h *Handler) loadSavedSet(ctx context.Context, ids []string, uid string) ma
 	}
 	rows, err := h.pool.Query(ctx, dbq.SQL("feed.saved_set"), ids, uid)
 	if err != nil {
+		h.logger.WarnContext(ctx, "load saved set failed", "error", err)
 		return m
 	}
 	defer rows.Close()
@@ -127,6 +132,7 @@ func (h *Handler) loadPOVLikeCounts(ctx context.Context, povs []string) map[stri
 	}
 	rows, err := h.pool.Query(ctx, dbq.SQL("pov_likes.counts"), povs)
 	if err != nil {
+		h.logger.WarnContext(ctx, "load pov like counts failed", "error", err)
 		return m
 	}
 	defer rows.Close()
@@ -147,6 +153,7 @@ func (h *Handler) loadPOVLikedSet(ctx context.Context, povs []string, uid string
 	}
 	rows, err := h.pool.Query(ctx, dbq.SQL("pov_likes.liked_set"), povs, uid)
 	if err != nil {
+		h.logger.WarnContext(ctx, "load pov liked set failed", "error", err)
 		return m
 	}
 	defer rows.Close()
