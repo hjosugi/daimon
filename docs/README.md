@@ -15,6 +15,7 @@
 | [ROADMAP.md](ROADMAP.md) | いま作るもの、次に作るもの、まだ作らないもの。 |
 | [CONTENT_MODERATION.md](CONTENT_MODERATION.md) | POVコメント、ネタバレ、通報、荒れやすい議論の安全設計。 |
 | [CONCEPT_AND_RESEARCH.txt](CONCEPT_AND_RESEARCH.txt) | 研究・参考サービス・理論の圧縮メモ。プロダクト仕様ではなく背景資料。 |
+| [RESEARCH.md](RESEARCH.md) | 研究・理論の**完全版ドシエ（武器庫）**。論文の注釈付き羅列、設計↔科学の対応、脳科学/心理学、最新研究(2024–)、成功サービス。面接の深掘り用。 |
 
 互換用の薄い索引:
 
