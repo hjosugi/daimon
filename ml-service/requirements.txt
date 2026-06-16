@@ -225,7 +225,7 @@ tqdm==4.68.2
     #   sentence-transformers
     #   spacy
     #   transformers
-transformers==4.57.6
+transformers==5.12.1
     # via sentence-transformers
 typer==0.26.7
     # via
