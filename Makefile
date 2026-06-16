@@ -19,9 +19,9 @@ POSTS ?= 12000
 
 # Auto-detect a Compose provider (works for Docker and Podman/CachyOS setups).
 COMPOSE := $(shell \
-  if docker compose version >/dev/null 2>&1; then echo "docker compose"; \
-  elif command -v podman-compose >/dev/null 2>&1; then echo "podman-compose"; \
+  if command -v podman-compose >/dev/null 2>&1; then echo "podman-compose"; \
   elif podman compose version >/dev/null 2>&1; then echo "podman compose"; \
+  elif docker compose version >/dev/null 2>&1; then echo "docker compose"; \
   elif command -v docker-compose >/dev/null 2>&1; then echo "docker-compose"; \
   else echo "docker compose"; fi)
 

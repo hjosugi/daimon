@@ -65,7 +65,7 @@ vector search index
 make fresh
 ```
 
-これはローカルの Docker volume を消して、DB / Qdrant / Redis / ML / Go API を build し、seed data を入れて、frontend を起動します。
+これはローカルの Docker/Podman volume を消して、DB / Qdrant / Redis / ML / Go API を build し、seed data を入れて、frontend を起動します。
 
 毎回データを消したくない場合:
 
@@ -167,8 +167,8 @@ base   = alpha * near + (1 - alpha) * bridge + 0.15 * has_common_pov
 ## よく使うコマンド
 
 ```bash
-make fresh        # まっさらから Docker stack + seed + frontend
-make docker       # Docker stack 起動
+make fresh        # まっさらから Docker/Podman stack + seed + frontend
+make docker       # Docker/Podman stack 起動
 make web          # frontend のみ起動
 make docker-logs  # api / ml logs
 make seed         # realistic seed data
@@ -179,4 +179,4 @@ make clean        # venv / node_modules も削除
 
 ## CI/CD
 
-`.github/dependabot.yml` が frontend(npm) / api(gomod) / ml(pip) / docker の依存更新を管理します。
+`.github/dependabot.yml` が frontend(npm) / api(gomod) / ml(uv) / docker の依存更新を管理します。

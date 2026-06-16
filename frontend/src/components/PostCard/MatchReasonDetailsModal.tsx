@@ -15,6 +15,8 @@ export const MatchReasonDetailsModal: React.FC<
 
   if (!matchReason) return null
 
+  const similarPosts = matchReason.similar_to_user_posts ?? []
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
       <button
@@ -90,7 +92,7 @@ export const MatchReasonDetailsModal: React.FC<
             </div>
           )}
 
-          {matchReason.similar_to_user_posts?.length > 0 && (
+          {similarPosts.length > 0 && (
             <div className="p-3 bg-cyan-900/20 rounded-lg border border-cyan-500/12">
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-lg">🔗</span>
@@ -99,7 +101,7 @@ export const MatchReasonDetailsModal: React.FC<
                 </span>
               </div>
               <div className="space-y-2">
-                {matchReason.similar_to_user_posts.map((userPost, index) => (
+                {similarPosts.map((userPost, index) => (
                   <div
                     key={userPost.id}
                     className="p-3 bg-[#1f1f3a] rounded-lg border border-cyan-500/15"

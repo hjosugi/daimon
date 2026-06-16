@@ -1,13 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import {
-  AlertTriangle,
-  Bookmark,
-  Heart,
-  MessageSquare,
-  Send,
-  Trash2,
-  X,
-} from "lucide-react"
+import { Bookmark, Heart, MessageSquare, Send } from "lucide-react"
 import type React from "react"
 import { memo, useEffect, useState } from "react"
 import type { Post, User } from "../api/client"
@@ -23,6 +15,9 @@ import {
   unsavePost,
 } from "../api/client"
 import { useI18n } from "../i18n"
+import { DeletePostDialog } from "./PostCard/DeletePostDialog"
+import { MatchDetailsModal } from "./PostCard/MatchDetailsModal"
+import { MatchReasonDetailsModal } from "./PostCard/MatchReasonDetailsModal"
 import { PostContent } from "./PostCard/PostContent"
 import { PostHeader } from "./PostCard/PostHeader"
 
@@ -183,300 +178,26 @@ const PostCardComponent: React.FC<PostCardProps> = ({
         onUserClick={onUserClick}
       />
 
-      {/* Match Reason Details Modal */}
-      {showMatchReasonDetails && post.match_reason && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <button
-            type="button"
-            aria-label={t("common.close")}
-            className="absolute inset-0 cursor-default"
-            onClick={() => setShowMatchReasonDetails(false)}
-          />
-          <div className="relative z-10 bg-[#0f0f1f] rounded-lg border border-cyan-500/18 w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col">
-            {/* Header */}
-            <div className="bg-[#1f1f3a] border-b border-cyan-500/12 p-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-10 h-10 rounded-full bg-cyan-900/20 border border-cyan-500/18 flex items-center justify-center">
-                  <span className="text-cyan-200/95 text-lg">💡</span>
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-cyan-200/95 font-mono">
-                    {t("post.whyMatched")}
-                  </h3>
-                  <p className="text-xs text-cyan-300/80 font-mono">
-                    {t("post.matchReasonDetails")}
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowMatchReasonDetails(false)}
-                className="text-cyan-300/90 hover:text-cyan-400 hover:bg-cyan-900/10 rounded p-1 transition-colors"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* Content */}
-            <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4">
-              {post.match_reason.common_povs.length > 0 && (
-                <div className="p-3 bg-cyan-900/20 rounded-lg border border-cyan-500/12">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-lg">🏷️</span>
-                    <span className="text-xs font-semibold text-cyan-200/95 font-mono">
-                      {t("post.commonPovs")}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {post.match_reason.common_povs.map((pov) => (
-                      <span
-                        key={pov}
-                        className="px-2 py-1 bg-cyan-900/30 text-cyan-200/95 rounded text-xs font-mono border border-cyan-500/18"
-                      >
-                        #{pov}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {post.match_reason.pov_matches &&
-                post.match_reason.pov_matches.length > 0 && (
-                  <div className="p-3 bg-fuchsia-900/20 rounded-lg border border-fuchsia-500/12">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-lg">🏷️</span>
-                      <span className="text-xs font-semibold text-fuchsia-300/95 font-mono">
-                        {t("post.matchedPovs")}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {post.match_reason.pov_matches.map((pov) => (
-                        <span
-                          key={pov}
-                          className="px-2 py-1 bg-fuchsia-900/30 text-fuchsia-300/95 rounded text-xs font-mono border border-fuchsia-500/18"
-                        >
-                          #{pov}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-              {post.match_reason.similar_to_user_posts &&
-                post.match_reason.similar_to_user_posts.length > 0 && (
-                  <div className="p-3 bg-cyan-900/20 rounded-lg border border-cyan-500/12">
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="text-lg">🔗</span>
-                      <span className="text-xs font-semibold text-cyan-200/95 font-mono">
-                        {t("post.yourPostsContributed")}
-                      </span>
-                    </div>
-                    <div className="space-y-2">
-                      {post.match_reason.similar_to_user_posts.map(
-                        (userPost, index) => (
-                          <div
-                            key={userPost.id}
-                            className="p-3 bg-[#1f1f3a] rounded-lg border border-cyan-500/15"
-                          >
-                            <div className="flex items-start justify-between gap-2 mb-1">
-                              <span className="text-xs font-medium text-cyan-300/80 font-mono">
-                                {t("post.postNumber", { index: index + 1 })}
-                              </span>
-                              {userPost.similarity_score !== undefined && (
-                                <span className="text-xs text-cyan-200/95 font-bold font-mono">
-                                  {Math.round(userPost.similarity_score * 100)}%{" "}
-                                  {t("post.similar")}
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-sm text-cyan-300/90 leading-relaxed">
-                              {userPost.text}
-                            </p>
-                          </div>
-                        ),
-                      )}
-                    </div>
-                  </div>
-                )}
-            </div>
-
-            {/* Footer */}
-            <div className="p-4 border-t border-cyan-500/15 bg-[#1f1f3a]">
-              <button
-                type="button"
-                onClick={() => setShowMatchReasonDetails(false)}
-                className="w-full py-2.5 px-4 bg-gradient-to-r from-cyan-500/90 to-fuchsia-500/90 text-black rounded font-medium hover:from-cyan-400 hover:to-fuchsia-400 transition-colors font-mono font-bold"
-              >
-                {t("common.close")}
-              </button>
-            </div>
-          </div>
-        </div>
+      {showMatchReasonDetails && (
+        <MatchReasonDetailsModal
+          post={post}
+          onClose={() => setShowMatchReasonDetails(false)}
+        />
       )}
 
-      {/* Match Details Modal (for similar user posts - shown when POV match is clicked) */}
-      {showMatchDetails &&
-        post.match_reason?.similar_to_user_posts &&
-        post.match_reason.similar_to_user_posts.length > 0 && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-            <button
-              type="button"
-              aria-label={t("common.close")}
-              className="absolute inset-0 cursor-default"
-              onClick={() => setShowMatchDetails(false)}
-            />
-            <div className="relative z-10 bg-[#0f0f1f] rounded-lg border border-fuchsia-500/18 w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col">
-              {/* Header */}
-              <div className="bg-[#1f1f3a] border-b border-fuchsia-500/12 p-4 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-10 h-10 rounded-full bg-fuchsia-900/20 border border-fuchsia-500/18 flex items-center justify-center">
-                    <span className="text-fuchsia-300/95 text-lg">🏷️</span>
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-fuchsia-300/95 font-mono">
-                      {t("post.matchDetails")}
-                    </h3>
-                    <p className="text-xs text-fuchsia-400/60 font-mono">
-                      {t("post.postsContributed", {
-                        count: post.match_reason.similar_to_user_posts.length,
-                      })}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowMatchDetails(false)}
-                  className="text-fuchsia-400/70 hover:text-fuchsia-400 hover:bg-fuchsia-900/10 rounded p-1 transition-colors"
-                >
-                  <X size={20} />
-                </button>
-              </div>
+      {showMatchDetails && (
+        <MatchDetailsModal
+          post={post}
+          onClose={() => setShowMatchDetails(false)}
+        />
+      )}
 
-              {/* Content */}
-              <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-3">
-                {post.match_reason.similar_to_user_posts
-                  .slice(0, 3)
-                  .map((userPost, index) => (
-                    <button
-                      key={userPost.id}
-                      type="button"
-                      className="w-full text-left p-4 bg-fuchsia-900/20 rounded-lg border border-fuchsia-500/12 hover:border-fuchsia-500/40 transition-colors cursor-pointer"
-                      onClick={() => {
-                        // Scroll to the post if it exists in the timeline
-                        const postElement = document.getElementById(
-                          `post-${userPost.id}`,
-                        )
-                        if (postElement) {
-                          postElement.scrollIntoView({
-                            behavior: "smooth",
-                            block: "center",
-                          })
-                          postElement.classList.add(
-                            "ring-2",
-                            "ring-fuchsia-400",
-                            "ring-offset-2",
-                          )
-                          setTimeout(() => {
-                            postElement.classList.remove(
-                              "ring-2",
-                              "ring-fuchsia-400",
-                              "ring-offset-2",
-                            )
-                          }, 2000)
-                        }
-                        setShowMatchDetails(false)
-                      }}
-                    >
-                      <div className="flex items-start justify-between gap-3 mb-2">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-fuchsia-400/80 to-cyan-400/80 flex items-center justify-center text-black text-xs font-bold border border-fuchsia-500/18 font-mono">
-                            {index + 1}
-                          </div>
-                          <span className="text-xs font-semibold text-fuchsia-300/95 font-mono">
-                            {t("post.yourPost")}
-                          </span>
-                        </div>
-                      </div>
-                      <p className="text-sm text-cyan-300/90 leading-relaxed break-words">
-                        {userPost.text}
-                      </p>
-                      <p className="text-xs text-fuchsia-300/95 mt-2 font-medium font-mono">
-                        {t("post.clickToView")} →
-                      </p>
-                    </button>
-                  ))}
-              </div>
-
-              {/* Footer */}
-              <div className="p-4 border-t border-fuchsia-500/15 bg-[#1f1f3a]">
-                <button
-                  type="button"
-                  onClick={() => setShowMatchDetails(false)}
-                  className="w-full py-2.5 px-4 bg-gradient-to-r from-cyan-500/90 to-fuchsia-500/90 text-black rounded font-medium hover:from-cyan-400 hover:to-fuchsia-400 transition-colors font-mono font-bold"
-                >
-                  {t("common.close")}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-      {/* Delete Confirmation Dialog */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <button
-            type="button"
-            aria-label={t("common.close")}
-            className="absolute inset-0 cursor-default"
-            onClick={() => setShowDeleteConfirm(false)}
-          />
-          <div className="relative z-10 bg-[#0f0f1f] rounded-lg border border-red-500/30 w-full max-w-md p-6 space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-red-900/30 border border-red-500/30 flex items-center justify-center">
-                <AlertTriangle className="text-red-400/90" size={24} />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-red-400/90 font-mono">
-                  {t("post.deletePost")}
-                </h3>
-                <p className="text-sm text-red-400/60 font-mono">
-                  {t("post.deletePostWarning")}
-                </p>
-              </div>
-            </div>
-            <p className="text-sm text-cyan-300/80 font-mono">
-              {t("post.deletePostBody")}
-            </p>
-            <div className="flex gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowDeleteConfirm(false)}
-                disabled={deletePostMutation.isPending}
-                className="flex-1 py-2.5 px-4 bg-[#1f1f3a] text-cyan-300/95 border border-cyan-500/12 rounded font-medium hover:bg-[#0f0f1f] hover:border-cyan-500/40 transition-colors disabled:opacity-50 font-mono"
-              >
-                {t("common.cancel")}
-              </button>
-              <button
-                type="button"
-                onClick={() => deletePostMutation.mutate()}
-                disabled={deletePostMutation.isPending}
-                className="flex-1 py-2.5 px-4 bg-red-600/90 text-white rounded font-medium hover:bg-red-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-mono font-bold"
-              >
-                {deletePostMutation.isPending ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>{t("common.deleting")}</span>
-                  </>
-                ) : (
-                  <>
-                    <Trash2 size={16} />
-                    <span>{t("common.delete")}</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
+        <DeletePostDialog
+          isDeleting={deletePostMutation.isPending}
+          onCancel={() => setShowDeleteConfirm(false)}
+          onDelete={() => deletePostMutation.mutate()}
+        />
       )}
 
       <PostContent

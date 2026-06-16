@@ -1,5 +1,5 @@
 import { api } from "./http"
-import type { Comment, Post, POVSuggestion, SearchParams } from "./types"
+import type { Comment, POVSuggestion, Post, SearchParams } from "./types"
 
 export const generatePOVs = async (text: string): Promise<string[]> => {
   try {
