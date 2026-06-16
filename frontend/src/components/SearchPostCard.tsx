@@ -6,6 +6,7 @@ import type { Post, User } from "../api/client"
 import { likePost, savePost, unlikePost, unsavePost } from "../api/client"
 import { useI18n } from "../i18n"
 import { formatRelativeDate } from "../utils/date"
+import { formatMatchReason } from "../utils/matchReason"
 
 interface SearchPostCardProps {
   post: Post
@@ -132,19 +133,7 @@ const SearchPostCardComponent: React.FC<SearchPostCardProps> = ({
         {post.match_reason &&
           (() => {
             const mr = post.match_reason
-            const why = mr.reason
-              ? mr.reason
-              : mr.pov_matches?.length || mr.common_povs?.length
-                ? t("post.commonPovReason", {
-                    povs: (mr.pov_matches?.length
-                      ? mr.pov_matches
-                      : (mr.common_povs ?? [])
-                    )
-                      .slice(0, 3)
-                      .map((p) => `#${p}`)
-                      .join(" "),
-                  })
-                : null
+            const why = formatMatchReason(mr, t)
             if (!why) return null
             return (
               <div className="mb-1.5 text-[11px] font-mono text-cyan-300/60">

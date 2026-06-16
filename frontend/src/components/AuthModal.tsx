@@ -10,7 +10,7 @@ import {
   type User,
   updateProfile,
 } from "../api/client"
-import { errorMessage } from "../api/errors"
+import { localizedErrorMessage } from "../api/errors"
 import { useI18n } from "../i18n"
 import { readFileAsDataURL } from "../utils/file"
 import { AvatarPicker } from "./ui/AvatarPicker"
@@ -40,12 +40,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [mode, setMode] = useState<"login" | "register">("login")
   const [formData, setFormData] = useState(emptyAuthForm)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
-  const [errorMessage, setErrorMessage] = useState("")
+  const [authErrorMessage, setAuthErrorMessage] = useState("")
 
   const resetForm = () => {
     setFormData(emptyAuthForm)
     setAvatarPreview(null)
-    setErrorMessage("")
+    setAuthErrorMessage("")
   }
 
   const registerMutation = useMutation({
@@ -67,7 +67,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       resetForm()
     },
     onError: (error: unknown) => {
-      setErrorMessage(errorMessage(error, t("auth.registrationFailed")))
+      setAuthErrorMessage(
+        localizedErrorMessage(error, t("auth.registrationFailed"), t),
+      )
     },
   })
 
@@ -79,7 +81,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       resetForm()
     },
     onError: (error: unknown) => {
-      setErrorMessage(errorMessage(error, t("auth.loginFailed")))
+      setAuthErrorMessage(
+        localizedErrorMessage(error, t("auth.loginFailed"), t),
+      )
     },
   })
 
@@ -91,7 +95,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     e.preventDefault()
     if (mode === "register") {
       if (formData.password !== formData.confirmPassword) {
-        setErrorMessage(t("auth.passwordMismatch"))
+        setAuthErrorMessage(t("auth.passwordMismatch"))
         return
       }
       registerMutation.mutate({
@@ -133,9 +137,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       headerClassName="bg-[#2a2a50] border-cyan-500/15"
     >
       <form onSubmit={handleSubmit} className="p-6 space-y-4">
-        {errorMessage && (
+        {authErrorMessage && (
           <div className="p-3 bg-red-900/20 border border-red-500/30 rounded text-sm text-red-400/90 font-mono">
-            [{t("common.error")}] {errorMessage}
+            [{t("common.error")}] {authErrorMessage}
           </div>
         )}
 
@@ -144,6 +148,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <AvatarPicker
               id="auth-avatar"
               preview={avatarPreview}
+              previewAlt={t("common.avatarPreview")}
               onFileSelect={handleAvatarSelect}
               helpText={t("auth.profilePictureOptional")}
             />
@@ -168,7 +173,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <textarea
                 id="auth-bio"
                 value={formData.bio}
-                onChange={(e) => updateField("bio", e.target.value.slice(0, 160))}
+                onChange={(e) =>
+                  updateField("bio", e.target.value.slice(0, 160))
+                }
                 rows={3}
                 maxLength={160}
                 className="w-full px-3 py-2 bg-[#2a2a50] border border-cyan-500/15 rounded focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/40 text-cyan-300 placeholder:text-cyan-300/80 font-mono text-sm transition-all resize-none"
@@ -183,14 +190,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
         <IconInput
           id="auth-email"
-          label={mode === "login" ? t("auth.emailOrUsername") : t("common.email")}
+          label={
+            mode === "login" ? t("auth.emailOrUsername") : t("common.email")
+          }
           icon={<Mail size={18} />}
           type={mode === "login" ? "text" : "email"}
           value={formData.email}
           onChange={(value) => updateField("email", value)}
           required
           placeholder={
-            mode === "login" ? t("auth.emailOrUsername") : "EMAIL@EXAMPLE.COM"
+            mode === "login"
+              ? t("auth.emailOrUsername")
+              : t("auth.emailPlaceholder")
           }
         />
 

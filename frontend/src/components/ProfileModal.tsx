@@ -1,16 +1,14 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import {
-  AlertTriangle,
-  Image as ImageIcon,
-  Mail,
-  Save,
-  Trash2,
-  User as UserIcon,
-  X,
-} from "lucide-react"
+import { Mail, Save, Trash2, User as UserIcon } from "lucide-react"
+import type React from "react"
 import { useEffect, useState } from "react"
 import { deleteAccount, type User, updateProfile } from "../api/client"
 import { useI18n } from "../i18n"
+import { readFileAsDataURL } from "../utils/file"
+import { DeleteAccountDialog } from "./ProfileModal/DeleteAccountDialog"
+import { AvatarPicker } from "./ui/AvatarPicker"
+import { IconInput } from "./ui/IconInput"
+import { ModalFrame } from "./ui/ModalFrame"
 
 interface ProfileModalProps {
   isOpen: boolean
@@ -20,6 +18,11 @@ interface ProfileModalProps {
   currentUser: User | null
 }
 
+const profileLabelClass =
+  "block text-xs font-medium text-cyan-300/95 mb-2 font-mono"
+const profileInputClass =
+  "w-full pl-10 pr-4 py-2.5 bg-[#1f1f3a] border border-cyan-500/12 rounded focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/40 text-cyan-200/95 placeholder:text-cyan-500/30 font-mono transition-all"
+
 export const ProfileModal: React.FC<ProfileModalProps> = ({
   isOpen,
   onClose,
@@ -28,9 +31,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   currentUser,
 }) => {
   const { t } = useI18n()
-  const [username, setUsername] = useState<string>("")
-  const [email, setEmail] = useState<string>("")
-  const [bio, setBio] = useState<string>("")
+  const [username, setUsername] = useState("")
+  const [bio, setBio] = useState("")
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -38,23 +40,20 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   const queryClient = useQueryClient()
 
   useEffect(() => {
-    if (currentUser && isOpen) {
-      setUsername(currentUser.username)
-      setEmail(currentUser.email)
-      setBio(currentUser.bio || "")
-      setAvatarPreview(currentUser.avatar_url || null)
-      setAvatarFile(null)
-    }
+    if (!currentUser || !isOpen) return
+    setUsername(currentUser.username)
+    setBio(currentUser.bio || "")
+    setAvatarPreview(currentUser.avatar_url || null)
+    setAvatarFile(null)
+    setShowDeleteConfirm(false)
   }, [currentUser, isOpen])
 
   const updateProfileMutation = useMutation({
-    mutationFn: async (data: {
+    mutationFn: (data: {
       username?: string
       avatar_url?: string
       bio?: string
-    }) => {
-      return await updateProfile(data)
-    },
+    }) => updateProfile(data),
     onSuccess: (user) => {
       onSuccess(user)
       queryClient.invalidateQueries({ queryKey: ["user"] })
@@ -63,9 +62,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   })
 
   const deleteAccountMutation = useMutation({
-    mutationFn: async () => {
-      return await deleteAccount()
-    },
+    mutationFn: () => deleteAccount(),
     onSuccess: () => {
       queryClient.clear()
       onDelete()
@@ -73,38 +70,32 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     },
   })
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const buildProfilePatch = async () => {
+    const avatarChanged =
+      avatarFile !== null || avatarPreview !== (currentUser?.avatar_url || null)
 
-    if (avatarFile) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        const base64String = reader.result as string
-        updateProfileMutation.mutate({
-          username: username !== currentUser?.username ? username : undefined,
-          avatar_url: base64String,
-          bio: bio !== (currentUser?.bio || "") ? bio : undefined,
-        })
-      }
-      reader.readAsDataURL(avatarFile)
-    } else {
-      updateProfileMutation.mutate({
-        username: username !== currentUser?.username ? username : undefined,
-        avatar_url: avatarPreview || undefined,
-        bio: bio !== (currentUser?.bio || "") ? bio : undefined,
-      })
+    return {
+      username: username !== currentUser?.username ? username : undefined,
+      avatar_url: avatarChanged
+        ? avatarFile
+          ? await readFileAsDataURL(avatarFile)
+          : avatarPreview || ""
+        : undefined,
+      bio: bio !== (currentUser?.bio || "") ? bio : undefined,
     }
   }
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      setAvatarFile(file)
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setAvatarPreview(reader.result as string)
-      }
-      reader.readAsDataURL(file)
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    updateProfileMutation.mutate(await buildProfilePatch())
+  }
+
+  const handleAvatarSelect = async (file: File) => {
+    setAvatarFile(file)
+    try {
+      setAvatarPreview(await readFileAsDataURL(file))
+    } catch (error) {
+      console.error("Failed to read avatar", error)
     }
   }
 
@@ -116,227 +107,104 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   if (!isOpen || !currentUser) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-3 sm:p-4">
-      <button
-        type="button"
-        aria-label={t("common.close")}
-        className="absolute inset-0 cursor-default"
-        onClick={onClose}
-      />
-      <div className="relative z-10 bg-[#0f0f1f] rounded-lg border border-cyan-500/18 w-full max-w-md mx-auto overflow-hidden max-h-[90vh] overflow-y-auto">
-        <div className="bg-[#1f1f3a] border-b border-cyan-500/12 p-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-cyan-200/95 font-mono">
-            {t("profile.edit")}
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-cyan-300/90 hover:text-cyan-400 hover:bg-cyan-900/10 rounded p-1 transition-colors"
-          >
-            <X size={20} />
-          </button>
+    <ModalFrame title={t("profile.edit")} onClose={onClose}>
+      <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <AvatarPicker
+          id="profile-avatar"
+          preview={avatarPreview}
+          previewAlt={t("common.avatarPreview")}
+          fallback="user"
+          size="lg"
+          onFileSelect={handleAvatarSelect}
+          onRemove={handleRemoveAvatar}
+          removeLabel={t("profile.removeImage")}
+          helpText={t("profile.changePicture")}
+          showEditBadge
+        />
+
+        <IconInput
+          id="profile-username"
+          label={t("common.username")}
+          icon={<UserIcon size={18} />}
+          value={username}
+          onChange={setUsername}
+          required
+          placeholder={t("common.username")}
+          labelClassName={profileLabelClass}
+          inputClassName={profileInputClass}
+        />
+
+        <div>
+          <label htmlFor="profile-bio" className={profileLabelClass}>
+            {t("common.bio")}
+          </label>
+          <textarea
+            id="profile-bio"
+            value={bio}
+            onChange={(e) => setBio(e.target.value.slice(0, 160))}
+            rows={3}
+            maxLength={160}
+            className="w-full px-3 py-2.5 bg-[#1f1f3a] border border-cyan-500/12 rounded focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/40 text-cyan-200/95 placeholder:text-cyan-500/30 font-mono transition-all resize-none"
+            placeholder={t("auth.bioPlaceholder")}
+          />
+          <div className="mt-1 text-right text-[10px] text-cyan-300/60 font-mono">
+            {bio.length}/160
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          {/* Avatar Upload */}
-          <div className="flex flex-col items-center gap-3">
-            <label htmlFor="profile-avatar" className="cursor-pointer">
-              <div className="relative">
-                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-br from-cyan-400/80 to-fuchsia-400/80 flex items-center justify-center overflow-hidden border-2 border-cyan-500/18">
-                  {avatarPreview ? (
-                    <img
-                      src={avatarPreview}
-                      alt="Avatar preview"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <UserIcon size={40} className="text-black" />
-                  )}
-                </div>
-                <div className="absolute bottom-0 right-0 bg-cyan-500/90 text-black rounded-full p-2 hover:bg-cyan-400 transition-colors border border-cyan-400/50">
-                  <ImageIcon size={16} />
-                </div>
-              </div>
-              <input
-                id="profile-avatar"
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarChange}
-                className="hidden"
-              />
-            </label>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={handleRemoveAvatar}
-                className="text-xs text-cyan-300/80 hover:text-cyan-300/95 px-3 py-1.5 bg-cyan-900/10 border border-cyan-500/12 rounded hover:bg-cyan-900/20 transition-colors font-mono"
-              >
-                {t("profile.removeImage")}
-              </button>
-            </div>
-            <span className="text-xs text-cyan-300/70 text-center font-mono">
-              {t("profile.changePicture")}
-            </span>
-          </div>
+        <IconInput
+          id="profile-email"
+          label={t("common.email")}
+          icon={<Mail size={18} />}
+          type="email"
+          value={currentUser.email}
+          disabled
+          placeholder={t("auth.emailPlaceholder")}
+          labelClassName={profileLabelClass}
+          inputClassName="w-full pl-10 pr-4 py-2.5 bg-[#0f0f1f] border border-cyan-500/15 rounded text-cyan-300/70 cursor-not-allowed font-mono"
+        />
+        <p className="-mt-4 text-xs text-cyan-300/70 font-mono">
+          {t("profile.emailCannotChange")}
+        </p>
 
-          {/* Username */}
-          <div>
-            <label
-              htmlFor="profile-username"
-              className="block text-xs font-medium text-cyan-300/95 mb-2 font-mono"
-            >
-              {t("common.username")}
-            </label>
-            <div className="relative">
-              <UserIcon
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-300/70"
-                size={18}
-              />
-              <input
-                id="profile-username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                className="w-full pl-10 pr-4 py-2.5 bg-[#1f1f3a] border border-cyan-500/12 rounded focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/40 text-cyan-200/95 placeholder:text-cyan-500/30 font-mono transition-all"
-                placeholder={t("common.username")}
-              />
-            </div>
-          </div>
+        <div className="pt-4 border-t border-cyan-500/15 space-y-3">
+          <button
+            type="submit"
+            disabled={updateProfileMutation.isPending || !username.trim()}
+            className="w-full py-3 bg-gradient-to-r from-cyan-500/90 to-fuchsia-500/90 text-black rounded font-semibold hover:from-cyan-400 hover:to-fuchsia-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 font-mono font-bold"
+          >
+            {updateProfileMutation.isPending ? (
+              <>
+                <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                <span>{t("common.saving")}</span>
+              </>
+            ) : (
+              <>
+                <Save size={18} />
+                <span>{t("common.save")}</span>
+              </>
+            )}
+          </button>
 
-          <div>
-            <label
-              htmlFor="profile-bio"
-              className="block text-xs font-medium text-cyan-300/95 mb-2 font-mono"
-            >
-              {t("common.bio")}
-            </label>
-            <textarea
-              id="profile-bio"
-              value={bio}
-              onChange={(e) => setBio(e.target.value.slice(0, 160))}
-              rows={3}
-              maxLength={160}
-              className="w-full px-3 py-2.5 bg-[#1f1f3a] border border-cyan-500/12 rounded focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/40 text-cyan-200/95 placeholder:text-cyan-500/30 font-mono transition-all resize-none"
-              placeholder={t("auth.bioPlaceholder")}
-            />
-            <div className="mt-1 text-right text-[10px] text-cyan-300/60 font-mono">
-              {bio.length}/160
-            </div>
-          </div>
+          <button
+            type="button"
+            onClick={() => setShowDeleteConfirm(true)}
+            disabled={deleteAccountMutation.isPending}
+            className="w-full py-2.5 bg-red-900/20 text-red-400/90 rounded font-medium hover:bg-red-900/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-red-500/30 hover:border-red-500/50 flex items-center justify-center gap-2 font-mono"
+          >
+            <Trash2 size={16} />
+            <span>{t("profile.deleteAccount")}</span>
+          </button>
+        </div>
+      </form>
 
-          {/* Email (Read-only) */}
-          <div>
-            <label
-              htmlFor="profile-email"
-              className="block text-xs font-medium text-cyan-300/95 mb-2 font-mono"
-            >
-              {t("common.email")}
-            </label>
-            <div className="relative">
-              <Mail
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-300/70"
-                size={18}
-              />
-              <input
-                id="profile-email"
-                type="email"
-                value={email}
-                disabled
-                className="w-full pl-10 pr-4 py-2.5 bg-[#0f0f1f] border border-cyan-500/15 rounded text-cyan-300/70 cursor-not-allowed font-mono"
-                placeholder="EMAIL@EXAMPLE.COM"
-              />
-            </div>
-            <p className="text-xs text-cyan-300/70 mt-1 font-mono">
-              {t("profile.emailCannotChange")}
-            </p>
-          </div>
-
-          {/* Submit Button */}
-          <div className="pt-4 border-t border-cyan-500/15 space-y-3">
-            <button
-              type="submit"
-              disabled={updateProfileMutation.isPending || !username.trim()}
-              className="w-full py-3 bg-gradient-to-r from-cyan-500/90 to-fuchsia-500/90 text-black rounded font-semibold hover:from-cyan-400 hover:to-fuchsia-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 font-mono font-bold"
-            >
-              {updateProfileMutation.isPending ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
-                  <span>{t("common.saving")}</span>
-                </>
-              ) : (
-                <>
-                  <Save size={18} />
-                  <span>{t("common.save")}</span>
-                </>
-              )}
-            </button>
-
-            {/* Delete Account Button */}
-            <button
-              type="button"
-              onClick={() => setShowDeleteConfirm(true)}
-              disabled={deleteAccountMutation.isPending}
-              className="w-full py-2.5 bg-red-900/20 text-red-400/90 rounded font-medium hover:bg-red-900/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-red-500/30 hover:border-red-500/50 flex items-center justify-center gap-2 font-mono"
-            >
-              <Trash2 size={16} />
-              <span>{t("profile.deleteAccount")}</span>
-            </button>
-          </div>
-        </form>
-
-        {/* Delete Confirmation Dialog */}
-        {showDeleteConfirm && (
-          <div className="absolute inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
-            <div className="bg-[#0f0f1f] rounded-lg border border-red-500/30 w-full max-w-md p-6 space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-red-900/30 border border-red-500/30 flex items-center justify-center">
-                  <AlertTriangle className="text-red-400/90" size={24} />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-red-400/90 font-mono">
-                    {t("profile.deleteAccount")}
-                  </h3>
-                  <p className="text-sm text-red-400/60 font-mono">
-                    {t("profile.deleteWarning")}
-                  </p>
-                </div>
-              </div>
-              <p className="text-sm text-cyan-300/80 font-mono">
-                {t("profile.deleteBody")}
-              </p>
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowDeleteConfirm(false)}
-                  disabled={deleteAccountMutation.isPending}
-                  className="flex-1 py-2.5 px-4 bg-[#1f1f3a] text-cyan-300/95 border border-cyan-500/12 rounded font-medium hover:bg-[#0f0f1f] hover:border-cyan-500/40 transition-colors disabled:opacity-50 font-mono"
-                >
-                  {t("common.cancel")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => deleteAccountMutation.mutate()}
-                  disabled={deleteAccountMutation.isPending}
-                  className="flex-1 py-2.5 px-4 bg-red-600/90 text-white rounded font-medium hover:bg-red-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-mono font-bold"
-                >
-                  {deleteAccountMutation.isPending ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>{t("common.deleting")}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Trash2 size={16} />
-                      <span>{t("common.delete")}</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+      {showDeleteConfirm && (
+        <DeleteAccountDialog
+          isPending={deleteAccountMutation.isPending}
+          onCancel={() => setShowDeleteConfirm(false)}
+          onConfirm={() => deleteAccountMutation.mutate()}
+        />
+      )}
+    </ModalFrame>
   )
 }

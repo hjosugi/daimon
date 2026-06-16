@@ -4,6 +4,7 @@ import { memo } from "react"
 import type { Post, User } from "../../api/client"
 import { useI18n } from "../../i18n"
 import { formatRelativeDate } from "../../utils/date"
+import { formatMatchReason } from "../../utils/matchReason"
 
 interface PostHeaderProps {
   post: Post
@@ -75,7 +76,10 @@ const PostHeaderComponent: React.FC<PostHeaderProps> = ({
               {post.match_reason?.is_bridge && (
                 <span
                   className="px-2 py-1 sm:py-1.5 rounded text-xs font-semibold whitespace-nowrap font-mono border bg-amber-900/25 text-amber-300 border-amber-500/25"
-                  title={post.match_reason.reason || t("post.bridgeTitle")}
+                  title={
+                    formatMatchReason(post.match_reason, t) ||
+                    t("post.bridgeTitle")
+                  }
                 >
                   🌉 {t("post.bridge")}
                 </span>

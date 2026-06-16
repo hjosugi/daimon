@@ -5,7 +5,6 @@ package ranking
 import (
 	"math"
 	"sort"
-	"strings"
 )
 
 // Candidate is a scoring candidate. Vector is the raw embedding (normalized here).
@@ -155,15 +154,15 @@ func RankBySenseDistance(
 
 func explainReason(simToUser float32, shared []string, farOn bool) string {
 	if len(shared) > 0 && farOn && simToUser < 0.45 {
-		return "遠い視点・共通の価値観: " + strings.Join(firstN(shared, 2), ", ")
+		return "bridge_shared_values"
 	}
 	if len(shared) > 0 {
-		return "共通の価値観: " + strings.Join(firstN(shared, 2), ", ")
+		return "shared_values"
 	}
 	if simToUser >= 0.6 {
-		return "あなたの感性に近い"
+		return "near_sense"
 	}
-	return "新しい視点"
+	return "new_perspective"
 }
 
 func clamp01(x float32) float32 {
@@ -174,13 +173,6 @@ func clamp01(x float32) float32 {
 		return 1
 	}
 	return x
-}
-
-func firstN(s []string, n int) []string {
-	if len(s) <= n {
-		return s
-	}
-	return s[:n]
 }
 
 // Cosine returns the cosine similarity of two raw vectors.

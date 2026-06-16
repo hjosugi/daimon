@@ -4,6 +4,7 @@ import type React from "react"
 interface AvatarPickerProps {
   id: string
   preview: string | null
+  previewAlt: string
   onFileSelect: (file: File) => void
   fallback?: "image" | "user"
   size?: "md" | "lg"
@@ -21,6 +22,7 @@ const sizeClasses = {
 export const AvatarPicker: React.FC<AvatarPickerProps> = ({
   id,
   preview,
+  previewAlt,
   onFileSelect,
   fallback = "image",
   size = "md",
@@ -41,7 +43,7 @@ export const AvatarPicker: React.FC<AvatarPickerProps> = ({
             {preview ? (
               <img
                 src={preview}
-                alt="Avatar preview"
+                alt={previewAlt}
                 className="w-full h-full object-cover"
               />
             ) : (

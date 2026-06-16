@@ -10,7 +10,7 @@ export const register = async (data: RegisterData): Promise<User> => {
     setAuthSession(response)
     return response
   } catch (error: unknown) {
-    const message = await apiErrorMessage(error, "登録に失敗しました")
+    const message = await apiErrorMessage(error, "")
     if (message) throw new Error(message)
     throw error
   }
@@ -22,7 +22,7 @@ export const login = async (data: LoginData): Promise<User> => {
     setAuthSession(response)
     return response
   } catch (error: unknown) {
-    const message = await apiErrorMessage(error, "ログインに失敗しました")
+    const message = await apiErrorMessage(error, "")
     if (message) throw new Error(message)
     throw error
   }
