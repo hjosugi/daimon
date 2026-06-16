@@ -3,7 +3,7 @@ package server
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -31,6 +31,7 @@ type Server struct {
 	pool   *pgxpool.Pool
 	cfg    config.Config
 	qdrant *qdrant.Client
+	logger *slog.Logger
 	auth   *authhandler.Handler
 	feed   *feedhandler.Handler
 	posts  *posthandler.Handler
@@ -42,15 +43,17 @@ func New(pool *pgxpool.Pool, cfg config.Config) *Server {
 	embedClient := embed.New(cfg.EmbedURL)
 	qdrantClient := qdrant.New(cfg.QdrantURL, cfg.QdrantAPIKey)
 	cacheClient := cache.New(cfg.RedisURL)
+	logger := slog.Default().With("component", "api")
 	return &Server{
 		pool:   pool,
 		cfg:    cfg,
 		qdrant: qdrantClient,
-		auth:   authhandler.New(pool),
-		feed:   feedhandler.New(pool, embedClient, qdrantClient, cacheClient),
-		posts:  posthandler.New(pool, embedClient, qdrantClient),
-		povs:   povhandler.New(pool, embedClient, cacheClient),
-		users:  userhandler.New(pool),
+		logger: logger,
+		auth:   authhandler.New(pool, logger.With("domain", "auth")),
+		feed:   feedhandler.New(pool, embedClient, qdrantClient, cacheClient, logger.With("domain", "feed")),
+		posts:  posthandler.New(pool, embedClient, qdrantClient, logger.With("domain", "posts")),
+		povs:   povhandler.New(pool, embedClient, cacheClient, logger.With("domain", "povs")),
+		users:  userhandler.New(pool, logger.With("domain", "users")),
 	}
 }
 
@@ -58,7 +61,7 @@ func New(pool *pgxpool.Pool, cfg config.Config) *Server {
 // regenerable, so failures here are logged, not fatal).
 func (s *Server) Bootstrap(ctx context.Context) {
 	if err := s.qdrant.EnsureCollection(ctx); err != nil {
-		log.Printf("qdrant ensure collection: %v", err)
+		s.logger.WarnContext(ctx, "qdrant ensure collection failed", "error", err)
 	}
 }
 

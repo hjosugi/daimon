@@ -1,6 +1,7 @@
 package feed
 
 import (
+	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -15,10 +16,11 @@ type Handler struct {
 	embed  *embed.Client
 	qdrant *qdrant.Client
 	cache  *cache.Cache
+	logger *slog.Logger
 }
 
-func New(pool *pgxpool.Pool, embed *embed.Client, qdrant *qdrant.Client, cache *cache.Cache) *Handler {
-	return &Handler{pool: pool, embed: embed, qdrant: qdrant, cache: cache}
+func New(pool *pgxpool.Pool, embed *embed.Client, qdrant *qdrant.Client, cache *cache.Cache, logger *slog.Logger) *Handler {
+	return &Handler{pool: pool, embed: embed, qdrant: qdrant, cache: cache, logger: logger}
 }
 
 type timelineReq struct {

@@ -13,6 +13,7 @@ import (
 
 	dbq "daimon/api/internal/db"
 	"daimon/api/internal/httpx"
+	"daimon/api/internal/server/respond"
 	"daimon/api/internal/server/session"
 	"daimon/api/internal/validate"
 )
@@ -73,7 +74,7 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	var existsUser, existsEmail bool
 	err := h.pool.QueryRow(ctx, dbq.SQL("auth.user_exists"), username, email).Scan(&existsUser, &existsEmail)
 	if err != nil {
-		httpx.Error(w, http.StatusInternalServerError, "Database error")
+		respond.Internal(w, r, h.logger, "Database error", err)
 		return
 	}
 	if existsUser {
@@ -87,20 +88,20 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		httpx.Error(w, http.StatusInternalServerError, "Could not hash password")
+		respond.Internal(w, r, h.logger, "Could not hash password", err)
 		return
 	}
 
 	now := time.Now().UTC()
 	id := uuid.NewString()
 	if _, err := h.pool.Exec(ctx, dbq.SQL("auth.insert_user"), id, username, email, string(hash), bio, now); err != nil {
-		httpx.Error(w, http.StatusInternalServerError, "Could not create user")
+		respond.Internal(w, r, h.logger, "Could not create user", err)
 		return
 	}
 
 	token, err := h.createSession(ctx, id, now)
 	if err != nil {
-		httpx.Error(w, http.StatusInternalServerError, "Could not create session")
+		respond.Internal(w, r, h.logger, "Could not create session", err)
 		return
 	}
 	httpx.JSON(w, http.StatusOK, userResp{ID: id, Username: username, Email: email, Bio: bio, Token: &token})
@@ -124,7 +125,7 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		httpx.Error(w, http.StatusInternalServerError, "Database error")
+		respond.Internal(w, r, h.logger, "Database error", err)
 		return
 	}
 	if bcrypt.CompareHashAndPassword([]byte(hash), []byte(req.Password)) != nil {
@@ -134,7 +135,7 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 	token, err := h.createSession(r.Context(), id, time.Now().UTC())
 	if err != nil {
-		httpx.Error(w, http.StatusInternalServerError, "Could not create session")
+		respond.Internal(w, r, h.logger, "Could not create session", err)
 		return
 	}
 	httpx.JSON(w, http.StatusOK, userResp{ID: id, Username: username, Email: email, AvatarURL: avatar, Bio: bio, Token: &token})
@@ -147,6 +148,7 @@ func (h *Handler) HandleMe(w http.ResponseWriter, r *http.Request) {
 	)
 	err := h.pool.QueryRow(r.Context(), dbq.SQL("auth.user_by_id"), session.UserID(r.Context())).Scan(&id, &username, &email, &avatar, &bio)
 	if err != nil {
+		respond.Warn(h.logger, r, "current user lookup failed", err)
 		httpx.Error(w, http.StatusNotFound, "User not found")
 		return
 	}
@@ -175,19 +177,22 @@ func (h *Handler) HandleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		var taken bool
-		_ = h.pool.QueryRow(ctx, dbq.SQL("auth.username_taken"), username, uid).Scan(&taken)
+		if err := h.pool.QueryRow(ctx, dbq.SQL("auth.username_taken"), username, uid).Scan(&taken); err != nil {
+			respond.Internal(w, r, h.logger, "Database error", err)
+			return
+		}
 		if taken {
 			httpx.Error(w, http.StatusBadRequest, "Username already exists")
 			return
 		}
 		if _, err := h.pool.Exec(ctx, dbq.SQL("auth.update_username"), username, now, uid); err != nil {
-			httpx.Error(w, http.StatusInternalServerError, "Could not update profile")
+			respond.Internal(w, r, h.logger, "Could not update profile", err)
 			return
 		}
 	}
 	if req.AvatarURL != nil {
 		if _, err := h.pool.Exec(ctx, dbq.SQL("auth.update_avatar_url"), *req.AvatarURL, now, uid); err != nil {
-			httpx.Error(w, http.StatusInternalServerError, "Could not update profile")
+			respond.Internal(w, r, h.logger, "Could not update profile", err)
 			return
 		}
 	}
@@ -198,7 +203,7 @@ func (h *Handler) HandleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if _, err := h.pool.Exec(ctx, dbq.SQL("auth.update_bio"), bio, now, uid); err != nil {
-			httpx.Error(w, http.StatusInternalServerError, "Could not update profile")
+			respond.Internal(w, r, h.logger, "Could not update profile", err)
 			return
 		}
 	}
@@ -208,6 +213,7 @@ func (h *Handler) HandleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 		avatar, bio         *string
 	)
 	if err := h.pool.QueryRow(ctx, dbq.SQL("auth.user_by_id"), uid).Scan(&id, &username, &email, &avatar, &bio); err != nil {
+		respond.Warn(h.logger, r, "updated user lookup failed", err)
 		httpx.Error(w, http.StatusNotFound, "User not found")
 		return
 	}
@@ -216,7 +222,10 @@ func (h *Handler) HandleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	token := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-	_, _ = h.pool.Exec(r.Context(), dbq.SQL("auth.delete_session"), token)
+	if _, err := h.pool.Exec(r.Context(), dbq.SQL("auth.delete_session"), token); err != nil {
+		respond.Internal(w, r, h.logger, "Could not logout", err)
+		return
+	}
 	httpx.JSON(w, http.StatusOK, map[string]string{"message": "Logged out successfully"})
 }
 
@@ -224,7 +233,7 @@ func (h *Handler) HandleDeleteAccount(w http.ResponseWriter, r *http.Request) {
 	// ON DELETE CASCADE removes posts/likes/comments/sessions. Qdrant cleanup
 	// is handled lazily (regenerable index).
 	if _, err := h.pool.Exec(r.Context(), dbq.SQL("auth.delete_user"), session.UserID(r.Context())); err != nil {
-		httpx.Error(w, http.StatusInternalServerError, "Could not delete account")
+		respond.Internal(w, r, h.logger, "Could not delete account", err)
 		return
 	}
 	httpx.JSON(w, http.StatusOK, map[string]string{"message": "Account deleted successfully"})
