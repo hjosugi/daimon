@@ -210,7 +210,7 @@ thinc==8.3.13
     # via spacy
 threadpoolctl==3.6.0
     # via scikit-learn
-tokenizers==0.22.2
+tokenizers==0.23.1
     # via transformers
 torch==2.12.0 ; sys_platform == 'darwin'
     # via
