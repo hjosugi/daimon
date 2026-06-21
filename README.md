@@ -179,4 +179,21 @@ make clean        # venv / node_modules も削除
 
 ## CI/CD
 
-`.github/dependabot.yml` が frontend(npm) / api(gomod) / ml(uv) / docker の依存更新を管理します。
+CI は GitHub Actions の `.github/workflows/ci.yml` で管理します。
+
+- `api`: `go test ./...` と `cmd/server` / `cmd/batch` の build
+- `frontend`: `pnpm install --frozen-lockfile`、Biome check、Vite production build
+- `ml-service`: `uv sync --locked` と FastAPI app の import smoke test
+- `deploy-config`: `compose.yml` と `cloudbuild.yaml` の最低限の形を検証
+
+依存更新は `.github/dependabot.yml` が frontend(npm) / api(gomod) / ml(uv) / GitHub Actions / Docker を管理します。
+
+本番 deploy は `cloudbuild.yaml` から Cloud Run に出します。
+
+- frontend: Vercel (`vercel.json`)
+- API: Cloud Run service `daimon-api`
+- ML: Cloud Run service `daimon-ml`
+
+Cloud Build trigger には少なくとも `_QDRANT_URL` を設定してください。API deploy は Secret Manager の `database-url` と `qdrant-api-key` を参照します。ML service は API からだけ呼ぶ前提で、Cloud Run ingress は `internal` にしています。
+
+現時点では Bazel は導入していません。Go / pnpm / uv / Docker の境界が明確で、Bazel を入れるより GitHub Actions の job 分割と Cloud Build の image build に寄せる方が運用が軽いです。モノレポが大きくなり、生成物や多言語キャッシュを統一したくなった段階で再検討します。

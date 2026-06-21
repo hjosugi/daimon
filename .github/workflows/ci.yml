@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: API
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: api/go.mod
+          cache-dependency-path: api/go.sum
+      - name: Test
+        run: go test ./...
+      - name: Build server and batch
+        run: |
+          go build -o /tmp/daimon-server ./cmd/server
+          go build -o /tmp/daimon-batch ./cmd/batch
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Lint
+        run: pnpm run lint
+      - name: Build
+        run: pnpm run build
+
+  ml:
+    name: ML service
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ml-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.11.21"
+          enable-cache: true
+          cache-dependency-glob: ml-service/uv.lock
+      - name: Sync locked dependencies
+        run: uv sync --locked --no-dev --no-install-project
+      - name: Import smoke test
+        run: uv run python -c "from app import app, EMBED_DIM; assert app.title == 'daimon-ml'; assert EMBED_DIM == 384"
+
+  deploy-config:
+    name: Deploy config
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate compose file
+        run: docker compose -f compose.yml config >/dev/null
+      - name: Validate Cloud Build file shape
+        run: |
+          test -f cloudbuild.yaml
+          grep -q "daimon-api" cloudbuild.yaml
+          grep -q "daimon-ml" cloudbuild.yaml
