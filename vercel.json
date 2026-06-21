@@ -3,5 +3,5 @@
   "outputDirectory": "frontend/dist",
   "installCommand": "cd frontend && npx --yes pnpm@9.15.0 install --no-frozen-lockfile",
   "framework": "vite",
-  "ignoreCommand": "git diff HEAD^ HEAD --quiet -- ./frontend ./vercel.json ./package.json"
+  "ignoreCommand": "git diff HEAD^ HEAD --quiet -- ./frontend ./vercel.json ./package.json ./.vercelignore"
 }
