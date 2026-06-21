@@ -1,0 +1,18 @@
+# Vercel only builds the frontend (see vercel.json).
+# Everything below is deployed elsewhere and must be kept out of the
+# upload so Vercel's zero-config builder doesn't try to compile it.
+
+# Go backend — deployed via Cloud Build (cloudbuild.yaml).
+# Without this, Vercel auto-detects the root-level api/ dir as serverless
+# functions and fails on api/cmd/*/main.go (CLI mains, not Vercel handlers).
+api/
+
+# Python ML service — deployed separately.
+ml-service/
+
+# Local-only infra / docs not needed for the frontend build.
+compose.yml
+cloudbuild.yaml
+Makefile
+docs/
+RUNBOOK.md

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import re
 from contextlib import asynccontextmanager
+from importlib.util import find_spec
 
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -22,6 +23,7 @@ from sentence_transformers import SentenceTransformer
 # This model is also 384-dim, so Qdrant needs no schema change — but every post
 # must be RE-EMBEDDED (re-seed) after a model swap or query/post vectors won't align.
 EMBED_MODEL = "paraphrase-multilingual-MiniLM-L12-v2"
+EMBED_DIM = 384
 
 _model: SentenceTransformer | None = None
 _nlp_cache: dict[str, object] = {}
@@ -33,6 +35,7 @@ _nlp_cache: dict[str, object] = {}
 MAX_SEQ_LEN = 512
 CHUNK_CHARS = 1200  # ~one 512-token window of mixed JA/EN text
 MAX_CHUNKS = 48     # bound cost: covers ~57k chars, beyond the 40k post cap
+ENCODE_BATCH_SIZE = 32
 
 
 def model() -> SentenceTransformer:
@@ -54,9 +57,36 @@ def encode_full(text: str) -> list[float]:
     """Embed arbitrarily long text by chunking + mean-pooling (cosine-safe)."""
     text = text or ""
     parts = _chunks(text)
-    vecs = model().encode(parts, convert_to_numpy=True)
+    vecs = model().encode(parts, convert_to_numpy=True, batch_size=ENCODE_BATCH_SIZE)
     vec = vecs.mean(axis=0) if len(parts) > 1 else vecs[0]
     return vec.tolist()
+
+
+def encode_many(texts: list[str]) -> list[list[float]]:
+    """Batch embed texts while preserving long-text chunk mean-pooling."""
+    if not texts:
+        return []
+
+    all_chunks: list[str] = []
+    spans: list[tuple[int, int]] = []
+    for text in texts:
+        parts = _chunks(text or "")
+        start = len(all_chunks)
+        all_chunks.extend(parts)
+        spans.append((start, len(all_chunks)))
+
+    chunk_vecs = model().encode(
+        all_chunks,
+        convert_to_numpy=True,
+        batch_size=ENCODE_BATCH_SIZE,
+    )
+
+    out: list[list[float]] = []
+    for start, end in spans:
+        vecs = chunk_vecs[start:end]
+        vec = vecs.mean(axis=0) if len(vecs) > 1 else vecs[0]
+        out.append(vec.tolist())
+    return out
 
 
 @asynccontextmanager
@@ -74,7 +104,18 @@ class TextReq(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "embedding_model": EMBED_MODEL,
+        "embedding_dim": EMBED_DIM,
+        "max_seq_len": MAX_SEQ_LEN,
+        "chunk_chars": CHUNK_CHARS,
+        "max_chunks": MAX_CHUNKS,
+        "spacy_models": {
+            "ja": find_spec("ja_core_news_sm") is not None,
+            "en": find_spec("en_core_web_sm") is not None,
+        },
+    }
 
 
 @app.post("/embed")
@@ -89,7 +130,7 @@ class BatchReq(BaseModel):
 @app.post("/embed_batch")
 def embed_batch(req: BatchReq):
     # Used by the Go seed command: many full-post embeddings in one round-trip.
-    return {"vectors": [encode_full(t or "") for t in (req.texts or [])]}
+    return {"vectors": encode_many(req.texts or [])}
 
 
 # --- POV extraction (spaCy ja/en, with a regex fallback) -------------------
