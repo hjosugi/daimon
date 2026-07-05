@@ -1,5 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ArrowLeft, Loader2, UserCheck, UserPlus, X } from "lucide-react"
+import {
+  ArrowLeft,
+  Loader2,
+  RefreshCw,
+  UserCheck,
+  UserPlus,
+  X,
+} from "lucide-react"
 import type React from "react"
 import {
   type FollowUser,
@@ -34,11 +41,17 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
   const qc = useQueryClient()
   const profileKey = ["profile", userId]
 
-  const { data: profile } = useQuery({
+  const {
+    data: profile,
+    isLoading: isProfileLoading,
+    isError: isProfileError,
+    isFetching: isProfileFetching,
+    refetch: refetchProfile,
+  } = useQuery({
     queryKey: profileKey,
     queryFn: () => getUserProfile(userId),
   })
-  const { data: posts = [], isLoading } = useQuery({
+  const { data: posts = [], isLoading: isPostsLoading } = useQuery({
     queryKey: ["user-posts", userId],
     queryFn: () => getUserPosts(userId),
     staleTime: 1000 * 30,
@@ -113,7 +126,35 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
           <ArrowLeft size={16} /> {t("common.back")}
         </button>
 
-        {profile && (
+        {isProfileLoading ? (
+          <div className="bg-[#1f1f35] border border-cyan-500/15 rounded p-4">
+            <div className="flex items-center gap-3 text-cyan-300 font-mono text-sm">
+              <Loader2 size={18} className="animate-spin" />
+              {t("user.profileLoading")}
+            </div>
+          </div>
+        ) : isProfileError ? (
+          <div className="bg-[#1f1f35] border border-red-500/25 rounded p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <p className="text-sm text-red-200 font-mono">
+                {t("user.profileLoadError")}
+              </p>
+              <button
+                type="button"
+                onClick={() => void refetchProfile()}
+                disabled={isProfileFetching}
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded border border-cyan-500/30 text-cyan-200 hover:bg-cyan-500/10 disabled:opacity-60 disabled:cursor-not-allowed text-sm font-mono transition-colors"
+              >
+                {isProfileFetching ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <RefreshCw size={14} />
+                )}
+                {t("common.retry")}
+              </button>
+            </div>
+          </div>
+        ) : profile ? (
           <div className="bg-[#1f1f35] border border-cyan-500/15 rounded p-4">
             <div className="flex items-center gap-3">
               {profile.avatar_url ? (
@@ -168,7 +209,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
               )}
             </div>
           </div>
-        )}
+        ) : null}
 
         {profile?.is_me && (
           <div className="bg-[#1f1f35] border border-cyan-500/15 rounded p-4">
@@ -232,7 +273,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
           </div>
         )}
 
-        {isLoading ? (
+        {isPostsLoading ? (
           <div className="flex justify-center p-12 text-cyan-300">
             <Loader2 size={32} className="animate-spin" />
           </div>

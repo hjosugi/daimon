@@ -28,6 +28,7 @@ const en = {
   "common.comments": "comments",
   "common.profile": "Profile",
   "common.remove": "remove",
+  "common.retry": "Retry",
   "common.save": "SAVE",
   "common.saving": "SAVING...",
   "common.send": "SEND",
@@ -118,6 +119,8 @@ const en = {
   "user.followingButton": "Following",
   "user.followersTitle": "FOLLOWERS",
   "user.noFollowers": "No followers yet",
+  "user.profileLoading": "Loading profile...",
+  "user.profileLoadError": "Failed to load profile",
   "user.removeFollower": "Remove follower",
 
   "pov.back": "Back",
@@ -248,6 +251,7 @@ const ja: Messages = {
   "common.comments": "コメント",
   "common.profile": "プロフィール",
   "common.remove": "削除",
+  "common.retry": "再試行",
   "common.save": "保存",
   "common.saving": "保存中...",
   "common.send": "送信",
@@ -337,6 +341,8 @@ const ja: Messages = {
   "user.followingButton": "フォロー中",
   "user.followersTitle": "フォロワー",
   "user.noFollowers": "まだフォロワーはいません",
+  "user.profileLoading": "プロフィールを読み込み中...",
+  "user.profileLoadError": "プロフィールの読み込みに失敗しました",
   "user.removeFollower": "フォロワーから削除",
 
   "pov.back": "戻る",
