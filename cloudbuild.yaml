@@ -85,6 +85,7 @@ steps:
       - --memory=${_ML_MEMORY}
       - --max-instances=${_ML_MAX_INSTANCES}
       - --ingress=${_ML_INGRESS}
+      - --startup-probe=tcpSocket.port=8001,periodSeconds=10,timeoutSeconds=10,failureThreshold=60
       - --allow-unauthenticated
       - --cpu-boost
 
