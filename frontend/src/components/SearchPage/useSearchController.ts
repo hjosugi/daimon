@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useCallback, useEffect, useState } from "react"
 import { searchPosts, suggestPOVs } from "../../api/client"
 import { useDebouncedValue } from "../../hooks/useDebouncedValue"
-import { POV_CONSTRAINTS } from "../../types/constants"
+import { DEBOUNCE_DELAYS, POV_CONSTRAINTS } from "../../types/constants"
 
 interface UseSearchControllerOptions {
   initialTags: string[]
@@ -21,8 +21,14 @@ export function useSearchController({
   const [showPOVSearch, setShowPOVSearch] = useState(false)
 
   const normalizedQuery = searchQuery.trim()
-  const debouncedQuery = useDebouncedValue(searchQuery, 250).trim()
-  const debouncedPOVInput = useDebouncedValue(searchTagInput, 200).trim()
+  const debouncedQuery = useDebouncedValue(
+    searchQuery,
+    DEBOUNCE_DELAYS.SEARCH_QUERY,
+  ).trim()
+  const debouncedPOVInput = useDebouncedValue(
+    searchTagInput,
+    DEBOUNCE_DELAYS.SEARCH_POV_INPUT,
+  ).trim()
 
   const { data: queryPOVSuggestions = [] } = useQuery({
     queryKey: ["pov-suggest", debouncedQuery],

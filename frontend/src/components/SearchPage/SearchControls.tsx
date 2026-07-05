@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronUp, Hash, Search, X } from "lucide-react"
 import type React from "react"
 import { useI18n } from "../../i18n"
+import { POV_CONSTRAINTS } from "../../types/constants"
 import type { SearchController } from "./useSearchController"
 
 interface SearchControlsProps {
@@ -127,7 +128,7 @@ export const SearchControls: React.FC<SearchControlsProps> = ({ search }) => {
               <input
                 type="text"
                 value={search.searchTagInput}
-                maxLength={300}
+                maxLength={POV_CONSTRAINTS.MAX_LENGTH}
                 onChange={(e) => search.setSearchTagInputValue(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {

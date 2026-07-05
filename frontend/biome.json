@@ -8,6 +8,11 @@
     "enabled": true,
     "rules": {
       "preset": "recommended",
+      "correctness": {
+        "noUnusedImports": "error",
+        "noUnusedPrivateClassMembers": "error",
+        "noUnusedVariables": "error"
+      },
       "suspicious": {
         "noUnknownAtRules": {
           "level": "warn",

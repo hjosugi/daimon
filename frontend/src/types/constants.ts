@@ -1,29 +1,10 @@
-// enum constants
-export enum MatchType {
-  TAG = "tag",
-  BOTH = "both",
-}
-
-export enum QueryKey {
-  TIMELINE = "timeline",
-  SEARCH = "search",
-  COMMENTS = "comments",
-}
-
-export enum POVType {
-  AUTO_GENERATED = "auto_generated",
-  MANUAL = "manual",
-}
-
-export enum ModalType {
-  DELETE_CONFIRM = "delete_confirm",
-  MATCH_DETAILS = "match_details",
-  MATCH_REASON_DETAILS = "match_reason_details",
-}
-
 export const POV_CONSTRAINTS = {
   MAX_LENGTH: 300,
   MAX_COUNT: 100,
+} as const
+
+export const PROFILE_CONSTRAINTS = {
+  BIO_MAX_LENGTH: 160,
 } as const
 
 export const POST_CONSTRAINTS = {
@@ -36,4 +17,6 @@ export const POST_CONSTRAINTS = {
 export const DEBOUNCE_DELAYS = {
   POV_GENERATION: 800,
   POV_SUGGESTION: 300,
+  SEARCH_QUERY: 250,
+  SEARCH_POV_INPUT: 200,
 } as const

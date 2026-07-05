@@ -1,6 +1,12 @@
 import { useQueryClient } from "@tanstack/react-query"
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react"
-import { getCurrentUser, logout, type User } from "./api/client"
+import {
+  clearAuthSession,
+  getAuthToken,
+  getCurrentUser,
+  logout,
+  type User,
+} from "./api/client"
 import { Header } from "./components/Header"
 import { TimelinePage } from "./components/TimelinePage"
 import { useI18n } from "./i18n"
@@ -91,14 +97,9 @@ function App() {
 
   // Check if user is logged in
   useEffect(() => {
-    const token = localStorage.getItem("auth_token")
+    const token = getAuthToken()
     if (token) {
-      getCurrentUser()
-        .then(setUser)
-        .catch(() => {
-          localStorage.removeItem("auth_token")
-          localStorage.removeItem("user_id")
-        })
+      getCurrentUser().then(setUser).catch(clearAuthSession)
     }
   }, [])
 

@@ -4,6 +4,7 @@ import type React from "react"
 import { useEffect, useState } from "react"
 import { deleteAccount, type User, updateProfile } from "../api/client"
 import { useI18n } from "../i18n"
+import { PROFILE_CONSTRAINTS } from "../types/constants"
 import { readFileAsDataURL } from "../utils/file"
 import { DeleteAccountDialog } from "./ProfileModal/DeleteAccountDialog"
 import { AvatarPicker } from "./ui/AvatarPicker"
@@ -141,14 +142,18 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           <textarea
             id="profile-bio"
             value={bio}
-            onChange={(e) => setBio(e.target.value.slice(0, 160))}
+            onChange={(e) =>
+              setBio(
+                e.target.value.slice(0, PROFILE_CONSTRAINTS.BIO_MAX_LENGTH),
+              )
+            }
             rows={3}
-            maxLength={160}
+            maxLength={PROFILE_CONSTRAINTS.BIO_MAX_LENGTH}
             className="w-full px-3 py-2.5 bg-[#1f1f3a] border border-cyan-500/12 rounded focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/40 text-cyan-200/95 placeholder:text-cyan-500/30 font-mono transition-all resize-none"
             placeholder={t("auth.bioPlaceholder")}
           />
           <div className="mt-1 text-right text-[10px] text-cyan-300/60 font-mono">
-            {bio.length}/160
+            {bio.length}/{PROFILE_CONSTRAINTS.BIO_MAX_LENGTH}
           </div>
         </div>
 

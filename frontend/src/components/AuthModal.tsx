@@ -12,6 +12,7 @@ import {
 } from "../api/client"
 import { localizedErrorMessage } from "../api/errors"
 import { useI18n } from "../i18n"
+import { PROFILE_CONSTRAINTS } from "../types/constants"
 import { readFileAsDataURL } from "../utils/file"
 import { AvatarPicker } from "./ui/AvatarPicker"
 import { IconInput } from "./ui/IconInput"
@@ -174,15 +175,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 id="auth-bio"
                 value={formData.bio}
                 onChange={(e) =>
-                  updateField("bio", e.target.value.slice(0, 160))
+                  updateField(
+                    "bio",
+                    e.target.value.slice(0, PROFILE_CONSTRAINTS.BIO_MAX_LENGTH),
+                  )
                 }
                 rows={3}
-                maxLength={160}
+                maxLength={PROFILE_CONSTRAINTS.BIO_MAX_LENGTH}
                 className="w-full px-3 py-2 bg-[#2a2a50] border border-cyan-500/15 rounded focus:ring-1 focus:ring-cyan-500/30 focus:border-cyan-500/40 text-cyan-300 placeholder:text-cyan-300/80 font-mono text-sm transition-all resize-none"
                 placeholder={t("auth.bioPlaceholder")}
               />
               <div className="mt-1 text-right text-[10px] text-cyan-300/60 font-mono">
-                {formData.bio.length}/160
+                {formData.bio.length}/{PROFILE_CONSTRAINTS.BIO_MAX_LENGTH}
               </div>
             </div>
           </>
