@@ -91,6 +91,20 @@ docker build --pull -t daimon-api-ci ./api
 docker build --pull -t daimon-ml-ci ./ml-service
 ```
 
+API handler integration tests run automatically in CI against a PostgreSQL
+service. To run them locally, start a disposable database and set
+`DAIMON_TEST_DATABASE_URL`:
+
+```bash
+docker run --rm --name daimon-test-postgres \
+  -e POSTGRES_USER=daimon \
+  -e POSTGRES_PASSWORD=daimon \
+  -e POSTGRES_DB=daimon_test \
+  -p 55432:5432 postgres:16
+
+(cd api && DAIMON_TEST_DATABASE_URL=postgresql://daimon:daimon@localhost:55432/daimon_test?sslmode=disable go test ./internal/server)
+```
+
 ## Cloud Deploy
 
 本番 deploy は root の `cloudbuild.yaml` から Cloud Run へ出します。

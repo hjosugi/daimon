@@ -18,6 +18,20 @@ jobs:
   api:
     name: API
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: daimon
+          POSTGRES_PASSWORD: daimon
+          POSTGRES_DB: daimon_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U daimon -d daimon_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     defaults:
       run:
         working-directory: api
@@ -28,6 +42,8 @@ jobs:
           go-version-file: api/go.mod
           cache-dependency-path: api/go.sum
       - name: Test
+        env:
+          DAIMON_TEST_DATABASE_URL: postgresql://daimon:daimon@localhost:5432/daimon_test?sslmode=disable
         run: go test ./...
       - name: Vet
         run: go vet ./...
