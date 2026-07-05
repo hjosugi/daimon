@@ -53,11 +53,11 @@ steps:
       - -ceu
       - |
         IMAGE="${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/daimon-ml"
-        docker pull "${IMAGE}:latest" || true
+        docker pull "$${IMAGE}:latest" || true
         docker build \
-          --cache-from "${IMAGE}:latest" \
-          -t "${IMAGE}:$SHORT_SHA" \
-          -t "${IMAGE}:latest" \
+          --cache-from "$${IMAGE}:latest" \
+          -t "$${IMAGE}:$SHORT_SHA" \
+          -t "$${IMAGE}:latest" \
           ml-service
 
   - id: push-ml
@@ -67,8 +67,8 @@ steps:
       - -ceu
       - |
         IMAGE="${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/daimon-ml"
-        docker push "${IMAGE}:$SHORT_SHA"
-        docker push "${IMAGE}:latest"
+        docker push "$${IMAGE}:$SHORT_SHA"
+        docker push "$${IMAGE}:latest"
 
   - id: deploy-ml
     name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
@@ -108,11 +108,11 @@ steps:
       - -ceu
       - |
         IMAGE="${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/daimon-api"
-        docker pull "${IMAGE}:latest" || true
+        docker pull "$${IMAGE}:latest" || true
         docker build \
-          --cache-from "${IMAGE}:latest" \
-          -t "${IMAGE}:$SHORT_SHA" \
-          -t "${IMAGE}:latest" \
+          --cache-from "$${IMAGE}:latest" \
+          -t "$${IMAGE}:$SHORT_SHA" \
+          -t "$${IMAGE}:latest" \
           api
 
   - id: push-api
@@ -122,8 +122,8 @@ steps:
       - -ceu
       - |
         IMAGE="${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/daimon-api"
-        docker push "${IMAGE}:$SHORT_SHA"
-        docker push "${IMAGE}:latest"
+        docker push "$${IMAGE}:$SHORT_SHA"
+        docker push "$${IMAGE}:latest"
 
   - id: deploy-api
     name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
@@ -143,7 +143,7 @@ steps:
           --ingress=all \
           --allow-unauthenticated \
           --cpu-boost \
-          --set-env-vars="^|^PORT=8000|QDRANT_URL=${_QDRANT_URL}|EMBED_URL=${ML_URL}|CORS_ORIGINS=${_CORS_ORIGINS}" \
+          --set-env-vars="^|^PORT=8000|QDRANT_URL=${_QDRANT_URL}|EMBED_URL=$${ML_URL}|CORS_ORIGINS=${_CORS_ORIGINS}" \
           --set-secrets="DATABASE_URL=database-url:latest,QDRANT_API_KEY=qdrant-api-key:latest"
 
 images:
