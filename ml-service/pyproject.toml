@@ -12,7 +12,7 @@ dependencies = [
     "uvicorn[standard]==0.40.0",
     # sentence-transformers stays pinned because the 384-d embedding contract,
     # chunk pooling behavior, and Qdrant index compatibility depend on this stack.
-    "sentence-transformers==2.3.1",
+    "sentence-transformers==5.6.0",
     "torch>=2.3,<3",
     "spacy>=3.8.0,<3.9.0",
     "typer>=0.12",
