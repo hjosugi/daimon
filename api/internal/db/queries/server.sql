@@ -179,6 +179,21 @@ SELECT count(*) FROM follows WHERE followee_id=$1
 -- name: follows.profile_user
 SELECT username, avatar_url, bio FROM users WHERE id=$1
 
+-- name: follows.profile
+SELECT
+  u.username,
+  u.avatar_url,
+  u.bio,
+  (SELECT count(*)::int FROM posts p WHERE p.user_id = u.id) AS posts_count,
+  (SELECT count(*)::int FROM follows f WHERE f.followee_id = u.id) AS followers,
+  (SELECT count(*)::int FROM follows f WHERE f.follower_id = u.id) AS following,
+  CASE
+    WHEN $2 = '' OR $2 = u.id THEN false
+    ELSE EXISTS(SELECT 1 FROM follows f WHERE f.follower_id = $2 AND f.followee_id = u.id)
+  END AS is_following
+FROM users u
+WHERE u.id = $1
+
 -- name: follows.posts_count
 SELECT count(*) FROM posts WHERE user_id=$1
 

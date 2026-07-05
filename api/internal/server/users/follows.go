@@ -1,11 +1,13 @@
 package users
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 
 	dbq "daimon/api/internal/db"
 	"daimon/api/internal/httpx"
@@ -44,26 +46,25 @@ func (h *Handler) HandleUserProfile(w http.ResponseWriter, r *http.Request) {
 	me := session.UserID(r.Context())
 	ctx := r.Context()
 
-	p := userProfile{ID: target}
-	if err := h.pool.QueryRow(ctx, dbq.SQL("follows.profile_user"), target).Scan(&p.Username, &p.AvatarURL, &p.Bio); err != nil {
+	p := userProfile{ID: target, IsMe: me != "" && me == target}
+	err := h.pool.QueryRow(ctx, dbq.SQL("follows.profile"), target, me).Scan(
+		&p.Username,
+		&p.AvatarURL,
+		&p.Bio,
+		&p.PostsCount,
+		&p.Followers,
+		&p.Following,
+		&p.IsFollowing,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
 		httpx.Error(w, http.StatusNotFound, "User not found")
 		return
 	}
-	if err := h.pool.QueryRow(ctx, dbq.SQL("follows.posts_count"), target).Scan(&p.PostsCount); err != nil {
-		respond.Warn(h.logger, r, "profile posts count failed", err)
-	}
-	if err := h.pool.QueryRow(ctx, dbq.SQL("follows.follower_count"), target).Scan(&p.Followers); err != nil {
-		respond.Warn(h.logger, r, "profile follower count failed", err)
-	}
-	if err := h.pool.QueryRow(ctx, dbq.SQL("follows.following_count"), target).Scan(&p.Following); err != nil {
-		respond.Warn(h.logger, r, "profile following count failed", err)
-	}
-
-	p.IsMe = me != "" && me == target
-	if me != "" && !p.IsMe {
-		if err := h.pool.QueryRow(ctx, dbq.SQL("follows.status"), me, target).Scan(&p.IsFollowing); err != nil {
-			respond.Warn(h.logger, r, "profile follow status failed", err)
-		}
+	if err != nil {
+		// Counts are part of the profile row; query failures return 500 rather
+		// than silently exposing zero counts.
+		respond.Internal(w, r, h.logger, "Database error", err)
+		return
 	}
 	httpx.JSON(w, http.StatusOK, p)
 }
