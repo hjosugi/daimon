@@ -12,6 +12,7 @@
     "dev": "NODE_OPTIONS=--disable-warning=DEP0205 vite",
     "build": "tsc && NODE_OPTIONS=--disable-warning=DEP0205 vite build",
     "lint": "biome check .",
+    "test": "vitest run",
     "preview": "NODE_OPTIONS=--disable-warning=DEP0205 vite preview"
   },
   "dependencies": {
@@ -19,19 +20,23 @@
     "ky": "^1.14.2",
     "lucide-react": "^1.20.0",
     "react": "^19.2.7",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.7"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.0",
     "@tailwindcss/postcss": "^4.3.2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^26.1.0",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.2.0",
     "autoprefixer": "^10.5.0",
+    "jsdom": "^29.1.1",
     "postcss": "^8.5.15",
     "tailwindcss": "^4.1.18",
     "typescript": "^6.0.3",
-    "vite": "^8.1.3"
+    "vite": "^8.1.3",
+    "vitest": "^4.1.9"
   }
 }
