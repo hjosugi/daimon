@@ -1,4 +1,4 @@
-FROM python:3.14-slim AS build
+FROM python:3.12-slim AS build
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential libgomp1 && rm -rf /var/lib/apt/lists/*
@@ -18,7 +18,7 @@ RUN uv sync --locked --no-dev --no-install-project
 RUN .venv/bin/python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')" \
     && .venv/bin/python -c "import spacy; spacy.load('ja_core_news_sm'); spacy.load('en_core_web_sm')"
 
-FROM python:3.14-slim
+FROM python:3.12-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 && rm -rf /var/lib/apt/lists/*
