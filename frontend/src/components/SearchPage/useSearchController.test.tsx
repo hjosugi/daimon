@@ -18,6 +18,7 @@ const searchPost: Post = {
   text: "search result",
   povs: ["Exact POV"],
 }
+const emptyInitialTags: string[] = []
 
 describe("useSearchController", () => {
   beforeEach(() => {
@@ -64,7 +65,7 @@ describe("useSearchController", () => {
     const { result } = renderHook(
       () =>
         useSearchController({
-          initialTags: [],
+          initialTags: emptyInitialTags,
           onPOVTooLong,
         }),
       { wrapper },
@@ -93,7 +94,7 @@ describe("useSearchController", () => {
     const { result } = renderHook(
       () =>
         useSearchController({
-          initialTags: [],
+          initialTags: emptyInitialTags,
           onPOVTooLong: vi.fn(),
         }),
       { wrapper },

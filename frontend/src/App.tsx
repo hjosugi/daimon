@@ -1,5 +1,21 @@
 import { useQueryClient } from "@tanstack/react-query"
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react"
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react"
+import {
+  Navigate,
+  Route,
+  Routes,
+  ScrollRestoration,
+  useLocation,
+  useNavigate,
+  useParams,
+} from "react-router-dom"
 import {
   clearAuthSession,
   getAuthToken,
@@ -10,6 +26,7 @@ import {
 import { Header } from "./components/Header"
 import { TimelinePage } from "./components/TimelinePage"
 import { useI18n } from "./i18n"
+import type { Page } from "./types/navigation"
 
 const SearchPage = lazy(() =>
   import("./components/SearchPage").then((m) => ({ default: m.SearchPage })),
@@ -53,7 +70,90 @@ const RouteFallback = () => {
   )
 }
 
+const pagePaths: Record<Exclude<Page, "user" | "pov">, string> = {
+  timeline: "/",
+  search: "/search",
+  mine: "/mine",
+  saved: "/saved",
+}
+
+const pageFromPath = (pathname: string): Page => {
+  if (pathname === "/search") return "search"
+  if (pathname === "/mine") return "mine"
+  if (pathname === "/saved") return "saved"
+  if (pathname.startsWith("/u/")) return "user"
+  if (pathname.startsWith("/pov/")) return "pov"
+  return "timeline"
+}
+
+const userPath = (userId: string) => `/u/${encodeURIComponent(userId)}`
+const povPath = (tag: string) => `/pov/${encodeURIComponent(tag)}`
+
+const tagsFromSearch = (search: string) =>
+  new URLSearchParams(search).getAll("tag")
+
+const sameTags = (left: string[], right: string[]) =>
+  left.length === right.length &&
+  left.every((tag, index) => tag === right[index])
+
+interface UserProfileRouteProps {
+  currentUser: User | null
+  onBack: () => void
+  onTagClick: (tag: string) => void
+  onUserClick: (userId: string) => void
+}
+
+const UserProfileRoute: React.FC<UserProfileRouteProps> = ({
+  currentUser,
+  onBack,
+  onTagClick,
+  onUserClick,
+}) => {
+  const { userId } = useParams()
+  if (!userId) return <Navigate to="/" replace />
+  return (
+    <UserProfilePage
+      userId={userId}
+      currentUser={currentUser}
+      onBack={onBack}
+      onTagClick={onTagClick}
+      onUserClick={onUserClick}
+    />
+  )
+}
+
+interface POVRouteProps {
+  user: User | null
+  onBack: () => void
+  onAuthRequired: () => void
+  onTagClick: (tag: string) => void
+  onUserClick: (userId: string) => void
+}
+
+const POVRoute: React.FC<POVRouteProps> = ({
+  user,
+  onBack,
+  onAuthRequired,
+  onTagClick,
+  onUserClick,
+}) => {
+  const { tag } = useParams()
+  if (!tag) return <Navigate to="/" replace />
+  return (
+    <POVDiscussionPage
+      pov={tag}
+      user={user}
+      onBack={onBack}
+      onAuthRequired={onAuthRequired}
+      onTagClick={onTagClick}
+      onUserClick={onUserClick}
+    />
+  )
+}
+
 function App() {
+  const location = useLocation()
+  const navigate = useNavigate()
   const [similarityWeight, setSimilarityWeight] = useState<number>(0.7)
   const [boostPopular, setBoostPopular] = useState<boolean>(true)
   const [includeFarPosts, setIncludeFarPosts] = useState<boolean>(false)
@@ -64,30 +164,13 @@ function App() {
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [showProfileModal, setShowProfileModal] = useState(false)
 
-  // Page state
-  const [currentPage, setCurrentPage] = useState<
-    "timeline" | "search" | "mine" | "saved" | "user" | "pov"
-  >("timeline")
-  const [initialSearchTags, setInitialSearchTags] = useState<string[]>([])
-  const [viewingUserId, setViewingUserId] = useState<string | null>(null)
-  const [viewingPOV, setViewingPOV] = useState<string | null>(null)
-  const [prevPage, setPrevPage] = useState<
-    "timeline" | "search" | "mine" | "saved" | "pov"
-  >("timeline")
-  const timelineScrollRef = useRef<number>(0)
-
-  const handleUserClick = useCallback(
-    (userId: string) => {
-      if (!userId) return
-      setPrevPage(
-        currentPage === "user"
-          ? prevPage
-          : (currentPage as "timeline" | "search" | "mine" | "saved" | "pov"),
-      )
-      setViewingUserId(userId)
-      setCurrentPage("user")
-    },
-    [currentPage, prevPage],
+  const currentPage = useMemo(
+    () => pageFromPath(location.pathname),
+    [location.pathname],
+  )
+  const initialSearchTags = useMemo(
+    () => tagsFromSearch(location.search),
+    [location.search],
   )
 
   const queryClient = useQueryClient()
@@ -108,28 +191,63 @@ function App() {
     setUser(null)
   }, [])
 
-  const handleTagClick = useCallback(
-    (tag: string) => {
-      // Save timeline scroll position
-      timelineScrollRef.current = window.scrollY
-      setPrevPage(
-        currentPage === "pov"
-          ? prevPage
-          : (currentPage as "timeline" | "search" | "mine" | "saved" | "pov"),
-      )
-      setViewingPOV(tag)
-      setCurrentPage("pov")
+  const handlePageChange = useCallback(
+    (page: Page) => {
+      if (page === "user" && user) {
+        navigate(userPath(user.id))
+        return
+      }
+      if (page === "user" || page === "pov") {
+        navigate("/")
+        return
+      }
+      navigate(pagePaths[page])
     },
-    [currentPage, prevPage],
+    [navigate, user],
   )
 
-  const handleBackToTimeline = useCallback(() => {
-    setCurrentPage("timeline")
-    // Restore scroll position after a short delay to ensure DOM is ready
-    setTimeout(() => {
-      window.scrollTo({ top: timelineScrollRef.current, behavior: "smooth" })
-    }, 100)
-  }, [])
+  const handleUserClick = useCallback(
+    (userId: string) => {
+      if (!userId) return
+      navigate(userPath(userId))
+    },
+    [navigate],
+  )
+
+  const handleTagClick = useCallback(
+    (tag: string) => {
+      navigate(povPath(tag))
+    },
+    [navigate],
+  )
+
+  const handleBack = useCallback(() => {
+    if (window.history.length > 1) {
+      navigate(-1)
+      return
+    }
+    navigate("/")
+  }, [navigate])
+
+  const handleSearchTagsChange = useCallback(
+    (tags: string[]) => {
+      if (location.pathname !== "/search") return
+      const currentTags = tagsFromSearch(location.search)
+      if (sameTags(currentTags, tags)) return
+
+      const params = new URLSearchParams(location.search)
+      params.delete("tag")
+      for (const tag of tags) {
+        params.append("tag", tag)
+      }
+      const search = params.toString()
+      navigate(
+        { pathname: "/search", search: search ? `?${search}` : "" },
+        { replace: true },
+      )
+    },
+    [location.pathname, location.search, navigate],
+  )
 
   return (
     <div className="min-h-screen bg-[#151520] text-cyan-200 font-mono relative overflow-x-hidden">
@@ -140,62 +258,82 @@ function App() {
       <Header
         user={user}
         currentPage={currentPage}
-        onPageChange={setCurrentPage}
+        onPageChange={handlePageChange}
         onAuthClick={openAuthModal}
         onProfileClick={openProfileModal}
         onLogout={handleLogout}
         onSettingsClick={openSettingsModal}
         similarityWeight={similarityWeight}
       />
+      <ScrollRestoration />
 
       <Suspense fallback={<RouteFallback />}>
-        {currentPage === "search" ? (
-          <SearchPage
-            initialTags={initialSearchTags}
-            onTagsChange={setInitialSearchTags}
-            onBack={handleBackToTimeline}
-            onUserClick={handleUserClick}
-            currentUser={user}
-          />
-        ) : currentPage === "mine" ? (
-          <MyPostsPage
-            user={user}
-            onTagClick={handleTagClick}
-            onUserClick={handleUserClick}
-          />
-        ) : currentPage === "saved" ? (
-          <SavedPage user={user} onTagClick={handleTagClick} />
-        ) : currentPage === "pov" && viewingPOV ? (
-          <POVDiscussionPage
-            pov={viewingPOV}
-            user={user}
-            onBack={() =>
-              setCurrentPage(prevPage === "pov" ? "timeline" : prevPage)
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <TimelinePage
+                user={user}
+                queryText="General interest"
+                similarityWeight={similarityWeight}
+                boostPopular={boostPopular}
+                includeFarPosts={includeFarPosts}
+                onAuthRequired={openAuthModal}
+                onTagClick={handleTagClick}
+                onUserClick={handleUserClick}
+              />
             }
-            onAuthRequired={openAuthModal}
-            onTagClick={handleTagClick}
-            onUserClick={handleUserClick}
           />
-        ) : currentPage === "user" && viewingUserId ? (
-          <UserProfilePage
-            userId={viewingUserId}
-            currentUser={user}
-            onBack={() => setCurrentPage(prevPage)}
-            onTagClick={handleTagClick}
-            onUserClick={handleUserClick}
+          <Route
+            path="/search"
+            element={
+              <SearchPage
+                initialTags={initialSearchTags}
+                onTagsChange={handleSearchTagsChange}
+                onUserClick={handleUserClick}
+                currentUser={user}
+              />
+            }
           />
-        ) : (
-          <TimelinePage
-            user={user}
-            queryText="General interest"
-            similarityWeight={similarityWeight}
-            boostPopular={boostPopular}
-            includeFarPosts={includeFarPosts}
-            onAuthRequired={openAuthModal}
-            onTagClick={handleTagClick}
-            onUserClick={handleUserClick}
+          <Route
+            path="/mine"
+            element={
+              <MyPostsPage
+                user={user}
+                onTagClick={handleTagClick}
+                onUserClick={handleUserClick}
+              />
+            }
           />
-        )}
+          <Route
+            path="/saved"
+            element={<SavedPage user={user} onTagClick={handleTagClick} />}
+          />
+          <Route
+            path="/pov/:tag"
+            element={
+              <POVRoute
+                user={user}
+                onBack={handleBack}
+                onAuthRequired={openAuthModal}
+                onTagClick={handleTagClick}
+                onUserClick={handleUserClick}
+              />
+            }
+          />
+          <Route
+            path="/u/:userId"
+            element={
+              <UserProfileRoute
+                currentUser={user}
+                onBack={handleBack}
+                onTagClick={handleTagClick}
+                onUserClick={handleUserClick}
+              />
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </Suspense>
 
       <Suspense fallback={null}>

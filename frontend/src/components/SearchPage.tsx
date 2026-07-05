@@ -13,8 +13,10 @@ interface SearchPageProps {
   currentUser?: User | null
 }
 
+const emptyInitialTags: string[] = []
+
 export const SearchPage: React.FC<SearchPageProps> = ({
-  initialTags = [],
+  initialTags = emptyInitialTags,
   onTagsChange,
   onUserClick,
   currentUser = null,

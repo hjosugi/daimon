@@ -10,6 +10,10 @@ interface UseSearchControllerOptions {
   onPOVTooLong: () => void
 }
 
+const sameTags = (left: string[], right: string[]) =>
+  left.length === right.length &&
+  left.every((tag, index) => tag === right[index])
+
 export function useSearchController({
   initialTags,
   onTagsChange,
@@ -60,9 +64,9 @@ export function useSearchController({
   })
 
   useEffect(() => {
-    if (initialTags.length > 0) {
-      setSearchTags(initialTags)
-    }
+    setSearchTags((current) =>
+      sameTags(current, initialTags) ? current : initialTags,
+    )
   }, [initialTags])
 
   useEffect(() => {

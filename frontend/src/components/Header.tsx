@@ -10,8 +10,7 @@ import {
 import type React from "react"
 import type { User } from "../api/client"
 import { useI18n } from "../i18n"
-
-type Page = "timeline" | "search" | "mine" | "saved" | "user" | "pov"
+import type { Page } from "../types/navigation"
 
 interface HeaderProps {
   user: User | null
