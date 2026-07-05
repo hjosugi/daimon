@@ -43,11 +43,13 @@ export const Header: React.FC<HeaderProps> = ({
           DAIMON
         </h1>
         <div className="flex items-center gap-1 sm:gap-3">
-          {/* Navigation */}
-          <div className="flex items-end gap-0.5">
+          <nav aria-label={t("nav.primary")} className="flex items-end gap-0.5">
             <button
               type="button"
               onClick={() => onPageChange("timeline")}
+              aria-label={t("nav.home")}
+              aria-current={currentPage === "timeline" ? "page" : undefined}
+              title={t("nav.home")}
               className={`relative flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 transition-all text-xs sm:text-sm font-mono ${
                 currentPage === "timeline"
                   ? "bg-[#2a2a50] text-cyan-300 rounded-t-lg -mb-[1px] z-10 border-t-2 border-l-2 border-r-2 border-cyan-500/40"
@@ -64,6 +66,9 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={() => onPageChange("search")}
+              aria-label={t("nav.search")}
+              aria-current={currentPage === "search" ? "page" : undefined}
+              title={t("nav.search")}
               className={`relative flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 transition-all text-xs sm:text-sm font-mono ${
                 currentPage === "search"
                   ? "bg-[#2a2a50] text-cyan-300 rounded-t-lg -mb-[1px] z-10 border-t-2 border-l-2 border-r-2 border-cyan-500/40"
@@ -80,6 +85,9 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={() => onPageChange("mine")}
+                aria-label={t("nav.mine")}
+                aria-current={currentPage === "mine" ? "page" : undefined}
+                title={t("nav.mine")}
                 className={`relative flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 transition-all text-xs sm:text-sm font-mono ${
                   currentPage === "mine"
                     ? "bg-[#2a2a50] text-cyan-300 rounded-t-lg -mb-[1px] z-10 border-t-2 border-l-2 border-r-2 border-cyan-500/40"
@@ -97,6 +105,9 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={() => onPageChange("saved")}
+                aria-label={t("nav.saved")}
+                aria-current={currentPage === "saved" ? "page" : undefined}
+                title={t("nav.saved")}
                 className={`relative flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 transition-all text-xs sm:text-sm font-mono ${
                   currentPage === "saved"
                     ? "bg-[#2a2a50] text-cyan-300 rounded-t-lg -mb-[1px] z-10 border-t-2 border-l-2 border-r-2 border-cyan-500/40"
@@ -110,10 +121,11 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="hidden sm:inline">{t("nav.saved")}</span>
               </button>
             )}
-          </div>
+          </nav>
           <button
             type="button"
             onClick={onSettingsClick}
+            aria-label={t("nav.timelineSettings")}
             className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-[#1f1f35] border border-fuchsia-500/25 hover:border-fuchsia-500/40 rounded transition-all text-xs sm:text-sm text-fuchsia-300 hover:text-fuchsia-300 font-mono"
             title={t("nav.timelineSettings")}
           >
@@ -130,6 +142,7 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={onProfileClick}
+                aria-label={t("nav.editProfile")}
                 className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-[#1f1f35] border border-cyan-500/15 hover:border-cyan-500/35 rounded transition-all cursor-pointer font-mono"
                 title={t("nav.editProfile")}
               >
@@ -151,6 +164,7 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={onLogout}
+                aria-label={t("nav.logout")}
                 className="p-1.5 sm:p-2 text-cyan-300/80 hover:text-red-300 hover:bg-red-900/15 border border-transparent hover:border-red-500/25 rounded transition-colors"
                 title={t("nav.logout")}
               >
@@ -161,6 +175,8 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={onAuthClick}
+              aria-label={t("nav.login")}
+              title={t("nav.login")}
               className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-cyan-500/95 to-fuchsia-500/95 text-black rounded transition-all text-xs sm:text-sm font-mono font-bold hover:from-cyan-400 hover:to-fuchsia-400"
             >
               <UserIcon size={14} className="sm:w-4 sm:h-4" />

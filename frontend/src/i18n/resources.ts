@@ -6,6 +6,7 @@ const en = {
   "locale.switch": "Language",
 
   "nav.home": "HOME",
+  "nav.primary": "Primary navigation",
   "nav.search": "SEARCH",
   "nav.mine": "MINE",
   "nav.saved": "SAVED",
@@ -229,6 +230,7 @@ const ja: Messages = {
   "locale.switch": "言語",
 
   "nav.home": "ホーム",
+  "nav.primary": "メインナビゲーション",
   "nav.search": "検索",
   "nav.mine": "自分",
   "nav.saved": "保存",
