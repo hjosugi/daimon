@@ -28,13 +28,11 @@ func main() {
 	}
 	defer pool.Close()
 
-	bootCtx, bootCancel := context.WithTimeout(context.Background(), 30*time.Second)
-	if err := db.EnsureSchema(bootCtx, pool); err != nil {
-		log.Fatalf("schema: %v", err)
-	}
 	s := server.New(pool, cfg)
-	s.Bootstrap(bootCtx) // ensure Qdrant collection (best-effort)
-	bootCancel()
+	appCtx, appCancel := context.WithCancel(context.Background())
+	defer appCancel()
+	go bootstrapQdrant(appCtx, s)
+	go ensureSchema(appCtx, pool)
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,
@@ -52,9 +50,39 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 	<-stop
+	appCancel()
 
 	shutdownCtx, cancel2 := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel2()
 	_ = srv.Shutdown(shutdownCtx)
 	log.Println("daimon-api stopped")
+}
+
+func bootstrapQdrant(ctx context.Context, s *server.Server) {
+	bootCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	s.Bootstrap(bootCtx)
+}
+
+func ensureSchema(ctx context.Context, pool *pgxpool.Pool) {
+	delay := 5 * time.Second
+	for attempt := 1; ; attempt++ {
+		bootCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		err := db.EnsureSchema(bootCtx, pool)
+		cancel()
+		if err == nil {
+			log.Println("schema bootstrap complete")
+			return
+		}
+		log.Printf("schema bootstrap attempt %d failed: %v", attempt, err)
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(delay):
+		}
+		delay *= 2
+		if delay > time.Minute {
+			delay = time.Minute
+		}
+	}
 }
