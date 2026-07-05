@@ -13,9 +13,10 @@ from __future__ import annotations
 import re
 from contextlib import asynccontextmanager
 from importlib.util import find_spec
+from typing import Annotated
 
 from fastapi import FastAPI
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 from sentence_transformers import SentenceTransformer
 
 # Multilingual (50+ languages incl. Japanese). all-MiniLM-L6-v2 is English-only
@@ -36,6 +37,12 @@ MAX_SEQ_LEN = 512
 CHUNK_CHARS = 1200  # ~one 512-token window of mixed JA/EN text
 MAX_CHUNKS = 48     # bound cost: covers ~57k chars, beyond the 40k post cap
 ENCODE_BATCH_SIZE = 32
+POST_TEXT_MAX_CHARS = 40_000
+BATCH_TEXT_MAX_ITEMS = 128
+BATCH_TEXT_MAX_TOTAL_CHARS = 256_000
+POV_ANALYSIS_CHARS = 8_000
+
+BoundedPostText = Annotated[str, Field(max_length=POST_TEXT_MAX_CHARS)]
 
 
 def model() -> SentenceTransformer:
@@ -99,7 +106,7 @@ app = FastAPI(title="daimon-ml", lifespan=lifespan)
 
 
 class TextReq(BaseModel):
-    text: str
+    text: BoundedPostText = ""
 
 
 @app.get("/health")
@@ -111,6 +118,10 @@ def health():
         "max_seq_len": MAX_SEQ_LEN,
         "chunk_chars": CHUNK_CHARS,
         "max_chunks": MAX_CHUNKS,
+        "post_text_max_chars": POST_TEXT_MAX_CHARS,
+        "batch_text_max_items": BATCH_TEXT_MAX_ITEMS,
+        "batch_text_max_total_chars": BATCH_TEXT_MAX_TOTAL_CHARS,
+        "pov_analysis_chars": POV_ANALYSIS_CHARS,
         "spacy_models": {
             "ja": find_spec("ja_core_news_sm") is not None,
             "en": find_spec("en_core_web_sm") is not None,
@@ -124,7 +135,20 @@ def embed(req: TextReq):
 
 
 class BatchReq(BaseModel):
-    texts: list[str]
+    texts: list[BoundedPostText] = Field(
+        default_factory=list,
+        max_length=BATCH_TEXT_MAX_ITEMS,
+    )
+
+    @field_validator("texts")
+    @classmethod
+    def total_chars_within_limit(cls, texts: list[str]) -> list[str]:
+        total = sum(len(text or "") for text in texts)
+        if total > BATCH_TEXT_MAX_TOTAL_CHARS:
+            raise ValueError(
+                f"batch text total must be {BATCH_TEXT_MAX_TOTAL_CHARS} characters or less"
+            )
+        return texts
 
 
 @app.post("/embed_batch")
@@ -194,10 +218,11 @@ def povs(req: TextReq):
     text = (req.text or "").strip()
     if not text:
         return {"povs": []}
-    lang = detect_language(text)
+    analysis_text = text[:POV_ANALYSIS_CHARS]
+    lang = detect_language(analysis_text)
     seen: set[str] = set()
     out: list[str] = []
-    for p in extract_phrases(text, lang):
+    for p in extract_phrases(analysis_text, lang):
         key = p.lower() if lang == "en" else p
         if key not in seen and len(p) <= 300:
             seen.add(key)
