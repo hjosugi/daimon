@@ -1,12 +1,11 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Bookmark, Hash, Heart, MessageSquare } from "lucide-react"
 import type React from "react"
-import { memo, useEffect, useState } from "react"
+import { memo } from "react"
 import type { Post, User } from "../api/client"
-import { likePost, savePost, unlikePost, unsavePost } from "../api/client"
 import { useI18n } from "../i18n"
 import { formatRelativeDate } from "../utils/date"
 import { formatMatchReason } from "../utils/matchReason"
+import { usePostCardActions } from "./PostCard/usePostCardActions"
 
 interface SearchPostCardProps {
   post: Post
@@ -21,71 +20,12 @@ const SearchPostCardComponent: React.FC<SearchPostCardProps> = ({
   currentUser,
   onUserClick,
 }) => {
-  const queryClient = useQueryClient()
   const { locale, t } = useI18n()
-  const [saved, setSaved] = useState(Boolean(post.saved))
-
-  useEffect(() => {
-    setSaved(Boolean(post.saved))
-  }, [post.saved])
-
-  const saveMutation = useMutation({
-    mutationFn: () => (saved ? unsavePost(post.id) : savePost(post.id)),
-    onMutate: () => {
-      const prev = saved
-      const next = !saved
-      setSaved(next)
-      patchSearchCaches((p) => ({ ...p, saved: next }))
-      return { prev }
-    },
-    onError: (_e, _v, ctx) => {
-      if (!ctx) return
-      setSaved(ctx.prev)
-      patchSearchCaches((p) => ({ ...p, saved: ctx.prev }))
-    },
-    onSuccess: (data) => {
-      setSaved(data.saved)
-      patchSearchCaches((p) => ({ ...p, saved: data.saved }))
-      queryClient.invalidateQueries({ queryKey: ["saved-posts"] })
-    },
-  })
-
-  // Update every cached search result set (key is ["search", query, tags]).
-  const patchSearchCaches = (updater: (p: Post) => Post) => {
-    queryClient.setQueriesData<Post[]>({ queryKey: ["search"] }, (old) =>
-      Array.isArray(old)
-        ? old.map((p) => (p.id === post.id ? updater(p) : p))
-        : old,
-    )
-  }
-
-  const likeMutation = useMutation({
-    mutationFn: () => (post.liked ? unlikePost(post.id) : likePost(post.id)),
-    // Optimistic: flip the heart immediately, no refetch (instant feedback).
-    onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: ["search"] })
-      const prev = queryClient.getQueriesData<Post[]>({ queryKey: ["search"] })
-      patchSearchCaches((p) => ({
-        ...p,
-        liked: !p.liked,
-        likes: (p.likes ?? 0) + (p.liked ? -1 : 1),
-      }))
-      return { prev }
-    },
-    onError: (_e, _v, ctx) => {
-      ctx?.prev?.forEach(([key, data]) => {
-        queryClient.setQueryData(key, data)
-      })
-    },
-    onSuccess: (data) => {
-      // Reconcile with the server's authoritative count.
-      patchSearchCaches((p) => ({ ...p, liked: data.liked, likes: data.likes }))
-    },
-  })
+  const actions = usePostCardActions(post, currentUser)
 
   const handleLike = (e: React.MouseEvent) => {
     e.stopPropagation()
-    likeMutation.mutate()
+    actions.toggleLike()
   }
 
   return (
@@ -174,14 +114,15 @@ const SearchPostCardComponent: React.FC<SearchPostCardProps> = ({
           <button
             type="button"
             onClick={handleLike}
+            disabled={actions.likePending}
             className={`flex items-center gap-0.5 font-mono transition-colors active:scale-95 ${
               post.liked
                 ? "text-red-400"
                 : "text-cyan-300/90 hover:text-red-300"
-            }`}
+            } ${actions.likePending ? "opacity-50 cursor-wait" : ""}`}
           >
             <Heart size={13} className={post.liked ? "fill-red-400" : ""} />
-            <span>{post.likes ?? 0}</span>
+            <span>{actions.likePending ? "..." : (post.likes ?? 0)}</span>
           </button>
           <div className="flex items-center gap-0.5 text-cyan-300/90 font-mono">
             <MessageSquare size={11} />
@@ -192,16 +133,19 @@ const SearchPostCardComponent: React.FC<SearchPostCardProps> = ({
               type="button"
               onClick={(e) => {
                 e.stopPropagation()
-                saveMutation.mutate()
+                actions.toggleSave()
               }}
               className={`flex items-center gap-0.5 font-mono transition-colors active:scale-95 ml-auto ${
-                saved
+                actions.saved
                   ? "text-amber-300"
                   : "text-cyan-300/90 hover:text-amber-300"
               }`}
-              title={saved ? t("post.savedTitle") : t("post.saveTitle")}
+              title={actions.saved ? t("post.savedTitle") : t("post.saveTitle")}
             >
-              <Bookmark size={12} className={saved ? "fill-amber-300" : ""} />
+              <Bookmark
+                size={12}
+                className={actions.saved ? "fill-amber-300" : ""}
+              />
             </button>
           )}
         </div>

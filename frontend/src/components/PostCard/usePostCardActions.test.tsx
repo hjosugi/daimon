@@ -34,6 +34,14 @@ const currentUser: User = {
   email: "alice@example.com",
 }
 
+const postFeedKeys = [
+  ["timeline"],
+  ["search"],
+  ["my-posts"],
+  ["user-posts"],
+  ["saved-posts"],
+]
+
 function createPost(overrides: Partial<Post> = {}): Post {
   return {
     id: "post-1",
@@ -68,8 +76,9 @@ describe("usePostCardActions", () => {
   it("optimistically patches post-like caches and reconciles server data", async () => {
     const post = createPost()
     const { queryClient, wrapper } = createQueryClientWrapper()
-    queryClient.setQueryData<Post[]>(["timeline"], [post])
-    queryClient.setQueryData<Post[]>(["search"], [post])
+    for (const key of postFeedKeys) {
+      queryClient.setQueryData<Post[]>(key, [post])
+    }
 
     const { result } = renderHook(() => usePostCardActions(post, currentUser), {
       wrapper,
@@ -80,16 +89,41 @@ describe("usePostCardActions", () => {
     })
 
     await waitFor(() => {
-      expect(queryClient.getQueryData<Post[]>(["timeline"])).toEqual([
-        expect.objectContaining({ liked: true, likes: 2 }),
-      ])
-      expect(queryClient.getQueryData<Post[]>(["search"])).toEqual([
-        expect.objectContaining({ liked: true, likes: 2 }),
-      ])
+      for (const key of postFeedKeys) {
+        expect(queryClient.getQueryData<Post[]>(key)).toEqual([
+          expect.objectContaining({ liked: true, likes: 2 }),
+        ])
+      }
     })
 
     await waitFor(() => {
       expect(mockedLikePost).toHaveBeenCalledWith("post-1")
+    })
+  })
+
+  it("patches save state across all cached post feeds", async () => {
+    const post = createPost()
+    const { queryClient, wrapper } = createQueryClientWrapper()
+    for (const key of postFeedKeys) {
+      queryClient.setQueryData<Post[]>(key, [post])
+    }
+
+    const { result } = renderHook(() => usePostCardActions(post, currentUser), {
+      wrapper,
+    })
+
+    act(() => {
+      result.current.toggleSave()
+    })
+
+    await waitFor(() => {
+      expect(mockedSavePost).toHaveBeenCalledWith("post-1")
+      expect(result.current.saved).toBe(true)
+      for (const key of postFeedKeys) {
+        expect(queryClient.getQueryData<Post[]>(key)).toEqual([
+          expect.objectContaining({ saved: true }),
+        ])
+      }
     })
   })
 

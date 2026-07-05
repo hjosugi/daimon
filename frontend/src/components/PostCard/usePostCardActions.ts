@@ -63,12 +63,12 @@ export function usePostCardActions(post: Post, currentUser?: User | null) {
   })
 
   const saveMutation = useMutation({
-    mutationFn: () => (saved ? unsavePost(post.id) : savePost(post.id)),
-    onMutate: () => {
+    mutationFn: (nextSaved: boolean) =>
+      nextSaved ? savePost(post.id) : unsavePost(post.id),
+    onMutate: (nextSaved) => {
       const prev = saved
-      const next = !saved
-      setSaved(next)
-      patchCaches((p) => ({ ...p, saved: next }))
+      setSaved(nextSaved)
+      patchCaches((p) => ({ ...p, saved: nextSaved }))
       return { prev }
     },
     onError: (_e, _v, ctx) => {
@@ -140,7 +140,7 @@ export function usePostCardActions(post: Post, currentUser?: User | null) {
     addCommentPending: addCommentMutation.isPending,
     deletePending: deletePostMutation.isPending,
     toggleLike: () => likeMutation.mutate(),
-    toggleSave: () => saveMutation.mutate(),
+    toggleSave: () => saveMutation.mutate(!saved),
     addCurrentComment,
     deletePost: () => deletePostMutation.mutate(),
     togglePOVLike,
