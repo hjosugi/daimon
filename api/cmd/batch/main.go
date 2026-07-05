@@ -20,6 +20,7 @@ import (
 	"daimon/api/internal/config"
 	dbq "daimon/api/internal/db"
 	"daimon/api/internal/embed"
+	"daimon/api/internal/feedcore"
 	"daimon/api/internal/qdrant"
 	"daimon/api/internal/ranking"
 	"daimon/api/internal/vec"
@@ -206,34 +207,51 @@ func timelineJob(ctx context.Context, pool *pgxpool.Pool, qc *qdrant.Client, em 
 	for _, h := range hits {
 		ids = append(ids, h.ID)
 	}
-	povsByPost := loadPOVs(ctx, pool, ids)
-	likeCounts := loadLikeCounts(ctx, pool, ids)
-	saveCounts := loadSaveCounts(ctx, pool, ids)
+	povsByPost, err := feedcore.LoadPOVs(ctx, pool, ids)
+	if err != nil {
+		log.Printf("timeline: load povs: %v", err)
+	}
+	likeCounts, err := feedcore.LoadLikeCounts(ctx, pool, ids)
+	if err != nil {
+		log.Printf("timeline: load likes: %v", err)
+	}
+	saveCounts, err := feedcore.LoadSaveCounts(ctx, pool, ids)
+	if err != nil {
+		log.Printf("timeline: load saves: %v", err)
+	}
+	metas := feedcore.MetasFromHits(hits)
+	now := time.Now().UTC()
 
 	users := distinctPosters(ctx, pool)
 	done := 0
 	for _, uid := range users {
 		// Blend the user's own-post centroid with their saved-post centroid
 		// (saves are a stronger preference signal).
-		centroid := vec.BlendSaved(userCentroid(ctx, qc, uid), savedCentroid(ctx, pool, qc, uid))
-		userTags := userTagSet(ctx, pool, uid)
-
-		cands := make([]ranking.Candidate, 0, len(hits))
-		for _, h := range hits {
-			if owner, _ := h.Payload["user_id"].(string); owner == uid {
-				continue
-			}
-			tagSet := map[string]bool{}
-			for _, p := range povsByPost[h.ID] {
-				tagSet[p] = true
-			}
-			cands = append(cands, ranking.Candidate{
-				PostID: h.ID, Vector: h.Vector, Tags: tagSet,
-				Relevance:  h.Score,
-				Popularity: float32(likeCounts[h.ID]+3*saveCounts[h.ID]) / 10.0,
-			})
+		ownCentroid, err := feedcore.UserCentroid(ctx, qc, uid)
+		if err != nil {
+			log.Printf("timeline: user centroid %s: %v", uid, err)
 		}
-		ranked := ranking.RankBySenseDistance(cands, centroid, userTags, 0.7, true, false, 0.3, 10)
+		savedCentroid, err := feedcore.SavedCentroid(ctx, pool, qc, uid)
+		if err != nil {
+			log.Printf("timeline: saved centroid %s: %v", uid, err)
+		}
+		centroid := vec.BlendSaved(ownCentroid, savedCentroid)
+		userTags, err := feedcore.UserTagSet(ctx, pool, uid)
+		if err != nil {
+			log.Printf("timeline: user tags %s: %v", uid, err)
+		}
+
+		cands := feedcore.BuildCandidates(hits, metas, povsByPost, likeCounts, saveCounts, uid, now)
+		ranked := ranking.RankBySenseDistance(
+			cands,
+			centroid,
+			userTags,
+			feedcore.DefaultTimelineSimilarityWeight,
+			true,
+			false,
+			feedcore.DefaultTimelineBridgeWeight,
+			feedcore.DefaultTimelineTopK,
+		)
 		feedIDs := make([]string, 0, len(ranked))
 		for _, c := range ranked {
 			feedIDs = append(feedIDs, c.PostID)
@@ -248,116 +266,10 @@ func timelineJob(ctx context.Context, pool *pgxpool.Pool, qc *qdrant.Client, em 
 
 // ---- small helpers -------------------------------------------------------
 
-func loadPOVs(ctx context.Context, pool *pgxpool.Pool, ids []string) map[string][]string {
-	m := map[string][]string{}
-	rows, err := pool.Query(ctx, dbq.SQL("feed.load_povs"), ids)
-	if err != nil {
-		return m
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var pid, pov string
-		if rows.Scan(&pid, &pov) == nil {
-			m[pid] = append(m[pid], pov)
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return m
-	}
-	return m
-}
-
-func loadLikeCounts(ctx context.Context, pool *pgxpool.Pool, ids []string) map[string]int {
-	m := map[string]int{}
-	rows, err := pool.Query(ctx, dbq.SQL("feed.like_counts"), ids)
-	if err != nil {
-		return m
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var pid string
-		var n int
-		if rows.Scan(&pid, &n) == nil {
-			m[pid] = n
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return m
-	}
-	return m
-}
-
-func loadSaveCounts(ctx context.Context, pool *pgxpool.Pool, ids []string) map[string]int {
-	m := map[string]int{}
-	rows, err := pool.Query(ctx, dbq.SQL("feed.save_counts"), ids)
-	if err != nil {
-		return m
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var pid string
-		var n int
-		if rows.Scan(&pid, &n) == nil {
-			m[pid] = n
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return m
-	}
-	return m
-}
-
-// savedCentroid returns the mean vector of the user's saved posts.
-func savedCentroid(ctx context.Context, pool *pgxpool.Pool, qc *qdrant.Client, uid string) []float32 {
-	ids, err := dbq.QueryStrings(ctx, pool, dbq.SQL("feed.user_saved_ids"), uid)
-	if err != nil {
-		return nil
-	}
-	if len(ids) == 0 {
-		return nil
-	}
-	pts, err := qc.Retrieve(ctx, ids, true)
-	if err != nil || len(pts) == 0 {
-		return nil
-	}
-	return vec.Mean(pointVectors(pts))
-}
-
 func distinctPosters(ctx context.Context, pool *pgxpool.Pool) []string {
 	out, err := dbq.QueryStrings(ctx, pool, dbq.SQL("batch.distinct_posters"))
 	if err != nil {
 		return nil
 	}
 	return out
-}
-
-func userTagSet(ctx context.Context, pool *pgxpool.Pool, uid string) map[string]bool {
-	tags := map[string]bool{}
-	povs, err := dbq.QueryStrings(ctx, pool, dbq.SQL("feed.user_povs"), uid)
-	if err != nil {
-		return tags
-	}
-	for _, pov := range povs {
-		tags[pov] = true
-	}
-	return tags
-}
-
-func userCentroid(ctx context.Context, qc *qdrant.Client, uid string) []float32 {
-	pts, err := qc.UserPoints(ctx, uid, 200)
-	if err != nil || len(pts) == 0 {
-		return nil
-	}
-	return vec.Mean(pointVectors(pts))
-}
-
-// pointVectors extracts the non-empty vectors from a slice of Qdrant points.
-func pointVectors(pts []qdrant.Point) [][]float32 {
-	vs := make([][]float32, 0, len(pts))
-	for _, p := range pts {
-		if len(p.Vector) > 0 {
-			vs = append(vs, p.Vector)
-		}
-	}
-	return vs
 }

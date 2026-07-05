@@ -2,8 +2,8 @@ package feed
 
 import (
 	"strings"
-	"time"
 
+	"daimon/api/internal/feedcore"
 	"daimon/api/internal/qdrant"
 	"daimon/api/internal/ranking"
 )
@@ -16,8 +16,8 @@ func defaultTimelineQuery(q string) bool {
 func defaultTimelineKnobs(req timelineReq) bool {
 	return defaultTimelineQuery(req.QueryText) &&
 		req.BoostPopular &&
-		req.SimilarityWeight > 0.69 &&
-		req.SimilarityWeight < 0.71 &&
+		req.SimilarityWeight > feedcore.DefaultTimelineSimilarityWeight-0.01 &&
+		req.SimilarityWeight < feedcore.DefaultTimelineSimilarityWeight+0.01 &&
 		!req.IncludeFarPosts
 }
 
@@ -36,21 +36,6 @@ func tagSetKeys(tags map[string]bool) []string {
 		out = append(out, t)
 	}
 	return out
-}
-
-func recencyScore(createdAt, now time.Time) float32 {
-	if createdAt.IsZero() {
-		return 0
-	}
-	age := now.Sub(createdAt).Hours() / 24
-	if age <= 0 {
-		return 1
-	}
-	score := 1 - float32(age/30)
-	if score < 0 {
-		return 0
-	}
-	return score
 }
 
 func povCoverageRate(tagList []string, userTags map[string]bool) float32 {

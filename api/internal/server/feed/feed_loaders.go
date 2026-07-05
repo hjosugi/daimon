@@ -4,6 +4,7 @@ import (
 	"context"
 
 	dbq "daimon/api/internal/db"
+	"daimon/api/internal/feedcore"
 )
 
 func (h *Handler) loadPosts(ctx context.Context, ids []string) map[string]postMeta {
@@ -28,55 +29,51 @@ func (h *Handler) loadPosts(ctx context.Context, ids []string) map[string]postMe
 }
 
 func (h *Handler) loadPOVs(ctx context.Context, ids []string) map[string][]string {
-	m := map[string][]string{}
-	rows, err := h.pool.Query(ctx, dbq.SQL("feed.load_povs"), ids)
+	m, err := feedcore.LoadPOVs(ctx, h.pool, ids)
 	if err != nil {
 		h.logger.WarnContext(ctx, "load povs failed", "error", err)
-		return m
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var pid, pov string
-		if rows.Scan(&pid, &pov) == nil {
-			m[pid] = append(m[pid], pov)
-		}
-	}
-	if err := rows.Err(); err != nil {
-		h.logger.WarnContext(ctx, "load pov rows failed", "error", err)
 	}
 	return m
 }
 
 func (h *Handler) loadCounts(ctx context.Context, table string, ids []string) map[string]int {
 	m := map[string]int{}
-	var query string
 	switch table {
 	case "likes":
-		query = dbq.SQL("feed.like_counts")
+		var err error
+		m, err = feedcore.LoadLikeCounts(ctx, h.pool, ids)
+		if err != nil {
+			h.logger.WarnContext(ctx, "load counts failed", "error", err, "table", table)
+		}
+		return m
 	case "comments":
-		query = dbq.SQL("feed.comment_counts")
+		rows, err := h.pool.Query(ctx, dbq.SQL("feed.comment_counts"), ids)
+		if err != nil {
+			h.logger.WarnContext(ctx, "load counts failed", "error", err, "table", table)
+			return m
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var pid string
+			var n int
+			if rows.Scan(&pid, &n) == nil {
+				m[pid] = n
+			}
+		}
+		if err := rows.Err(); err != nil {
+			h.logger.WarnContext(ctx, "load counts rows failed", "error", err, "table", table)
+		}
+		return m
 	case "bookmarks":
-		query = dbq.SQL("feed.save_counts")
+		var err error
+		m, err = feedcore.LoadSaveCounts(ctx, h.pool, ids)
+		if err != nil {
+			h.logger.WarnContext(ctx, "load counts failed", "error", err, "table", table)
+		}
+		return m
 	default:
 		return m
 	}
-	rows, err := h.pool.Query(ctx, query, ids)
-	if err != nil {
-		h.logger.WarnContext(ctx, "load counts failed", "error", err, "table", table)
-		return m
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var pid string
-		var n int
-		if rows.Scan(&pid, &n) == nil {
-			m[pid] = n
-		}
-	}
-	if err := rows.Err(); err != nil {
-		h.logger.WarnContext(ctx, "load counts rows failed", "error", err, "table", table)
-	}
-	return m
 }
 
 func (h *Handler) loadLikedSet(ctx context.Context, ids []string, uid string) map[string]bool {
@@ -181,6 +178,17 @@ func (h *Handler) loadBundle(ctx context.Context, ids []string, uid string) bund
 		povLikeCounts: h.loadPOVLikeCounts(ctx, allPOVs),
 		povLiked:      h.loadPOVLikedSet(ctx, allPOVs, uid),
 	}
+}
+
+func (b bundle) rankingMeta() map[string]feedcore.PostMeta {
+	out := make(map[string]feedcore.PostMeta, len(b.meta))
+	for id, meta := range b.meta {
+		out[id] = feedcore.PostMeta{
+			UserID:    meta.userID,
+			CreatedAt: meta.createdAt,
+		}
+	}
+	return out
 }
 
 func (b bundle) povStats(tagList []string) povStats {

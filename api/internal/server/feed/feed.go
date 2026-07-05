@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	dbq "daimon/api/internal/db"
+	"daimon/api/internal/feedcore"
 	"daimon/api/internal/httpx"
 	"daimon/api/internal/qdrant"
 	"daimon/api/internal/ranking"
@@ -122,40 +123,16 @@ func (h *Handler) rankAndMaterializeTimeline(ctx context.Context, uid string, re
 	b := h.loadBundle(ctx, ids, uid)
 	saveCounts := h.loadCounts(ctx, "bookmarks", ids)
 
-	cands := buildTimelineCandidates(hits, b, saveCounts, uid, time.Now().UTC())
+	cands := feedcore.BuildCandidates(hits, b.rankingMeta(), b.povs, b.likeCounts, saveCounts, uid, time.Now().UTC())
 	ranked := ranking.RankBySenseDistance(cands, centroid, userTags,
-		req.SimilarityWeight, req.BoostPopular, req.IncludeFarPosts, 0.3, 10)
+		req.SimilarityWeight, req.BoostPopular, req.IncludeFarPosts,
+		feedcore.DefaultTimelineBridgeWeight, feedcore.DefaultTimelineTopK)
 
 	out := make([]postResp, 0, len(ranked))
 	for _, c := range ranked {
 		out = append(out, h.materialize(c, b, userTags))
 	}
 	return out
-}
-
-func buildTimelineCandidates(hits []qdrant.Hit, b bundle, saveCounts map[string]int, uid string, now time.Time) []ranking.Candidate {
-	cands := make([]ranking.Candidate, 0, len(hits))
-	for _, hit := range hits {
-		pm, ok := b.meta[hit.ID]
-		if !ok || pm.userID == uid {
-			continue
-		}
-		tagSet := map[string]bool{}
-		for _, pov := range b.povs[hit.ID] {
-			tagSet[pov] = true
-		}
-		// A save counts ~3x a like as a quality/preference signal.
-		pop := float32(b.likeCounts[hit.ID]+3*saveCounts[hit.ID]) / 10.0
-		cands = append(cands, ranking.Candidate{
-			PostID:     hit.ID,
-			Vector:     hit.Vector,
-			Tags:       tagSet,
-			Relevance:  hit.Score,
-			Popularity: pop,
-			Recency:    recencyScore(pm.createdAt, now),
-		})
-	}
-	return cands
 }
 
 func (h *Handler) HandleSearch(w http.ResponseWriter, r *http.Request) {
