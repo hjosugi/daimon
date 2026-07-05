@@ -1,6 +1,7 @@
 package feed
 
 import (
+	"context"
 	"net/http"
 	"sort"
 	"time"
@@ -9,6 +10,7 @@ import (
 
 	dbq "daimon/api/internal/db"
 	"daimon/api/internal/httpx"
+	"daimon/api/internal/qdrant"
 	"daimon/api/internal/ranking"
 	"daimon/api/internal/server/respond"
 	"daimon/api/internal/server/session"
@@ -23,16 +25,9 @@ func (h *Handler) HandleTimeline(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	uid := session.UserID(ctx)
 
-	// Fast path: serve the batch-precomputed home feed (default knobs).
-	// Discovery mode (include_far_posts) always computes live.
-	if uid != "" && defaultTimelineKnobs(req) {
-		var ids []string
-		if h.cache.GetJSON(ctx, "feed:"+uid, &ids) && len(ids) > 0 {
-			if out := h.materializeIDs(ctx, ids, uid); len(out) > 0 {
-				httpx.JSON(w, http.StatusOK, out)
-				return
-			}
-		}
+	if out, ok := h.cachedTimeline(ctx, uid, req); ok {
+		httpx.JSON(w, http.StatusOK, out)
+		return
 	}
 
 	vector, err := h.embed.Embed(ctx, req.QueryText)
@@ -41,30 +36,67 @@ func (h *Handler) HandleTimeline(w http.ResponseWriter, r *http.Request) {
 		httpx.JSON(w, http.StatusOK, []postResp{}) // degrade gracefully
 		return
 	}
-	userTags, centroid := h.userSense(ctx, uid)
-	// Saves are a strong preference signal: blend the saved-post centroid in.
-	centroid = vec.BlendSaved(centroid, h.savedCentroid(ctx, uid))
-	searchVector := vector
-	if uid != "" && len(centroid) > 0 && defaultTimelineQuery(req.QueryText) {
-		searchVector = centroid
-	}
 
-	limit := 100
-	if req.IncludeFarPosts {
-		limit = 200
-	}
-	hits, err := h.qdrant.Search(ctx, searchVector, limit, nil, true)
-	if err != nil || len(hits) == 0 {
-		if err != nil {
-			respond.Warn(h.logger, r, "timeline qdrant search failed", err)
-		}
+	userTags, centroid, searchVector := h.resolveTimelineVector(ctx, uid, req, vector)
+	hits, ok := h.gatherTimelineHits(ctx, r, uid, req, searchVector, userTags)
+	if !ok {
 		httpx.JSON(w, http.StatusOK, []postResp{})
 		return
 	}
 
+	out := h.rankAndMaterializeTimeline(ctx, uid, req, hits, centroid, userTags)
+	httpx.JSON(w, http.StatusOK, out)
+}
+
+func (h *Handler) cachedTimeline(ctx context.Context, uid string, req timelineReq) ([]postResp, bool) {
+	// Fast path: serve the batch-precomputed home feed (default knobs).
+	// Discovery mode (include_far_posts) always computes live.
+	if uid == "" || !defaultTimelineKnobs(req) {
+		return nil, false
+	}
+	var ids []string
+	if h.cache.GetJSON(ctx, "feed:"+uid, &ids) && len(ids) > 0 {
+		if out := h.materializeIDs(ctx, ids, uid); len(out) > 0 {
+			return out, true
+		}
+	}
+	return nil, false
+}
+
+func (h *Handler) resolveTimelineVector(ctx context.Context, uid string, req timelineReq, queryVector []float32) (map[string]bool, []float32, []float32) {
+	userTags, centroid := h.userSense(ctx, uid)
+	// Saves are a strong preference signal: blend the saved-post centroid in.
+	centroid = vec.BlendSaved(centroid, h.savedCentroid(ctx, uid))
+	searchVector := queryVector
+	if uid != "" && len(centroid) > 0 && defaultTimelineQuery(req.QueryText) {
+		searchVector = centroid
+	}
+	return userTags, centroid, searchVector
+}
+
+func timelineSearchLimit(req timelineReq) int {
+	if req.IncludeFarPosts {
+		return 200
+	}
+	return 100
+}
+
+func (h *Handler) gatherTimelineHits(ctx context.Context, r *http.Request, uid string, req timelineReq, searchVector []float32, userTags map[string]bool) ([]qdrant.Hit, bool) {
+	hits, err := h.qdrant.Search(ctx, searchVector, timelineSearchLimit(req), nil, true)
+	if err != nil || len(hits) == 0 {
+		if err != nil {
+			respond.Warn(h.logger, r, "timeline qdrant search failed", err)
+		}
+		return nil, false
+	}
+	hits = h.appendPopularTimelineHits(ctx, r, uid, req, searchVector, userTags, hits)
+	return hits, true
+}
+
+func (h *Handler) appendPopularTimelineHits(ctx context.Context, r *http.Request, uid string, req timelineReq, searchVector []float32, userTags map[string]bool, hits []qdrant.Hit) []qdrant.Hit {
 	seenHits := map[string]bool{}
-	for _, h := range hits {
-		seenHits[h.ID] = true
+	for _, hit := range hits {
+		seenHits[hit.ID] = true
 	}
 	if req.BoostPopular && uid != "" && len(userTags) > 0 {
 		if pts, err := h.qdrant.Retrieve(ctx, h.recentPopularMatchedPostIDs(ctx, uid, userTags, 80), true); err == nil {
@@ -79,37 +111,18 @@ func (h *Handler) HandleTimeline(w http.ResponseWriter, r *http.Request) {
 			respond.Warn(h.logger, r, "timeline popular qdrant retrieve failed", err)
 		}
 	}
+	return hits
+}
 
+func (h *Handler) rankAndMaterializeTimeline(ctx context.Context, uid string, req timelineReq, hits []qdrant.Hit, centroid []float32, userTags map[string]bool) []postResp {
 	ids := make([]string, 0, len(hits))
-	for _, h := range hits {
-		ids = append(ids, h.ID)
+	for _, hit := range hits {
+		ids = append(ids, hit.ID)
 	}
 	b := h.loadBundle(ctx, ids, uid)
 	saveCounts := h.loadCounts(ctx, "bookmarks", ids)
 
-	cands := make([]ranking.Candidate, 0, len(hits))
-	now := time.Now().UTC()
-	for _, h := range hits {
-		pm, ok := b.meta[h.ID]
-		if !ok || pm.userID == uid {
-			continue
-		}
-		tagSet := map[string]bool{}
-		for _, p := range b.povs[h.ID] {
-			tagSet[p] = true
-		}
-		// A save counts ~3x a like as a quality/preference signal.
-		pop := float32(b.likeCounts[h.ID]+3*saveCounts[h.ID]) / 10.0
-		cands = append(cands, ranking.Candidate{
-			PostID:     h.ID,
-			Vector:     h.Vector,
-			Tags:       tagSet,
-			Relevance:  h.Score,
-			Popularity: pop,
-			Recency:    recencyScore(pm.createdAt, now),
-		})
-	}
-
+	cands := buildTimelineCandidates(hits, b, saveCounts, uid, time.Now().UTC())
 	ranked := ranking.RankBySenseDistance(cands, centroid, userTags,
 		req.SimilarityWeight, req.BoostPopular, req.IncludeFarPosts, 0.3, 10)
 
@@ -117,7 +130,32 @@ func (h *Handler) HandleTimeline(w http.ResponseWriter, r *http.Request) {
 	for _, c := range ranked {
 		out = append(out, h.materialize(c, b, userTags))
 	}
-	httpx.JSON(w, http.StatusOK, out)
+	return out
+}
+
+func buildTimelineCandidates(hits []qdrant.Hit, b bundle, saveCounts map[string]int, uid string, now time.Time) []ranking.Candidate {
+	cands := make([]ranking.Candidate, 0, len(hits))
+	for _, hit := range hits {
+		pm, ok := b.meta[hit.ID]
+		if !ok || pm.userID == uid {
+			continue
+		}
+		tagSet := map[string]bool{}
+		for _, pov := range b.povs[hit.ID] {
+			tagSet[pov] = true
+		}
+		// A save counts ~3x a like as a quality/preference signal.
+		pop := float32(b.likeCounts[hit.ID]+3*saveCounts[hit.ID]) / 10.0
+		cands = append(cands, ranking.Candidate{
+			PostID:     hit.ID,
+			Vector:     hit.Vector,
+			Tags:       tagSet,
+			Relevance:  hit.Score,
+			Popularity: pop,
+			Recency:    recencyScore(pm.createdAt, now),
+		})
+	}
+	return cands
 }
 
 func (h *Handler) HandleSearch(w http.ResponseWriter, r *http.Request) {
