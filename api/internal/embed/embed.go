@@ -7,9 +7,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"strings"
 	"time"
 )
+
+const VectorDim = 384
 
 type Client struct {
 	base string
@@ -39,7 +43,12 @@ func (c *Client) post(ctx context.Context, path string, in, out any) error {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode >= 300 {
-		return fmt.Errorf("ml service %s: status %d", path, resp.StatusCode)
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		detail := strings.TrimSpace(string(body))
+		if detail == "" {
+			return fmt.Errorf("ml service %s: status %d", path, resp.StatusCode)
+		}
+		return fmt.Errorf("ml service %s: status %d: %s", path, resp.StatusCode, detail)
 	}
 	return json.NewDecoder(resp.Body).Decode(out)
 }
@@ -52,6 +61,9 @@ func (c *Client) Embed(ctx context.Context, text string) ([]float32, error) {
 	if err := c.post(ctx, "/embed", map[string]string{"text": text}, &out); err != nil {
 		return nil, err
 	}
+	if len(out.Vector) != VectorDim {
+		return nil, fmt.Errorf("ml service /embed: vector dimension %d != %d", len(out.Vector), VectorDim)
+	}
 	return out.Vector, nil
 }
 
@@ -63,6 +75,14 @@ func (c *Client) EmbedBatch(ctx context.Context, texts []string) ([][]float32, e
 	}
 	if err := c.post(ctx, "/embed_batch", map[string]any{"texts": texts}, &out); err != nil {
 		return nil, err
+	}
+	if len(out.Vectors) != len(texts) {
+		return nil, fmt.Errorf("ml service /embed_batch: vector count %d != input count %d", len(out.Vectors), len(texts))
+	}
+	for i, vector := range out.Vectors {
+		if len(vector) != VectorDim {
+			return nil, fmt.Errorf("ml service /embed_batch: vector %d dimension %d != %d", i, len(vector), VectorDim)
+		}
 	}
 	return out.Vectors, nil
 }

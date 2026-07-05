@@ -290,6 +290,9 @@ func embedAll(ctx context.Context, embedURL string, texts []string, batch int) [
 		if err != nil {
 			log.Fatalf("embed batch %d-%d: %v (is the ML service up? try --fake-vectors)", i, end, err)
 		}
+		if len(vecs) != end-i {
+			log.Fatalf("embed batch %d-%d: vector count %d != input count %d", i, end, len(vecs), end-i)
+		}
 		out = append(out, vecs...)
 		log.Printf("    embedded %d/%d", end, len(texts))
 	}

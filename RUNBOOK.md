@@ -77,7 +77,7 @@ GitHub Actions の `.github/workflows/ci.yml` は以下を検証します。
 
 - API: `go test ./...`, `go vet ./...`, server / batch build
 - Frontend: `pnpm install --frozen-lockfile`, Biome lint, Vite build
-- ML service: `uv sync --locked`, `uv run ruff check .`, FastAPI import smoke test
+- ML service: `uv sync --locked`, `uv run ruff check .`, `uv run pytest`, FastAPI import smoke test
 - Deploy config: `docker compose -f compose.yml config`, `cloudbuild.yaml` shape check, API / ML Docker image build
 
 ローカルで同じ系統の確認をする場合:
@@ -85,7 +85,7 @@ GitHub Actions の `.github/workflows/ci.yml` は以下を検証します。
 ```bash
 (cd api && go test ./... && go vet ./...)
 (cd frontend && pnpm install --frozen-lockfile && pnpm run lint && pnpm run build)
-(cd ml-service && uv sync --locked --no-install-project && uv run ruff check .)
+(cd ml-service && uv sync --locked --no-install-project && uv run ruff check . && uv run pytest)
 docker compose -f compose.yml config >/dev/null
 docker build --pull -t daimon-api-ci ./api
 docker build --pull -t daimon-ml-ci ./ml-service

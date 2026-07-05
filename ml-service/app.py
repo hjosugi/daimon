@@ -10,12 +10,17 @@ and POV phrase extraction (spaCy). Everything else lives in the Go API.
 """
 from __future__ import annotations
 
+import logging
+import os
 import re
+import time
 from contextlib import asynccontextmanager
 from importlib.util import find_spec
+from threading import Lock
 from typing import Annotated
 
-from fastapi import FastAPI
+import torch
+from fastapi import FastAPI, HTTPException, Request, Response
 from pydantic import BaseModel, Field, field_validator
 from sentence_transformers import SentenceTransformer
 
@@ -26,8 +31,18 @@ from sentence_transformers import SentenceTransformer
 EMBED_MODEL = "paraphrase-multilingual-MiniLM-L12-v2"
 EMBED_DIM = 384
 
+logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
+logger = logging.getLogger("daimon.ml")
+
 _model: SentenceTransformer | None = None
-_nlp_cache: dict[str, object] = {}
+_model_lock = Lock()
+_nlp_cache: dict[str, object | None] = {}
+_nlp_lock = Lock()
+_CACHE_MISS = object()
+_SPACY_MODEL_BY_LANG = {
+    "ja": "ja_core_news_sm",
+    "en": "en_core_web_sm",
+}
 
 
 # Long posts (up to 40k chars) must be embedded as a WHOLE, not just their first
@@ -45,11 +60,44 @@ POV_ANALYSIS_CHARS = 8_000
 BoundedPostText = Annotated[str, Field(max_length=POST_TEXT_MAX_CHARS)]
 
 
+def int_env(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        logger.warning("invalid integer env %s=%r; using %d", name, raw, default)
+        return default
+    if value < 1:
+        logger.warning("invalid integer env %s=%r; using %d", name, raw, default)
+        return default
+    return value
+
+
+TORCH_NUM_THREADS = int_env("DAIMON_TORCH_NUM_THREADS", 1)
+TORCH_INTEROP_THREADS = int_env("DAIMON_TORCH_INTEROP_THREADS", 1)
+
+
+def configure_torch_threads() -> None:
+    torch.set_num_threads(TORCH_NUM_THREADS)
+    try:
+        torch.set_num_interop_threads(TORCH_INTEROP_THREADS)
+    except RuntimeError:
+        logger.warning("torch interop thread count was already initialized")
+
+
+configure_torch_threads()
+
+
 def model() -> SentenceTransformer:
     global _model
     if _model is None:
-        _model = SentenceTransformer(EMBED_MODEL, device="cpu")
-        _model.max_seq_length = MAX_SEQ_LEN
+        with _model_lock:
+            if _model is None:
+                loaded = SentenceTransformer(EMBED_MODEL, device="cpu")
+                loaded.max_seq_length = MAX_SEQ_LEN
+                _model = loaded
     return _model
 
 
@@ -93,28 +141,79 @@ def encode_many(texts: list[str]) -> list[list[float]]:
         vecs = chunk_vecs[start:end]
         vec = vecs.mean(axis=0) if len(vecs) > 1 else vecs[0]
         out.append(vec.tolist())
+    if len(out) != len(texts):
+        raise RuntimeError(f"embedding count mismatch: got {len(out)}, want {len(texts)}")
     return out
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     model()  # warm the model at startup so the first request is fast
+    _nlp("ja")
+    _nlp("en")
     yield
 
 
 app = FastAPI(title="daimon-ml", lifespan=lifespan)
 
 
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    started = time.perf_counter()
+    try:
+        response = await call_next(request)
+    except Exception:
+        duration_ms = (time.perf_counter() - started) * 1000
+        logger.exception(
+            "request_failed method=%s path=%s duration_ms=%.2f",
+            request.method,
+            request.url.path,
+            duration_ms,
+        )
+        raise
+    duration_ms = (time.perf_counter() - started) * 1000
+    logger.info(
+        "request_completed method=%s path=%s status=%d duration_ms=%.2f",
+        request.method,
+        request.url.path,
+        response.status_code,
+        duration_ms,
+    )
+    return response
+
+
 class TextReq(BaseModel):
     text: BoundedPostText = ""
 
 
-@app.get("/health")
-def health():
+def readiness_state() -> dict[str, object]:
+    spacy_loaded = {
+        lang: _nlp_cache.get(name) is not None
+        for lang, name in _SPACY_MODEL_BY_LANG.items()
+    }
+    ready = _model is not None and all(spacy_loaded.values())
     return {
-        "status": "ok",
+        "ready": ready,
+        "embedding_model_loaded": _model is not None,
+        "spacy_models_loaded": spacy_loaded,
+    }
+
+
+@app.get("/live")
+def live():
+    return {"status": "ok"}
+
+
+@app.get("/health")
+def health(response: Response):
+    state = readiness_state()
+    if not state["ready"]:
+        response.status_code = 503
+    return {
+        "status": "ok" if state["ready"] else "not_ready",
         "embedding_model": EMBED_MODEL,
         "embedding_dim": EMBED_DIM,
+        **state,
         "max_seq_len": MAX_SEQ_LEN,
         "chunk_chars": CHUNK_CHARS,
         "max_chunks": MAX_CHUNKS,
@@ -126,12 +225,19 @@ def health():
             "ja": find_spec("ja_core_news_sm") is not None,
             "en": find_spec("en_core_web_sm") is not None,
         },
+        "torch_num_threads": TORCH_NUM_THREADS,
+        "torch_interop_threads": TORCH_INTEROP_THREADS,
     }
 
 
 @app.post("/embed")
 def embed(req: TextReq):
-    return {"vector": encode_full(req.text or "")}
+    try:
+        vector = encode_full(req.text or "")
+        validate_vector(vector, "embed")
+    except Exception as exc:
+        raise_inference_error("embedding_failed", exc)
+    return {"vector": vector}
 
 
 class BatchReq(BaseModel):
@@ -154,7 +260,34 @@ class BatchReq(BaseModel):
 @app.post("/embed_batch")
 def embed_batch(req: BatchReq):
     # Used by the Go seed command: many full-post embeddings in one round-trip.
-    return {"vectors": encode_many(req.texts or [])}
+    texts = req.texts or []
+    try:
+        vectors = encode_many(texts)
+        if len(vectors) != len(texts):
+            raise RuntimeError(
+                f"embedding count mismatch: got {len(vectors)}, want {len(texts)}"
+            )
+        for idx, vector in enumerate(vectors):
+            validate_vector(vector, f"embed_batch[{idx}]")
+    except Exception as exc:
+        raise_inference_error("embedding_failed", exc)
+    return {"vectors": vectors}
+
+
+def validate_vector(vector: list[float], context: str) -> None:
+    if len(vector) != EMBED_DIM:
+        raise RuntimeError(f"{context} vector dimension {len(vector)} != {EMBED_DIM}")
+
+
+def raise_inference_error(error: str, exc: Exception) -> None:
+    logger.exception("%s: %s", error, exc)
+    raise HTTPException(
+        status_code=503,
+        detail={
+            "error": error,
+            "message": str(exc),
+        },
+    ) from exc
 
 
 # --- POV extraction (spaCy ja/en, with a regex fallback) -------------------
@@ -167,15 +300,22 @@ def detect_language(text: str) -> str:
 
 
 def _nlp(language: str):
-    name = "ja_core_news_sm" if language == "ja" else "en_core_web_sm"
-    if name not in _nlp_cache:
+    name = _SPACY_MODEL_BY_LANG["ja" if language == "ja" else "en"]
+    cached = _nlp_cache.get(name, _CACHE_MISS)
+    if cached is not _CACHE_MISS:
+        return cached
+    with _nlp_lock:
+        cached = _nlp_cache.get(name, _CACHE_MISS)
+        if cached is not _CACHE_MISS:
+            return cached
         import spacy
 
         try:
             _nlp_cache[name] = spacy.load(name)
         except OSError:
+            logger.exception("spacy_model_load_failed model=%s", name)
             _nlp_cache[name] = None
-    return _nlp_cache[name]
+        return _nlp_cache[name]
 
 
 def extract_phrases(text: str, language: str) -> list[str]:
@@ -218,13 +358,16 @@ def povs(req: TextReq):
     text = (req.text or "").strip()
     if not text:
         return {"povs": []}
-    analysis_text = text[:POV_ANALYSIS_CHARS]
-    lang = detect_language(analysis_text)
-    seen: set[str] = set()
-    out: list[str] = []
-    for p in extract_phrases(analysis_text, lang):
-        key = p.lower() if lang == "en" else p
-        if key not in seen and len(p) <= 300:
-            seen.add(key)
-            out.append(p)
+    try:
+        analysis_text = text[:POV_ANALYSIS_CHARS]
+        lang = detect_language(analysis_text)
+        seen: set[str] = set()
+        out: list[str] = []
+        for p in extract_phrases(analysis_text, lang):
+            key = p.lower() if lang == "en" else p
+            if key not in seen and len(p) <= 300:
+                seen.add(key)
+                out.append(p)
+    except Exception as exc:
+        raise_inference_error("pov_extraction_failed", exc)
     return {"povs": out[:5]}

@@ -79,6 +79,8 @@ jobs:
         run: uv sync --locked --no-install-project
       - name: Lint
         run: uv run ruff check .
+      - name: Test
+        run: uv run pytest
       - name: Import smoke test
         run: uv run python -c "from app import app, EMBED_DIM, POST_TEXT_MAX_CHARS; assert app.title == 'daimon-ml'; assert EMBED_DIM == 384; assert POST_TEXT_MAX_CHARS == 40000"
 
