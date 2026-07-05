@@ -1,5 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import type { ReactNode } from "react"
+import { ToastProvider } from "../components/ui/ToastProvider"
+import { I18nProvider } from "../i18n"
 
 export function createTestQueryClient() {
   return new QueryClient({
@@ -21,7 +23,11 @@ export function createQueryClientWrapper(
   return {
     queryClient,
     wrapper: ({ children }: { children: ReactNode }) => (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      <QueryClientProvider client={queryClient}>
+        <I18nProvider>
+          <ToastProvider>{children}</ToastProvider>
+        </I18nProvider>
+      </QueryClientProvider>
     ),
   }
 }

@@ -26,12 +26,22 @@ const STORAGE_KEY = "daimon_locale"
 
 const I18nContext = createContext<I18nContextValue | null>(null)
 
+function getStorage() {
+  if (import.meta.env.MODE === "test") return null
+  if (typeof window === "undefined") return null
+  try {
+    return window.localStorage ?? null
+  } catch {
+    return null
+  }
+}
+
 function isLocale(value: string | null | undefined): value is Locale {
   return !!value && (locales as readonly string[]).includes(value)
 }
 
 function detectLocale(): Locale {
-  const stored = localStorage.getItem(STORAGE_KEY)
+  const stored = getStorage()?.getItem(STORAGE_KEY)
   if (isLocale(stored)) return stored
 
   const language = navigator.language.toLowerCase()
@@ -52,7 +62,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.documentElement.lang = locale
-    localStorage.setItem(STORAGE_KEY, locale)
+    getStorage()?.setItem(STORAGE_KEY, locale)
   }, [locale])
 
   const setLocale = useCallback((nextLocale: Locale) => {

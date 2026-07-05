@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import type React from "react"
 import type { User } from "../api/client"
 import { createPost } from "../api/client"
+import { useMutationErrorToast } from "../hooks/useMutationErrorToast"
 import { useI18n } from "../i18n"
 import { AutoPOVSuggestions } from "./PostInputForm/AutoPOVSuggestions"
 import { ManualPOVInput } from "./PostInputForm/ManualPOVInput"
@@ -22,6 +23,7 @@ export const PostInputForm: React.FC<PostInputFormProps> = ({
 }) => {
   const { t } = useI18n()
   const queryClient = useQueryClient()
+  const showMutationError = useMutationErrorToast()
   const composer = usePostComposer({
     onPovTooLong: () => alert(t("postForm.povTooLong")),
   })
@@ -34,6 +36,7 @@ export const PostInputForm: React.FC<PostInputFormProps> = ({
       queryClient.invalidateQueries({ queryKey: ["timeline"] })
       onPostCreated?.()
     },
+    onError: (error) => showMutationError(error, "toast.createPostFailed"),
   })
 
   const submitPost = () => {

@@ -3,6 +3,7 @@ import { Mail, Save, Trash2, User as UserIcon } from "lucide-react"
 import type React from "react"
 import { useEffect, useState } from "react"
 import { deleteAccount, type User, updateProfile } from "../api/client"
+import { useMutationErrorToast } from "../hooks/useMutationErrorToast"
 import { useI18n } from "../i18n"
 import { PROFILE_CONSTRAINTS } from "../types/constants"
 import { readFileAsDataURL } from "../utils/file"
@@ -32,6 +33,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   currentUser,
 }) => {
   const { t } = useI18n()
+  const showMutationError = useMutationErrorToast()
   const [username, setUsername] = useState("")
   const [bio, setBio] = useState("")
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
@@ -60,6 +62,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
       queryClient.invalidateQueries({ queryKey: ["user"] })
       onClose()
     },
+    onError: (error) => showMutationError(error, "toast.profileUpdateFailed"),
   })
 
   const deleteAccountMutation = useMutation({
@@ -69,6 +72,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
       onDelete()
       onClose()
     },
+    onError: (error) => showMutationError(error, "toast.accountDeleteFailed"),
   })
 
   const buildProfilePatch = async () => {

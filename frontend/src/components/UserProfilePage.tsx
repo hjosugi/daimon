@@ -19,6 +19,7 @@ import {
   type UserProfile,
   unfollowUser,
 } from "../api/client"
+import { useMutationErrorToast } from "../hooks/useMutationErrorToast"
 import { useI18n } from "../i18n"
 import { PostCard } from "./PostCard"
 import { QueryStateView } from "./ui/QueryStateView"
@@ -40,6 +41,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
 }) => {
   const { t } = useI18n()
   const qc = useQueryClient()
+  const showMutationError = useMutationErrorToast()
   const profileKey = ["profile", userId]
 
   const {
@@ -85,8 +87,10 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
       )
       return { prev }
     },
-    onError: (_e, _v, ctx) =>
-      ctx?.prev && qc.setQueryData(profileKey, ctx.prev),
+    onError: (error, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(profileKey, ctx.prev)
+      showMutationError(error, "toast.followFailed")
+    },
     onSuccess: (data) =>
       qc.setQueryData<UserProfile>(profileKey, (old) =>
         old
@@ -109,10 +113,11 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
       )
       return { prevFollowers, prevProfile }
     },
-    onError: (_e, _id, ctx) => {
+    onError: (error, _id, ctx) => {
       if (ctx?.prevFollowers)
         qc.setQueryData(["followers", userId], ctx.prevFollowers)
       if (ctx?.prevProfile) qc.setQueryData(profileKey, ctx.prevProfile)
+      showMutationError(error, "toast.removeFollowerFailed")
     },
     onSuccess: (data) =>
       qc.setQueryData<UserProfile>(profileKey, (old) =>

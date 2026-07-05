@@ -12,6 +12,7 @@ import {
   unlikePost,
   unsavePost,
 } from "../../api/client"
+import { useMutationErrorToast } from "../../hooks/useMutationErrorToast"
 
 const postFeedKeys = [
   ["timeline"],
@@ -23,6 +24,7 @@ const postFeedKeys = [
 
 export function usePostCardActions(post: Post, currentUser?: User | null) {
   const queryClient = useQueryClient()
+  const showMutationError = useMutationErrorToast()
   const [showComments, setShowComments] = useState(false)
   const [commentText, setCommentText] = useState("")
   const [saved, setSaved] = useState(Boolean(post.saved))
@@ -57,7 +59,10 @@ export function usePostCardActions(post: Post, currentUser?: User | null) {
   const likeMutation = useMutation({
     mutationFn: () => (post.liked ? unlikePost(post.id) : likePost(post.id)),
     onMutate: () => patchCaches(flipLike),
-    onError: () => patchCaches(flipLike),
+    onError: (error) => {
+      patchCaches(flipLike)
+      showMutationError(error, "toast.postLikeFailed")
+    },
     onSuccess: (data) =>
       patchCaches((p) => ({ ...p, liked: data.liked, likes: data.likes })),
   })
@@ -71,10 +76,11 @@ export function usePostCardActions(post: Post, currentUser?: User | null) {
       patchCaches((p) => ({ ...p, saved: nextSaved }))
       return { prev }
     },
-    onError: (_e, _v, ctx) => {
+    onError: (error, _v, ctx) => {
       if (!ctx) return
       setSaved(ctx.prev)
       patchCaches((p) => ({ ...p, saved: ctx.prev }))
+      showMutationError(error, "toast.postSaveFailed")
     },
     onSuccess: (data) => {
       setSaved(data.saved)
@@ -96,6 +102,7 @@ export function usePostCardActions(post: Post, currentUser?: User | null) {
       queryClient.invalidateQueries({ queryKey: ["comments", post.id] })
       queryClient.invalidateQueries({ queryKey: ["timeline"] })
     },
+    onError: (error) => showMutationError(error, "toast.commentFailed"),
   })
 
   const deletePostMutation = useMutation({
@@ -104,6 +111,7 @@ export function usePostCardActions(post: Post, currentUser?: User | null) {
       queryClient.invalidateQueries({ queryKey: ["timeline"] })
       queryClient.invalidateQueries({ queryKey: ["search"] })
     },
+    onError: (error) => showMutationError(error, "toast.deletePostFailed"),
   })
 
   const povLikeMutation = useMutation({
@@ -115,6 +123,7 @@ export function usePostCardActions(post: Post, currentUser?: User | null) {
         [variables.pov]: data,
       }))
     },
+    onError: (error) => showMutationError(error, "toast.povLikeFailed"),
   })
 
   const togglePOVLike = (pov: string) => {

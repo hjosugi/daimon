@@ -12,6 +12,7 @@ import {
   type User,
   unlikePOV,
 } from "../../api/client"
+import { useMutationErrorToast } from "../../hooks/useMutationErrorToast"
 
 interface UsePOVDiscussionOptions {
   pov: string
@@ -25,6 +26,7 @@ export function usePOVDiscussion({
   onAuthRequired,
 }: UsePOVDiscussionOptions) {
   const qc = useQueryClient()
+  const showMutationError = useMutationErrorToast()
   const [text, setText] = useState("")
   const [stance, setStance] = useState<POVCommentStance>("support")
   const commentsKey = ["pov-comments", pov]
@@ -51,6 +53,7 @@ export function usePOVDiscussion({
         ...(old ?? []),
       ])
     },
+    onError: (error) => showMutationError(error, "toast.povCommentFailed"),
   })
 
   const deleteMutation = useMutation({
@@ -60,6 +63,8 @@ export function usePOVDiscussion({
         old ? old.filter((comment) => comment.id !== commentId) : old,
       )
     },
+    onError: (error) =>
+      showMutationError(error, "toast.povCommentDeleteFailed"),
   })
 
   const stanceCounts = useMemo(() => {
@@ -94,7 +99,10 @@ export function usePOVDiscussion({
       })
       return { prev }
     },
-    onError: (_e, _v, ctx) => ctx?.prev && qc.setQueryData(standKey, ctx.prev),
+    onError: (error, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(standKey, ctx.prev)
+      showMutationError(error, "toast.povStandFailed")
+    },
     onSuccess: (data) => qc.setQueryData(standKey, data),
   })
 
