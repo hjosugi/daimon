@@ -14,6 +14,8 @@ type genPOVReq struct {
 	Text string `json:"text"`
 }
 
+const generatePOVTextMaxRunes = 40000
+
 // HandleGeneratePOVs proxies POV extraction to the Python ML service (spaCy).
 func (h *Handler) HandleGeneratePOVs(w http.ResponseWriter, r *http.Request) {
 	var req genPOVReq
@@ -22,6 +24,10 @@ func (h *Handler) HandleGeneratePOVs(w http.ResponseWriter, r *http.Request) {
 	}
 	if strings.TrimSpace(req.Text) == "" {
 		httpx.JSON(w, http.StatusOK, map[string][]string{"povs": {}})
+		return
+	}
+	if len([]rune(req.Text)) > generatePOVTextMaxRunes {
+		httpx.Error(w, http.StatusBadRequest, "Text must be 40,000 characters or less")
 		return
 	}
 	povs, err := h.embed.POVs(r.Context(), req.Text)

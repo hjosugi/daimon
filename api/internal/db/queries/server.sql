@@ -12,7 +12,7 @@ VALUES ($1,$2,$3,$4,NULL,$5,$6,$6)
 
 -- name: auth.login_user
 SELECT id, username, email, password_hash, avatar_url, bio
-FROM users WHERE email=$1 OR username=$2 LIMIT 1
+FROM users WHERE email=$1 OR lower(username)=lower($2) LIMIT 1
 
 -- name: auth.user_by_id
 SELECT id, username, email, avatar_url, bio FROM users WHERE id=$1
@@ -34,6 +34,9 @@ DELETE FROM sessions WHERE id=$1
 
 -- name: auth.delete_user
 DELETE FROM users WHERE id=$1
+
+-- name: auth.user_post_ids
+SELECT id FROM posts WHERE user_id=$1
 
 -- name: auth.insert_session
 INSERT INTO sessions (id, user_id, created_at, expires_at) VALUES ($1,$2,$3,$4)

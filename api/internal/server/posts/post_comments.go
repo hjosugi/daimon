@@ -59,13 +59,7 @@ func (h *Handler) HandleAddComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var exists bool
-	if err := h.pool.QueryRow(r.Context(), dbq.SQL("posts.exists"), id).Scan(&exists); err != nil {
-		respond.Internal(w, r, h.logger, "Database error", err)
-		return
-	}
-	if !exists {
-		httpx.Error(w, http.StatusNotFound, "Post not found")
+	if !h.requirePost(w, r, id) {
 		return
 	}
 

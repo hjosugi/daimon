@@ -230,13 +230,48 @@ func (h *Handler) HandleLogout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleDeleteAccount(w http.ResponseWriter, r *http.Request) {
-	// ON DELETE CASCADE removes posts/likes/comments/sessions. Qdrant cleanup
-	// is handled lazily (regenerable index).
-	if _, err := h.pool.Exec(r.Context(), dbq.SQL("auth.delete_user"), session.UserID(r.Context())); err != nil {
+	ctx := r.Context()
+	uid := session.UserID(ctx)
+
+	postIDs, err := h.userPostIDs(ctx, uid)
+	if err != nil {
+		respond.Internal(w, r, h.logger, "Database error", err)
+		return
+	}
+
+	// ON DELETE CASCADE removes relational rows. Qdrant is a regenerable search
+	// index, so point cleanup is best-effort after the database delete succeeds.
+	if _, err := h.pool.Exec(ctx, dbq.SQL("auth.delete_user"), uid); err != nil {
 		respond.Internal(w, r, h.logger, "Could not delete account", err)
 		return
 	}
+	if len(postIDs) > 0 {
+		if err := h.qdrant.Delete(ctx, postIDs); err != nil {
+			respond.Warn(h.logger, r, "qdrant account cleanup failed", err)
+		}
+	}
 	httpx.JSON(w, http.StatusOK, map[string]string{"message": "Account deleted successfully"})
+}
+
+func (h *Handler) userPostIDs(ctx context.Context, uid string) ([]string, error) {
+	rows, err := h.pool.Query(ctx, dbq.SQL("auth.user_post_ids"), uid)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return ids, nil
 }
 
 func (h *Handler) createSession(ctx context.Context, uid string, now time.Time) (string, error) {

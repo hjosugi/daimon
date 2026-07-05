@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS users (
   updated_at    timestamp NOT NULL
 );
 CREATE UNIQUE INDEX IF NOT EXISTS ix_users_username ON users (username);
+CREATE UNIQUE INDEX IF NOT EXISTS ix_users_username_lower ON users (lower(username));
 CREATE UNIQUE INDEX IF NOT EXISTS ix_users_email ON users (email);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS bio text;
 

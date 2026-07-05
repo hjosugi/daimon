@@ -16,13 +16,7 @@ import (
 func (h *Handler) HandleSavePost(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	uid := session.UserID(r.Context())
-	var exists bool
-	if err := h.pool.QueryRow(r.Context(), dbq.SQL("posts.exists"), id).Scan(&exists); err != nil {
-		respond.Internal(w, r, h.logger, "Database error", err)
-		return
-	}
-	if !exists {
-		httpx.Error(w, http.StatusNotFound, "Post not found")
+	if !h.requirePost(w, r, id) {
 		return
 	}
 	if _, err := h.pool.Exec(r.Context(), dbq.SQL("bookmarks.insert"), uuid.NewString(), uid, id, time.Now().UTC()); err != nil {

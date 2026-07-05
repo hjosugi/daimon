@@ -23,6 +23,9 @@ func (h *Handler) likesCount(ctx context.Context, postID string) (int, error) {
 func (h *Handler) HandleLike(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	uid := session.UserID(r.Context())
+	if !h.requirePost(w, r, id) {
+		return
+	}
 	if _, err := h.pool.Exec(r.Context(), dbq.SQL("posts.insert_like"), uuid.NewString(), id, uid, time.Now().UTC()); err != nil {
 		respond.Internal(w, r, h.logger, "Could not like post", err)
 		return
@@ -38,6 +41,9 @@ func (h *Handler) HandleLike(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleUnlike(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	uid := session.UserID(r.Context())
+	if !h.requirePost(w, r, id) {
+		return
+	}
 	if _, err := h.pool.Exec(r.Context(), dbq.SQL("posts.delete_like"), id, uid); err != nil {
 		respond.Internal(w, r, h.logger, "Could not unlike post", err)
 		return

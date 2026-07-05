@@ -28,15 +28,16 @@ import (
 )
 
 type Server struct {
-	pool   *pgxpool.Pool
-	cfg    config.Config
-	qdrant *qdrant.Client
-	logger *slog.Logger
-	auth   *authhandler.Handler
-	feed   *feedhandler.Handler
-	posts  *posthandler.Handler
-	povs   *povhandler.Handler
-	users  *userhandler.Handler
+	pool            *pgxpool.Pool
+	cfg             config.Config
+	qdrant          *qdrant.Client
+	logger          *slog.Logger
+	auth            *authhandler.Handler
+	feed            *feedhandler.Handler
+	posts           *posthandler.Handler
+	povs            *povhandler.Handler
+	users           *userhandler.Handler
+	publicMLLimiter *rateLimiter
 }
 
 func New(pool *pgxpool.Pool, cfg config.Config) *Server {
@@ -45,15 +46,16 @@ func New(pool *pgxpool.Pool, cfg config.Config) *Server {
 	cacheClient := cache.New(cfg.RedisURL)
 	logger := slog.Default().With("component", "api")
 	return &Server{
-		pool:   pool,
-		cfg:    cfg,
-		qdrant: qdrantClient,
-		logger: logger,
-		auth:   authhandler.New(pool, logger.With("domain", "auth")),
-		feed:   feedhandler.New(pool, embedClient, qdrantClient, cacheClient, logger.With("domain", "feed")),
-		posts:  posthandler.New(pool, embedClient, qdrantClient, logger.With("domain", "posts")),
-		povs:   povhandler.New(pool, embedClient, cacheClient, logger.With("domain", "povs")),
-		users:  userhandler.New(pool, logger.With("domain", "users")),
+		pool:            pool,
+		cfg:             cfg,
+		qdrant:          qdrantClient,
+		logger:          logger,
+		auth:            authhandler.New(pool, qdrantClient, logger.With("domain", "auth")),
+		feed:            feedhandler.New(pool, embedClient, qdrantClient, cacheClient, logger.With("domain", "feed")),
+		posts:           posthandler.New(pool, embedClient, qdrantClient, logger.With("domain", "posts")),
+		povs:            povhandler.New(pool, embedClient, cacheClient, logger.With("domain", "povs")),
+		users:           userhandler.New(pool, logger.With("domain", "users")),
+		publicMLLimiter: newRateLimiter(30, time.Minute),
 	}
 }
 
@@ -99,8 +101,8 @@ func (s *Server) Router() http.Handler {
 		// Public reads.
 		r.Get("/{id}/comments", s.posts.HandleGetComments)
 		r.Get("/{id}/likes", s.posts.HandleGetLikers) // who liked
-		r.Post("/generate-povs", s.povs.HandleGeneratePOVs)
-		r.Get("/povs/suggest", s.povs.HandleSuggestPOVs)
+		r.With(s.publicMLRateLimit).Post("/generate-povs", s.povs.HandleGeneratePOVs)
+		r.With(s.publicMLRateLimit).Get("/povs/suggest", s.povs.HandleSuggestPOVs)
 		r.With(s.optionalAuth).Get("/povs/{pov}/comments", s.povs.HandlePOVComments)
 		r.Get("/by-user/{userID}", s.feed.HandleUserPosts) // a user's other posts
 

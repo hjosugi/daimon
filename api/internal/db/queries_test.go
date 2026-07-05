@@ -12,6 +12,13 @@ func TestSQLLoadsNamedQuery(t *testing.T) {
 	}
 }
 
+func TestLoginUserQueryIsCaseInsensitiveForUsername(t *testing.T) {
+	q := SQL("auth.login_user")
+	if !strings.Contains(q, "lower(username)=lower($2)") {
+		t.Fatalf("expected case-insensitive username login query, got %q", q)
+	}
+}
+
 func TestSQLPanicsForUnknownQuery(t *testing.T) {
 	defer func() {
 		if recover() == nil {
