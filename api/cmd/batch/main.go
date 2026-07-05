@@ -44,10 +44,20 @@ func main() {
 	em := embed.New(cfg.EmbedURL)
 
 	start := time.Now()
+	sessionCleanupJob(ctx, pool)
 	deepAnalyzeJob(ctx, pool, em)
 	suggestJob(ctx, pool, em, ca)
 	timelineJob(ctx, pool, qc, em, ca)
 	log.Printf("batch done in %s", time.Since(start).Round(time.Millisecond))
+}
+
+func sessionCleanupJob(ctx context.Context, pool *pgxpool.Pool) {
+	tag, err := pool.Exec(ctx, dbq.SQL("auth.delete_expired_sessions"), time.Now().UTC())
+	if err != nil {
+		log.Printf("sessions cleanup: %v", err)
+		return
+	}
+	log.Printf("sessions cleanup: removed %d expired sessions", tag.RowsAffected())
 }
 
 // ---- deep analysis: decompose long posts into multiple 観点 (POVs) --------
@@ -60,8 +70,8 @@ const (
 	deepMinChars  = 1500 // only posts longer than this are worth decomposing
 	deepMaxPosts  = 400  // bound work per batch run
 	deepChunkRune = 2000 // ~one analysis window
-	deepMaxChunks = 4     // cap chunks analyzed per post
-	deepMaxPOVs   = 12    // cap new POVs per post
+	deepMaxChunks = 4    // cap chunks analyzed per post
+	deepMaxPOVs   = 12   // cap new POVs per post
 )
 
 func deepAnalyzeJob(ctx context.Context, pool *pgxpool.Pool, em *embed.Client) {

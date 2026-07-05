@@ -174,7 +174,7 @@ func (s *Server) userFromToken(r *http.Request) (string, bool) {
 	}
 	token := strings.TrimPrefix(authz, "Bearer ")
 	var uid string
-	err := s.pool.QueryRow(r.Context(), dbq.SQL("auth.session_user"), token, time.Now().UTC()).Scan(&uid)
+	err := s.pool.QueryRow(r.Context(), dbq.SQL("auth.session_user"), session.HashToken(token), time.Now().UTC()).Scan(&uid)
 	if err != nil {
 		return "", false
 	}

@@ -151,6 +151,11 @@ curl -sf http://localhost:6333/healthz
 
 Qdrant index は PostgreSQL の投稿データから再構築できる検索 index です。PostgreSQL が正本で、Qdrant write は best-effort です。
 
+Session tokens are stored as SHA-256 hashes in `sessions.id`. The rollout from
+plaintext tokens intentionally invalidates existing sessions; users can log in
+again. Expired sessions are removed by the scheduled `cmd/batch` job through
+`auth.delete_expired_sessions`.
+
 ## Rollback
 
 Cloud Run revision を戻す場合:

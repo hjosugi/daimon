@@ -222,7 +222,7 @@ func (h *Handler) HandleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	token := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-	if _, err := h.pool.Exec(r.Context(), dbq.SQL("auth.delete_session"), token); err != nil {
+	if _, err := h.pool.Exec(r.Context(), dbq.SQL("auth.delete_session"), session.HashToken(token)); err != nil {
 		respond.Internal(w, r, h.logger, "Could not logout", err)
 		return
 	}
@@ -276,6 +276,6 @@ func (h *Handler) userPostIDs(ctx context.Context, uid string) ([]string, error)
 
 func (h *Handler) createSession(ctx context.Context, uid string, now time.Time) (string, error) {
 	token := uuid.NewString()
-	_, err := h.pool.Exec(ctx, dbq.SQL("auth.insert_session"), token, uid, now, now.Add(sessionExpiryDays*24*time.Hour))
+	_, err := h.pool.Exec(ctx, dbq.SQL("auth.insert_session"), session.HashToken(token), uid, now, now.Add(sessionExpiryDays*24*time.Hour))
 	return token, err
 }

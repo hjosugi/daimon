@@ -38,6 +38,9 @@ DELETE FROM users WHERE id=$1
 -- name: auth.user_post_ids
 SELECT id FROM posts WHERE user_id=$1
 
+-- name: auth.delete_expired_sessions
+DELETE FROM sessions WHERE expires_at < $1
+
 -- name: auth.insert_session
 INSERT INTO sessions (id, user_id, created_at, expires_at) VALUES ($1,$2,$3,$4)
 

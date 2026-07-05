@@ -1,6 +1,10 @@
 package session
 
-import "context"
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+)
 
 type ctxKey string
 
@@ -13,4 +17,9 @@ func WithUserID(ctx context.Context, uid string) context.Context {
 func UserID(ctx context.Context) string {
 	v, _ := ctx.Value(userIDKey).(string)
 	return v
+}
+
+func HashToken(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(sum[:])
 }
