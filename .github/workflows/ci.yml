@@ -29,6 +29,8 @@ jobs:
           cache-dependency-path: api/go.sum
       - name: Test
         run: go test ./...
+      - name: Vet
+        run: go vet ./...
       - name: Build server and batch
         run: |
           go build -o /tmp/daimon-server ./cmd/server
@@ -74,9 +76,11 @@ jobs:
           enable-cache: true
           cache-dependency-glob: ml-service/uv.lock
       - name: Sync locked dependencies
-        run: uv sync --locked --no-dev --no-install-project
+        run: uv sync --locked --no-install-project
+      - name: Lint
+        run: uv run ruff check .
       - name: Import smoke test
-        run: uv run python -c "from app import app, EMBED_DIM; assert app.title == 'daimon-ml'; assert EMBED_DIM == 384"
+        run: uv run python -c "from app import app, EMBED_DIM, POST_TEXT_MAX_CHARS; assert app.title == 'daimon-ml'; assert EMBED_DIM == 384; assert POST_TEXT_MAX_CHARS == 40000"
 
   deploy-config:
     name: Deploy config
@@ -90,3 +94,7 @@ jobs:
           test -f cloudbuild.yaml
           grep -q "daimon-api" cloudbuild.yaml
           grep -q "daimon-ml" cloudbuild.yaml
+      - name: Build API Docker image
+        run: docker build --pull -t daimon-api-ci ./api
+      - name: Build ML Docker image
+        run: docker build --pull -t daimon-ml-ci ./ml-service

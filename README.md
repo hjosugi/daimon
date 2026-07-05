@@ -181,10 +181,10 @@ make clean        # venv / node_modules も削除
 
 CI は GitHub Actions の `.github/workflows/ci.yml` で管理します。
 
-- `api`: `go test ./...` と `cmd/server` / `cmd/batch` の build
+- `api`: `go test ./...`、`go vet ./...`、`cmd/server` / `cmd/batch` の build
 - `frontend`: `pnpm install --frozen-lockfile`、Biome check、Vite production build
-- `ml-service`: `uv sync --locked` と FastAPI app の import smoke test
-- `deploy-config`: `compose.yml` と `cloudbuild.yaml` の最低限の形を検証
+- `ml-service`: `uv sync --locked`、`ruff check`、FastAPI app の import smoke test
+- `deploy-config`: `compose.yml` / `cloudbuild.yaml` の検証と API / ML Docker image build
 
 依存更新は `.github/dependabot.yml` が frontend(npm) / api(gomod) / ml(uv) / GitHub Actions / Docker を管理します。
 

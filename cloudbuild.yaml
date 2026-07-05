@@ -48,17 +48,27 @@ steps:
 
   - id: build-ml
     name: gcr.io/cloud-builders/docker
+    entrypoint: bash
     args:
-      - build
-      - -t
-      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/daimon-ml:$SHORT_SHA
-      - ml-service
+      - -ceu
+      - |
+        IMAGE="${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/daimon-ml"
+        docker pull "${IMAGE}:latest" || true
+        docker build \
+          --cache-from "${IMAGE}:latest" \
+          -t "${IMAGE}:$SHORT_SHA" \
+          -t "${IMAGE}:latest" \
+          ml-service
 
   - id: push-ml
     name: gcr.io/cloud-builders/docker
+    entrypoint: bash
     args:
-      - push
-      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/daimon-ml:$SHORT_SHA
+      - -ceu
+      - |
+        IMAGE="${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/daimon-ml"
+        docker push "${IMAGE}:$SHORT_SHA"
+        docker push "${IMAGE}:latest"
 
   - id: deploy-ml
     name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
@@ -93,17 +103,27 @@ steps:
 
   - id: build-api
     name: gcr.io/cloud-builders/docker
+    entrypoint: bash
     args:
-      - build
-      - -t
-      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/daimon-api:$SHORT_SHA
-      - api
+      - -ceu
+      - |
+        IMAGE="${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/daimon-api"
+        docker pull "${IMAGE}:latest" || true
+        docker build \
+          --cache-from "${IMAGE}:latest" \
+          -t "${IMAGE}:$SHORT_SHA" \
+          -t "${IMAGE}:latest" \
+          api
 
   - id: push-api
     name: gcr.io/cloud-builders/docker
+    entrypoint: bash
     args:
-      - push
-      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/daimon-api:$SHORT_SHA
+      - -ceu
+      - |
+        IMAGE="${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/daimon-api"
+        docker push "${IMAGE}:$SHORT_SHA"
+        docker push "${IMAGE}:latest"
 
   - id: deploy-api
     name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
@@ -128,4 +148,6 @@ steps:
 
 images:
   - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/daimon-api:$SHORT_SHA
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/daimon-api:latest
   - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/daimon-ml:$SHORT_SHA
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/daimon-ml:latest

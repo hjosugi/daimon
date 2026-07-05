@@ -7,7 +7,23 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "preset": "recommended"
+      "preset": "recommended",
+      "suspicious": {
+        "noUnknownAtRules": {
+          "level": "warn",
+          "options": {
+            "ignore": [
+              "theme",
+              "apply",
+              "config",
+              "tailwind",
+              "custom-variant",
+              "utility",
+              "source"
+            ]
+          }
+        }
+      }
     }
   },
   "javascript": {

@@ -1,12 +1,21 @@
 services:
   qdrant:
-    image: docker.io/qdrant/qdrant:latest
+    image: docker.io/qdrant/qdrant:v1.18.2
     ports:
       - "6333:6333"
       - "6334:6334"
     volumes:
       - qdrant_storage:/qdrant/storage
     restart: always
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "bash -ec 'exec 3<>/dev/tcp/127.0.0.1/6333; printf \"GET /healthz HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3; grep -q \"200\" <&3'",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 30
 
   db:
     image: docker.io/library/postgres:15-alpine
@@ -30,6 +39,11 @@ services:
     ports:
       - "6379:6379"
     restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
 
   # Python ML microservice — the ONLY Python in the running stack.
   ml:
@@ -39,6 +53,16 @@ services:
     environment:
       PORT: "8001"
     restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health', timeout=2).read()\"",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 30
+      start_period: 30s
 
   # Go API — everything except ML.
   api:
@@ -56,9 +80,11 @@ services:
       db:
         condition: service_healthy
       qdrant:
-        condition: service_started
+        condition: service_healthy
+      redis:
+        condition: service_healthy
       ml:
-        condition: service_started
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:

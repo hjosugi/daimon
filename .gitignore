@@ -63,8 +63,7 @@ ml-service/.venv/
 ml-service/__pycache__/
 ml-service/**/__pycache__/
 
-# Operations / internal docs (contain infra-specific values — keep local)
-RUNBOOK.md
+# Operations / internal docs with environment-specific values stay local.
 *.local.md
 docs/DEPLOYMENT.md
 

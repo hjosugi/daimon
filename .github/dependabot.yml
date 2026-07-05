@@ -47,11 +47,23 @@ updates:
       prefix: "chore(ci)"
 
   - package-ecosystem: "docker"
-    directory: "/"
+    directory: "/api"
     schedule:
       interval: "weekly"
     labels:
       - "dependencies"
       - "docker"
+      - "api"
     commit-message:
-      prefix: "chore(docker)"
+      prefix: "chore(api-docker)"
+
+  - package-ecosystem: "docker"
+    directory: "/ml-service"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "ml"
+    commit-message:
+      prefix: "chore(ml-docker)"
