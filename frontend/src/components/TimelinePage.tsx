@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query"
-import { Loader2, Pencil } from "lucide-react"
+import { Pencil } from "lucide-react"
 import { useState } from "react"
 import type { User } from "../api/client"
 import { getTimeline } from "../api/client"
 import { useI18n } from "../i18n"
 import { PostCard } from "./PostCard"
 import { PostInputForm } from "./PostInputForm"
+import { QueryStateView } from "./ui/QueryStateView"
 
 interface TimelinePageProps {
   user: User | null
@@ -64,32 +65,26 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
 
       {/* Timeline */}
       <div className="space-y-4">
-        {isLoading ? (
-          <div className="flex justify-center p-8 text-cyan-300/90">
-            <Loader2 size={32} className="animate-spin" />
-          </div>
-        ) : isError ? (
-          <div className="text-center py-12 text-red-400/70">
-            <p className="font-mono">{t("timeline.loadError")}</p>
-          </div>
-        ) : (
-          <>
-            {posts.map((post) => (
-              <PostCard
-                key={post.id}
-                post={post}
-                onTagClick={onTagClick}
-                onUserClick={onUserClick}
-                currentUser={user}
-              />
-            ))}
-            {posts.length === 0 && (
-              <div className="text-center py-12 text-cyan-300/70">
-                <p className="font-mono">{t("timeline.noPosts")}</p>
-              </div>
-            )}
-          </>
-        )}
+        <QueryStateView
+          isLoading={isLoading}
+          isError={isError}
+          isEmpty={posts.length === 0}
+          loadingClassName="flex justify-center p-8 text-cyan-300/90"
+          errorClassName="text-center py-12 text-red-400/70"
+          emptyClassName="text-center py-12 text-cyan-300/70"
+          error={<p className="font-mono">{t("timeline.loadError")}</p>}
+          empty={<p className="font-mono">{t("timeline.noPosts")}</p>}
+        >
+          {posts.map((post) => (
+            <PostCard
+              key={post.id}
+              post={post}
+              onTagClick={onTagClick}
+              onUserClick={onUserClick}
+              currentUser={user}
+            />
+          ))}
+        </QueryStateView>
       </div>
 
       {/* Floating Action Button - Pencil */}

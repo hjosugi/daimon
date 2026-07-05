@@ -1,8 +1,9 @@
-import { Loader2, Search } from "lucide-react"
+import { Search } from "lucide-react"
 import type React from "react"
 import type { User } from "../../api/client"
 import { useI18n } from "../../i18n"
 import { SearchPostCard } from "../SearchPostCard"
+import { QueryStateView } from "../ui/QueryStateView"
 import type { SearchController } from "./useSearchController"
 
 interface SearchResultsProps {
@@ -47,15 +48,24 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
         </div>
       </div>
 
-      {search.isLoading ? (
-        <div className="flex justify-center p-12 text-cyan-300">
-          <Loader2 size={32} className="animate-spin" />
-        </div>
-      ) : search.isError ? (
-        <div className="text-center py-12 text-red-300">
-          <p className="font-mono">{t("search.loadError")}</p>
-        </div>
-      ) : search.posts.length > 0 ? (
+      <QueryStateView
+        isLoading={search.isLoading}
+        isError={search.isError}
+        isEmpty={search.posts.length === 0}
+        errorClassName="text-center py-12 text-red-300"
+        emptyClassName="text-center py-12 text-cyan-300/80"
+        error={<p className="font-mono">{t("search.loadError")}</p>}
+        empty={
+          <>
+            <div className="font-mono text-xs text-cyan-300/70 mb-2">
+              {t("search.noResults")}
+            </div>
+            <p className="text-sm text-cyan-300 font-mono">
+              {t("search.tryDifferent")}
+            </p>
+          </>
+        }
+      >
         <div className="bg-[#1f1f35] rounded border border-cyan-500/15 overflow-hidden">
           {search.posts.map((post) => (
             <SearchPostCard
@@ -67,16 +77,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             />
           ))}
         </div>
-      ) : (
-        <div className="text-center py-12 text-cyan-300/80">
-          <div className="font-mono text-xs text-cyan-300/70 mb-2">
-            {t("search.noResults")}
-          </div>
-          <p className="text-sm text-cyan-300 font-mono">
-            {t("search.tryDifferent")}
-          </p>
-        </div>
-      )}
+      </QueryStateView>
     </div>
   )
 }

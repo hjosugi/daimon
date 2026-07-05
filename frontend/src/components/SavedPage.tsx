@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query"
-import { Bookmark, Loader2 } from "lucide-react"
+import { Bookmark } from "lucide-react"
 import type React from "react"
 import { getSavedPosts, type User } from "../api/client"
 import { useI18n } from "../i18n"
 import { PostCard } from "./PostCard"
+import { QueryStateView } from "./ui/QueryStateView"
 
 interface SavedPageProps {
   user: User | null
@@ -40,29 +41,25 @@ export const SavedPage: React.FC<SavedPageProps> = ({ user, onTagClick }) => {
           <div className="text-center py-16 text-cyan-300/70 font-mono text-sm">
             {t("saved.loginRequired")}
           </div>
-        ) : isLoading ? (
-          <div className="flex justify-center p-12 text-cyan-300">
-            <Loader2 size={32} className="animate-spin" />
-          </div>
-        ) : isError ? (
-          <div className="text-center py-12 text-red-300 font-mono">
-            {t("saved.loadError")}
-          </div>
-        ) : posts.length === 0 ? (
-          <div className="text-center py-16 text-cyan-300/70 font-mono text-sm">
-            {t("saved.empty")}
-          </div>
         ) : (
-          <div className="space-y-2">
-            {posts.map((post) => (
-              <PostCard
-                key={post.id}
-                post={post}
-                onTagClick={onTagClick}
-                currentUser={user}
-              />
-            ))}
-          </div>
+          <QueryStateView
+            isLoading={isLoading}
+            isError={isError}
+            isEmpty={posts.length === 0}
+            error={t("saved.loadError")}
+            empty={t("saved.empty")}
+          >
+            <div className="space-y-2">
+              {posts.map((post) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  onTagClick={onTagClick}
+                  currentUser={user}
+                />
+              ))}
+            </div>
+          </QueryStateView>
         )}
       </div>
     </div>

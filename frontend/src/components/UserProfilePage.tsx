@@ -21,6 +21,7 @@ import {
 } from "../api/client"
 import { useI18n } from "../i18n"
 import { PostCard } from "./PostCard"
+import { QueryStateView } from "./ui/QueryStateView"
 
 interface UserProfilePageProps {
   userId: string
@@ -51,7 +52,11 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
     queryKey: profileKey,
     queryFn: () => getUserProfile(userId),
   })
-  const { data: posts = [], isLoading: isPostsLoading } = useQuery({
+  const {
+    data: posts = [],
+    isLoading: isPostsLoading,
+    isError: isPostsError,
+  } = useQuery({
     queryKey: ["user-posts", userId],
     queryFn: () => getUserPosts(userId),
     staleTime: 1000 * 30,
@@ -273,15 +278,13 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
           </div>
         )}
 
-        {isPostsLoading ? (
-          <div className="flex justify-center p-12 text-cyan-300">
-            <Loader2 size={32} className="animate-spin" />
-          </div>
-        ) : posts.length === 0 ? (
-          <div className="text-center py-16 text-cyan-300/70 font-mono text-sm">
-            {t("mine.empty")}
-          </div>
-        ) : (
+        <QueryStateView
+          isLoading={isPostsLoading}
+          isError={isPostsError}
+          isEmpty={posts.length === 0}
+          error={t("mine.loadError")}
+          empty={t("mine.empty")}
+        >
           <div className="space-y-2">
             {posts.map((post) => (
               <PostCard
@@ -293,7 +296,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
               />
             ))}
           </div>
-        )}
+        </QueryStateView>
       </div>
     </div>
   )
