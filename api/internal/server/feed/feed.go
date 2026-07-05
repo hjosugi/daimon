@@ -120,10 +120,9 @@ func (h *Handler) rankAndMaterializeTimeline(ctx context.Context, uid string, re
 	for _, hit := range hits {
 		ids = append(ids, hit.ID)
 	}
-	b := h.loadBundle(ctx, ids, uid)
-	saveCounts := h.loadCounts(ctx, "bookmarks", ids)
+	b := h.loadTimelineBundle(ctx, ids, uid)
 
-	cands := feedcore.BuildCandidates(hits, b.rankingMeta(), b.povs, b.likeCounts, saveCounts, uid, time.Now().UTC())
+	cands := feedcore.BuildCandidates(hits, b.rankingMeta(), b.povs, b.likeCounts, b.saveCounts, uid, time.Now().UTC())
 	ranked := ranking.RankBySenseDistance(cands, centroid, userTags,
 		req.SimilarityWeight, req.BoostPopular, req.IncludeFarPosts,
 		feedcore.DefaultTimelineBridgeWeight, feedcore.DefaultTimelineTopK)

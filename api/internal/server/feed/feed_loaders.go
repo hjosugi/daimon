@@ -3,6 +3,8 @@ package feed
 import (
 	"context"
 
+	"golang.org/x/sync/errgroup"
+
 	dbq "daimon/api/internal/db"
 	"daimon/api/internal/feedcore"
 )
@@ -166,17 +168,83 @@ func (h *Handler) loadPOVLikedSet(ctx context.Context, povs []string, uid string
 // loadBundle bulk-loads post metadata, POVs, counts and viewer-specific flags
 // for a set of post IDs (the shared read path for timeline/search/profile).
 func (h *Handler) loadBundle(ctx context.Context, ids []string, uid string) bundle {
-	povs := h.loadPOVs(ctx, ids)
+	return h.loadBundleFor(ctx, ids, uid, false)
+}
+
+func (h *Handler) loadTimelineBundle(ctx context.Context, ids []string, uid string) bundle {
+	return h.loadBundleFor(ctx, ids, uid, true)
+}
+
+func (h *Handler) loadBundleFor(ctx context.Context, ids []string, uid string, includeSaveCounts bool) bundle {
+	var (
+		meta          map[string]postMeta
+		povs          map[string][]string
+		likeCounts    map[string]int
+		saveCounts    map[string]int
+		commentCounts map[string]int
+		liked         map[string]bool
+		saved         map[string]bool
+	)
+
+	g, groupCtx := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		meta = h.loadPosts(groupCtx, ids)
+		return nil
+	})
+	g.Go(func() error {
+		povs = h.loadPOVs(groupCtx, ids)
+		return nil
+	})
+	g.Go(func() error {
+		likeCounts = h.loadCounts(groupCtx, "likes", ids)
+		return nil
+	})
+	g.Go(func() error {
+		commentCounts = h.loadCounts(groupCtx, "comments", ids)
+		return nil
+	})
+	g.Go(func() error {
+		liked = h.loadLikedSet(groupCtx, ids, uid)
+		return nil
+	})
+	g.Go(func() error {
+		saved = h.loadSavedSet(groupCtx, ids, uid)
+		return nil
+	})
+	if includeSaveCounts {
+		g.Go(func() error {
+			saveCounts = h.loadCounts(groupCtx, "bookmarks", ids)
+			return nil
+		})
+	}
+	_ = g.Wait()
+
 	allPOVs := uniquePOVs(povs)
+	var (
+		povLikeCounts map[string]int
+		povLiked      map[string]bool
+	)
+	g, groupCtx = errgroup.WithContext(ctx)
+	g.Go(func() error {
+		povLikeCounts = h.loadPOVLikeCounts(groupCtx, allPOVs)
+		return nil
+	})
+	g.Go(func() error {
+		povLiked = h.loadPOVLikedSet(groupCtx, allPOVs, uid)
+		return nil
+	})
+	_ = g.Wait()
+
 	return bundle{
-		meta:          h.loadPosts(ctx, ids),
+		meta:          meta,
 		povs:          povs,
-		likeCounts:    h.loadCounts(ctx, "likes", ids),
-		commentCounts: h.loadCounts(ctx, "comments", ids),
-		liked:         h.loadLikedSet(ctx, ids, uid),
-		saved:         h.loadSavedSet(ctx, ids, uid),
-		povLikeCounts: h.loadPOVLikeCounts(ctx, allPOVs),
-		povLiked:      h.loadPOVLikedSet(ctx, allPOVs, uid),
+		likeCounts:    likeCounts,
+		saveCounts:    saveCounts,
+		commentCounts: commentCounts,
+		liked:         liked,
+		saved:         saved,
+		povLikeCounts: povLikeCounts,
+		povLiked:      povLiked,
 	}
 }
 

@@ -80,6 +80,7 @@ type bundle struct {
 	meta          map[string]postMeta
 	povs          map[string][]string
 	likeCounts    map[string]int
+	saveCounts    map[string]int
 	commentCounts map[string]int
 	liked         map[string]bool
 	saved         map[string]bool
