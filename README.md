@@ -197,3 +197,7 @@ CI は GitHub Actions の `.github/workflows/ci.yml` で管理します。
 Cloud Build trigger には少なくとも `_QDRANT_URL` を設定してください。API deploy は Secret Manager の `database-url` と `qdrant-api-key` を参照します。ML service は API からだけ呼ぶ前提で、Cloud Run ingress は `internal` にしています。
 
 現時点では Bazel は導入していません。Go / pnpm / uv / Docker の境界が明確で、Bazel を入れるより GitHub Actions の job 分割と Cloud Build の image build に寄せる方が運用が軽いです。モノレポが大きくなり、生成物や多言語キャッシュを統一したくなった段階で再検討します。
+
+## License
+
+0BSD. You can use, copy, modify, and distribute this project for almost any purpose.

@@ -13,5 +13,6 @@
     "down": "make down",
     "clean": "make clean",
     "build": "cd frontend && pnpm install && pnpm run build"
-  }
+  },
+  "license": "0BSD"
 }
