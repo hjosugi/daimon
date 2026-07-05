@@ -21,6 +21,9 @@ func (h *Handler) loadPosts(ctx context.Context, ids []string) map[string]postMe
 			m[id] = pm
 		}
 	}
+	if err := rows.Err(); err != nil {
+		h.logger.WarnContext(ctx, "load posts rows failed", "error", err)
+	}
 	return m
 }
 
@@ -37,6 +40,9 @@ func (h *Handler) loadPOVs(ctx context.Context, ids []string) map[string][]strin
 		if rows.Scan(&pid, &pov) == nil {
 			m[pid] = append(m[pid], pov)
 		}
+	}
+	if err := rows.Err(); err != nil {
+		h.logger.WarnContext(ctx, "load pov rows failed", "error", err)
 	}
 	return m
 }
@@ -67,6 +73,9 @@ func (h *Handler) loadCounts(ctx context.Context, table string, ids []string) ma
 			m[pid] = n
 		}
 	}
+	if err := rows.Err(); err != nil {
+		h.logger.WarnContext(ctx, "load counts rows failed", "error", err, "table", table)
+	}
 	return m
 }
 
@@ -75,17 +84,13 @@ func (h *Handler) loadLikedSet(ctx context.Context, ids []string, uid string) ma
 	if uid == "" {
 		return m
 	}
-	rows, err := h.pool.Query(ctx, dbq.SQL("feed.liked_set"), ids, uid)
+	likedIDs, err := dbq.QueryStrings(ctx, h.pool, dbq.SQL("feed.liked_set"), ids, uid)
 	if err != nil {
 		h.logger.WarnContext(ctx, "load liked set failed", "error", err)
 		return m
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var pid string
-		if rows.Scan(&pid) == nil {
-			m[pid] = true
-		}
+	for _, pid := range likedIDs {
+		m[pid] = true
 	}
 	return m
 }
@@ -95,17 +100,13 @@ func (h *Handler) loadSavedSet(ctx context.Context, ids []string, uid string) ma
 	if uid == "" {
 		return m
 	}
-	rows, err := h.pool.Query(ctx, dbq.SQL("feed.saved_set"), ids, uid)
+	savedIDs, err := dbq.QueryStrings(ctx, h.pool, dbq.SQL("feed.saved_set"), ids, uid)
 	if err != nil {
 		h.logger.WarnContext(ctx, "load saved set failed", "error", err)
 		return m
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var pid string
-		if rows.Scan(&pid) == nil {
-			m[pid] = true
-		}
+	for _, pid := range savedIDs {
+		m[pid] = true
 	}
 	return m
 }
@@ -143,6 +144,9 @@ func (h *Handler) loadPOVLikeCounts(ctx context.Context, povs []string) map[stri
 			m[pov] = n
 		}
 	}
+	if err := rows.Err(); err != nil {
+		h.logger.WarnContext(ctx, "load pov like count rows failed", "error", err)
+	}
 	return m
 }
 
@@ -151,17 +155,13 @@ func (h *Handler) loadPOVLikedSet(ctx context.Context, povs []string, uid string
 	if uid == "" || len(povs) == 0 {
 		return m
 	}
-	rows, err := h.pool.Query(ctx, dbq.SQL("pov_likes.liked_set"), povs, uid)
+	likedPOVs, err := dbq.QueryStrings(ctx, h.pool, dbq.SQL("pov_likes.liked_set"), povs, uid)
 	if err != nil {
 		h.logger.WarnContext(ctx, "load pov liked set failed", "error", err)
 		return m
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var pov string
-		if rows.Scan(&pov) == nil {
-			m[pov] = true
-		}
+	for _, pov := range likedPOVs {
+		m[pov] = true
 	}
 	return m
 }

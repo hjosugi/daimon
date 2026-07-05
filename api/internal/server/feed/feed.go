@@ -191,42 +191,28 @@ func (h *Handler) HandleSearch(w http.ResponseWriter, r *http.Request) {
 			scores[h.ID] = h.Score
 		}
 		if len(req.Povs) == 0 {
-			rows, err := h.pool.Query(ctx, dbq.SQL("feed.search_query_pov_ids"), req.Query, req.Limit)
+			povIDs, err := dbq.QueryStrings(ctx, h.pool, dbq.SQL("feed.search_query_pov_ids"), req.Query, req.Limit)
 			if err == nil {
 				seen := map[string]bool{}
 				for _, id := range ids {
 					seen[id] = true
 				}
-				var povIDs []string
-				for rows.Next() {
-					var pid string
-					if rows.Scan(&pid) == nil && !seen[pid] {
+				filteredPOVIDs := make([]string, 0, len(povIDs))
+				for _, pid := range povIDs {
+					if !seen[pid] {
 						seen[pid] = true
-						povIDs = append(povIDs, pid)
+						filteredPOVIDs = append(filteredPOVIDs, pid)
 					}
 				}
-				rows.Close()
-				if err := rows.Err(); err != nil {
-					respond.Warn(h.logger, r, "search query pov rows failed", err)
-				}
-				ids = append(povIDs, ids...)
+				ids = append(filteredPOVIDs, ids...)
 			} else {
 				respond.Warn(h.logger, r, "search query pov ids failed", err)
 			}
 		}
 	} else if len(req.Povs) > 0 {
-		rows, err := h.pool.Query(ctx, dbq.SQL("feed.search_pov_ids"), req.Povs, req.Limit)
+		povIDs, err := dbq.QueryStrings(ctx, h.pool, dbq.SQL("feed.search_pov_ids"), req.Povs, req.Limit)
 		if err == nil {
-			for rows.Next() {
-				var pid string
-				if rows.Scan(&pid) == nil {
-					ids = append(ids, pid)
-				}
-			}
-			rows.Close()
-			if err := rows.Err(); err != nil {
-				respond.Warn(h.logger, r, "search pov rows failed", err)
-			}
+			ids = append(ids, povIDs...)
 		} else {
 			respond.Warn(h.logger, r, "search pov ids failed", err)
 		}
@@ -300,20 +286,8 @@ func (h *Handler) HandleSearch(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleUserPosts(w http.ResponseWriter, r *http.Request) {
 	target := chi.URLParam(r, "userID")
 	ctx := r.Context()
-	rows, err := h.pool.Query(ctx, dbq.SQL("feed.user_post_ids"), target)
+	ids, err := dbq.QueryStrings(ctx, h.pool, dbq.SQL("feed.user_post_ids"), target)
 	if err != nil {
-		respond.Internal(w, r, h.logger, "Database error", err)
-		return
-	}
-	var ids []string
-	for rows.Next() {
-		var id string
-		if rows.Scan(&id) == nil {
-			ids = append(ids, id)
-		}
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
 		respond.Internal(w, r, h.logger, "Database error", err)
 		return
 	}

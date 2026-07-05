@@ -13,17 +13,10 @@ func (h *Handler) userSense(ctx context.Context, uid string) (map[string]bool, [
 	if uid == "" {
 		return tags, nil
 	}
-	rows, err := h.pool.Query(ctx, dbq.SQL("feed.user_povs"), uid)
+	povs, err := dbq.QueryStrings(ctx, h.pool, dbq.SQL("feed.user_povs"), uid)
 	if err == nil {
-		for rows.Next() {
-			var pov string
-			if rows.Scan(&pov) == nil {
-				tags[pov] = true
-			}
-		}
-		rows.Close()
-		if err := rows.Err(); err != nil {
-			h.logger.WarnContext(ctx, "user pov rows failed", "error", err)
+		for _, pov := range povs {
+			tags[pov] = true
 		}
 	} else {
 		h.logger.WarnContext(ctx, "user pov query failed", "error", err)
@@ -50,21 +43,9 @@ func (h *Handler) savedCentroid(ctx context.Context, uid string) []float32 {
 	if uid == "" {
 		return nil
 	}
-	rows, err := h.pool.Query(ctx, dbq.SQL("feed.user_saved_ids"), uid)
+	ids, err := dbq.QueryStrings(ctx, h.pool, dbq.SQL("feed.user_saved_ids"), uid)
 	if err != nil {
 		h.logger.WarnContext(ctx, "saved centroid ids failed", "error", err)
-		return nil
-	}
-	var ids []string
-	for rows.Next() {
-		var id string
-		if rows.Scan(&id) == nil {
-			ids = append(ids, id)
-		}
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		h.logger.WarnContext(ctx, "saved centroid rows failed", "error", err)
 		return nil
 	}
 	if len(ids) == 0 {
@@ -92,17 +73,10 @@ func (h *Handler) userTagSet(ctx context.Context, uid string) map[string]bool {
 	if uid == "" {
 		return tags
 	}
-	rows, err := h.pool.Query(ctx, dbq.SQL("feed.user_povs"), uid)
+	povs, err := dbq.QueryStrings(ctx, h.pool, dbq.SQL("feed.user_povs"), uid)
 	if err == nil {
-		for rows.Next() {
-			var pov string
-			if rows.Scan(&pov) == nil {
-				tags[pov] = true
-			}
-		}
-		rows.Close()
-		if err := rows.Err(); err != nil {
-			h.logger.WarnContext(ctx, "user tag rows failed", "error", err)
+		for _, pov := range povs {
+			tags[pov] = true
 		}
 	} else {
 		h.logger.WarnContext(ctx, "user tag query failed", "error", err)

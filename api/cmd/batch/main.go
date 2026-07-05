@@ -89,6 +89,10 @@ func deepAnalyzeJob(ctx context.Context, pool *pgxpool.Pool, em *embed.Client) {
 		}
 	}
 	rows.Close()
+	if err := rows.Err(); err != nil {
+		log.Printf("deep-analyze rows: %v", err)
+		return
+	}
 	if len(posts) == 0 {
 		return
 	}
@@ -137,6 +141,10 @@ func suggestJob(ctx context.Context, pool *pgxpool.Pool, em *embed.Client, ca *c
 		}
 	}
 	rows.Close()
+	if err := rows.Err(); err != nil {
+		log.Printf("suggest rows: %v", err)
+		return
+	}
 	if len(list) == 0 {
 		return
 	}
@@ -253,6 +261,9 @@ func loadPOVs(ctx context.Context, pool *pgxpool.Pool, ids []string) map[string]
 			m[pid] = append(m[pid], pov)
 		}
 	}
+	if err := rows.Err(); err != nil {
+		return m
+	}
 	return m
 }
 
@@ -269,6 +280,9 @@ func loadLikeCounts(ctx context.Context, pool *pgxpool.Pool, ids []string) map[s
 		if rows.Scan(&pid, &n) == nil {
 			m[pid] = n
 		}
+	}
+	if err := rows.Err(); err != nil {
+		return m
 	}
 	return m
 }
@@ -287,23 +301,18 @@ func loadSaveCounts(ctx context.Context, pool *pgxpool.Pool, ids []string) map[s
 			m[pid] = n
 		}
 	}
+	if err := rows.Err(); err != nil {
+		return m
+	}
 	return m
 }
 
 // savedCentroid returns the mean vector of the user's saved posts.
 func savedCentroid(ctx context.Context, pool *pgxpool.Pool, qc *qdrant.Client, uid string) []float32 {
-	rows, err := pool.Query(ctx, dbq.SQL("feed.user_saved_ids"), uid)
+	ids, err := dbq.QueryStrings(ctx, pool, dbq.SQL("feed.user_saved_ids"), uid)
 	if err != nil {
 		return nil
 	}
-	var ids []string
-	for rows.Next() {
-		var id string
-		if rows.Scan(&id) == nil {
-			ids = append(ids, id)
-		}
-	}
-	rows.Close()
 	if len(ids) == 0 {
 		return nil
 	}
@@ -315,33 +324,21 @@ func savedCentroid(ctx context.Context, pool *pgxpool.Pool, qc *qdrant.Client, u
 }
 
 func distinctPosters(ctx context.Context, pool *pgxpool.Pool) []string {
-	rows, err := pool.Query(ctx, dbq.SQL("batch.distinct_posters"))
+	out, err := dbq.QueryStrings(ctx, pool, dbq.SQL("batch.distinct_posters"))
 	if err != nil {
 		return nil
-	}
-	defer rows.Close()
-	var out []string
-	for rows.Next() {
-		var u string
-		if rows.Scan(&u) == nil {
-			out = append(out, u)
-		}
 	}
 	return out
 }
 
 func userTagSet(ctx context.Context, pool *pgxpool.Pool, uid string) map[string]bool {
 	tags := map[string]bool{}
-	rows, err := pool.Query(ctx, dbq.SQL("feed.user_povs"), uid)
+	povs, err := dbq.QueryStrings(ctx, pool, dbq.SQL("feed.user_povs"), uid)
 	if err != nil {
 		return tags
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var pov string
-		if rows.Scan(&pov) == nil {
-			tags[pov] = true
-		}
+	for _, pov := range povs {
+		tags[pov] = true
 	}
 	return tags
 }

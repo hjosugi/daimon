@@ -15,20 +15,8 @@ import (
 func (h *Handler) HandleSavedFeed(w http.ResponseWriter, r *http.Request) {
 	uid := session.UserID(r.Context())
 	ctx := r.Context()
-	rows, err := h.pool.Query(ctx, dbq.SQL("bookmarks.feed"), uid)
+	ids, err := dbq.QueryStrings(ctx, h.pool, dbq.SQL("bookmarks.feed"), uid)
 	if err != nil {
-		respond.Internal(w, r, h.logger, "Database error", err)
-		return
-	}
-	var ids []string
-	for rows.Next() {
-		var id string
-		if rows.Scan(&id) == nil {
-			ids = append(ids, id)
-		}
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
 		respond.Internal(w, r, h.logger, "Database error", err)
 		return
 	}
@@ -44,20 +32,8 @@ func (h *Handler) HandleSavedFeed(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleFollowingFeed(w http.ResponseWriter, r *http.Request) {
 	uid := session.UserID(r.Context())
 	ctx := r.Context()
-	rows, err := h.pool.Query(ctx, dbq.SQL("follows.feed"), uid)
+	ids, err := dbq.QueryStrings(ctx, h.pool, dbq.SQL("follows.feed"), uid)
 	if err != nil {
-		respond.Internal(w, r, h.logger, "Database error", err)
-		return
-	}
-	var ids []string
-	for rows.Next() {
-		var id string
-		if rows.Scan(&id) == nil {
-			ids = append(ids, id)
-		}
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
 		respond.Internal(w, r, h.logger, "Database error", err)
 		return
 	}

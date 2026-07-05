@@ -254,24 +254,7 @@ func (h *Handler) HandleDeleteAccount(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) userPostIDs(ctx context.Context, uid string) ([]string, error) {
-	rows, err := h.pool.Query(ctx, dbq.SQL("auth.user_post_ids"), uid)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var ids []string
-	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		ids = append(ids, id)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return ids, nil
+	return dbq.QueryStrings(ctx, h.pool, dbq.SQL("auth.user_post_ids"), uid)
 }
 
 func (h *Handler) createSession(ctx context.Context, uid string, now time.Time) (string, error) {
