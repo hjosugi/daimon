@@ -87,7 +87,6 @@ steps:
       - --ingress=${_ML_INGRESS}
       - --allow-unauthenticated
       - --cpu-boost
-      - --set-env-vars=PORT=8001
 
   - id: capture-ml-url
     name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
@@ -143,7 +142,7 @@ steps:
           --ingress=all \
           --allow-unauthenticated \
           --cpu-boost \
-          --set-env-vars="^|^PORT=8000|QDRANT_URL=${_QDRANT_URL}|EMBED_URL=$${ML_URL}|CORS_ORIGINS=${_CORS_ORIGINS}" \
+          --set-env-vars="^|^QDRANT_URL=${_QDRANT_URL}|EMBED_URL=$${ML_URL}|CORS_ORIGINS=${_CORS_ORIGINS}" \
           --set-secrets="DATABASE_URL=database-url:latest,QDRANT_API_KEY=qdrant-api-key:latest"
 
 images:
