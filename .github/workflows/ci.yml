@@ -114,6 +114,13 @@ jobs:
           test -f cloudbuild.yaml
           grep -q "daimon-api" cloudbuild.yaml
           grep -q "daimon-ml" cloudbuild.yaml
+      - name: Validate Vercel SPA rewrite
+        run: |
+          jq -e '
+            any(.rewrites[];
+              .source == "/(.*)" and .destination == "/index.html"
+            )
+          ' vercel.json >/dev/null
       - name: Build API Docker image
         run: docker build --pull -t daimon-api-ci ./api
       - name: Build ML Docker image

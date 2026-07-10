@@ -71,6 +71,20 @@ func TestRequireAuthRejectsMissingToken(t *testing.T) {
 	}
 }
 
+func TestReadinessSucceedsWhenDatabaseIsAvailable(t *testing.T) {
+	h := newIntegrationHarness(t)
+
+	for _, path := range []string{"/health", "/readyz"} {
+		t.Run(path, func(t *testing.T) {
+			rec := get(t, h.router, path)
+			if rec.Code != http.StatusOK {
+				t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+			}
+			assertHealthResponse(t, rec, "ok", "available")
+		})
+	}
+}
+
 func TestRegisterRejectsDuplicateUsername(t *testing.T) {
 	h := newIntegrationHarness(t)
 

@@ -36,10 +36,14 @@ Schema は Go API 起動時に `api/internal/db/schema.sql` から冪等に boot
 主要な health check:
 
 ```bash
-curl -sf http://localhost:8000/health
+curl -sf http://localhost:8000/livez
+curl -sf http://localhost:8000/readyz
 curl -sf http://localhost:8001/health
 curl -sf http://localhost:6333/healthz
 ```
+
+`/livez` はAPIプロセスの生存確認だけを行います。`/health` と `/readyz` は
+PostgreSQLへ `Ping` し、接続できなければ `503` を返します。
 
 Seed data を投入する場合:
 
@@ -138,6 +142,10 @@ gcloud run services describe daimon-ml --region=asia-northeast1 --format='value(
 gcloud run services describe daimon-api --region=asia-northeast1 --format='value(status.url)'
 curl -sf "$(gcloud run services describe daimon-api --region=asia-northeast1 --format='value(status.url)')/health"
 ```
+
+GitHub Actions の `Production smoke` は本番frontendのSPA deep link、API readiness、
+現行Go APIのroute contractを1時間ごとに確認します。URLを変更する場合はrepository
+variablesの `PRODUCTION_FRONTEND_URL` と `PRODUCTION_API_URL` を設定してください。
 
 `daimon-ml` は internal ingress のため、外部端末から直接 health check できない構成です。API の `EMBED_URL` は Cloud Build が ML service URL を取得して deploy 時に設定します。
 

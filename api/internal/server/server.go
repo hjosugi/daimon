@@ -81,9 +81,11 @@ func (s *Server) Router() http.Handler {
 		MaxAge:           300,
 	}))
 
-	r.Get("/health", func(w http.ResponseWriter, _ *http.Request) {
-		httpx.JSON(w, http.StatusOK, map[string]string{"status": "ok"})
-	})
+	// Liveness only reports whether this process can serve HTTP. Readiness also
+	// verifies PostgreSQL because it is Daimon's system of record.
+	r.Get("/livez", s.handleLiveness)
+	r.Get("/readyz", s.handleReadiness)
+	r.Get("/health", s.handleReadiness) // Backward-compatible readiness alias.
 
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/register", s.auth.HandleRegister)
@@ -146,6 +148,29 @@ func (s *Server) Router() http.Handler {
 	})
 
 	return r
+}
+
+func (s *Server) handleLiveness(w http.ResponseWriter, _ *http.Request) {
+	httpx.JSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func (s *Server) handleReadiness(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+
+	if err := s.pool.Ping(ctx); err != nil {
+		s.logger.WarnContext(r.Context(), "readiness database check failed", "error", err)
+		httpx.JSON(w, http.StatusServiceUnavailable, map[string]string{
+			"status":   "error",
+			"database": "unavailable",
+		})
+		return
+	}
+
+	httpx.JSON(w, http.StatusOK, map[string]string{
+		"status":   "ok",
+		"database": "available",
+	})
 }
 
 func (s *Server) optionalAuth(next http.Handler) http.Handler {
