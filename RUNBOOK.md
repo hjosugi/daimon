@@ -118,6 +118,10 @@ docker run --rm --name daimon-test-postgres \
 - `_QDRANT_URL`: Qdrant Cloud URL
 - `_CORS_ORIGINS`: Browser caller origins
 
+本番Go APIのURLは `https://daimon-api-629174432708.asia-northeast1.run.app` です。
+旧FastAPI serviceの `https://daimon-629174432708.asia-northeast1.run.app` を
+frontendの `VITE_API_BASE_URL` に設定しないでください。
+
 必要な Secret Manager secrets:
 
 - `database-url`: API が使う Postgres connection string

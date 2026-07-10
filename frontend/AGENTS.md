@@ -17,7 +17,7 @@ Qdrant         vector search index
 Redis          optional read-model cache
 ```
 
-Frontend は Go API と通信します。API base URL は `VITE_API_BASE_URL`、未設定時は `http://localhost:8000` です。
+Frontend は Go API と通信します。API base URL は `VITE_API_BASE_URL` です。未設定時はdevelopmentで `http://localhost:8000`、productionで `https://daimon-api-629174432708.asia-northeast1.run.app` を使います。
 
 ## What This Workspace Owns
 
