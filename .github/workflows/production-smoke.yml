@@ -14,7 +14,7 @@ concurrency:
 
 env:
   FRONTEND_URL: ${{ vars.PRODUCTION_FRONTEND_URL || 'https://daimon-sandy.vercel.app' }}
-  API_URL: ${{ vars.PRODUCTION_API_URL || 'https://daimon-629174432708.asia-northeast1.run.app' }}
+  API_URL: ${{ vars.PRODUCTION_API_URL || 'https://daimon-api-629174432708.asia-northeast1.run.app' }}
 
 jobs:
   smoke:
