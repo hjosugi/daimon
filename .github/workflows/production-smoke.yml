@@ -1,0 +1,56 @@
+name: Production smoke
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 * * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-smoke
+  cancel-in-progress: true
+
+env:
+  FRONTEND_URL: ${{ vars.PRODUCTION_FRONTEND_URL || 'https://daimon-sandy.vercel.app' }}
+  API_URL: ${{ vars.PRODUCTION_API_URL || 'https://daimon-629174432708.asia-northeast1.run.app' }}
+
+jobs:
+  smoke:
+    name: Frontend and API
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check frontend and SPA deep link
+        run: |
+          curl --fail --show-error --silent \
+            --retry 4 --retry-all-errors --retry-delay 5 \
+            --connect-timeout 10 --max-time 60 \
+            "$FRONTEND_URL/" >/dev/null
+          curl --fail --show-error --silent \
+            --retry 4 --retry-all-errors --retry-delay 5 \
+            --connect-timeout 10 --max-time 60 \
+            "$FRONTEND_URL/search" >/dev/null
+
+      - name: Check API readiness
+        run: |
+          response="$(curl --fail --show-error --silent \
+            --retry 4 --retry-all-errors --retry-delay 5 \
+            --connect-timeout 10 --max-time 60 \
+            "$API_URL/readyz")"
+          jq -e '.status == "ok" and .database == "available"' <<<"$response"
+
+      - name: Check deployed API generation
+        run: |
+          openapi_status="$(curl --show-error --silent \
+            --connect-timeout 10 --max-time 60 \
+            --output /dev/null --write-out '%{http_code}' \
+            "$API_URL/openapi.json")"
+          test "$openapi_status" = "404"
+
+          saved_status="$(curl --show-error --silent \
+            --connect-timeout 10 --max-time 60 \
+            --output /dev/null --write-out '%{http_code}' \
+            "$API_URL/posts/saved")"
+          test "$saved_status" = "401"

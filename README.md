@@ -77,7 +77,8 @@ make web
 開く URL:
 
 - Frontend: http://localhost:5173
-- API health: http://localhost:8000/health
+- API liveness: http://localhost:8000/livez
+- API readiness (PostgreSQL check): http://localhost:8000/health or `/readyz`
 - Qdrant dashboard: http://localhost:6333/dashboard
 
 seed 済みユーザーは `seeduser1@example.com` / `password123` のような `@example.com` アカウントです。
@@ -184,7 +185,8 @@ CI は GitHub Actions の `.github/workflows/ci.yml` で管理します。
 - `api`: `go test ./...`、`go vet ./...`、`cmd/server` / `cmd/batch` の build
 - `frontend`: `pnpm install --frozen-lockfile`、Biome check、Vite production build
 - `ml-service`: `uv sync --locked`、`ruff check`、pytest、FastAPI app の import smoke test
-- `deploy-config`: `compose.yml` / `cloudbuild.yaml` の検証と API / ML Docker image build
+- `deploy-config`: `compose.yml` / `cloudbuild.yaml` / Vercel SPA rewrite の検証と API / ML Docker image build
+- `production-smoke`: 本番frontend、SPA deep link、DB readiness、Go API route contractの定期確認
 
 依存更新は `.github/dependabot.yml` が frontend(npm) / api(gomod) / ml(uv) / GitHub Actions / Docker を管理します。
 
