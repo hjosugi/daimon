@@ -41,7 +41,7 @@ explicit = true
 [dependency-groups]
 dev = [
     # FastAPI 0.109 / Starlette 0.35 TestClient passes `app=`, removed in httpx 0.28.
-    "httpx<0.28",
+    "httpx<0.29",
     "pytest>=9.1.1",
     "ruff>=0.15.20",
 ]
