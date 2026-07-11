@@ -1,3 +1,6 @@
+<!-- i18n: language-switcher -->
+[English](README.en.md) | [日本語](README.md)
+
 # Daimon Docs
 
 このディレクトリは、Daimon を「何を作っているか」「なぜその形なのか」「どう動いているか」に分けて読むための正本です。

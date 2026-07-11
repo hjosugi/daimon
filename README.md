@@ -1,3 +1,6 @@
+<!-- i18n: language-switcher -->
+[English](README.md) | [日本語](README.ja.md)
+
 # Daimon
 
 Daimon は、投稿テキストの意味ベクトルと POV (Point of View) タグを使って、価値観の近さや「遠いけれど共通点がある」投稿を見つける SNS プロトタイプです。

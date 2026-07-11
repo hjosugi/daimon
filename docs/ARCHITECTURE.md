@@ -1,3 +1,6 @@
+<!-- i18n: language-switcher -->
+[English](ARCHITECTURE.en.md) | [日本語](ARCHITECTURE.md)
+
 # Architecture
 
 Daimon の現行実装は、Go API を中心にしたSNS/検索アプリです。Python は本体APIではなく、embedding と POV抽出だけを担当する ML microservice として分離されています。

@@ -1,3 +1,6 @@
+<!-- i18n: language-switcher -->
+[English](THEORY_TO_FEATURES.en.md) | [日本語](THEORY_TO_FEATURES.md)
+
 # Theory To Features
 
 この文書は、Daimon の機能を理論から逆算してまとめるためのものです。

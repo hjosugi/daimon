@@ -1,3 +1,6 @@
+<!-- i18n: language-switcher -->
+[English](RESEARCH.en.md) | [日本語](RESEARCH.md)
+
 # DAIMON — 研究・理論ドシエ（武器庫 / 完全版）
 
 最終更新: 2026-06

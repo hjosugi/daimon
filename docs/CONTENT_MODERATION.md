@@ -1,3 +1,6 @@
+<!-- i18n: language-switcher -->
+[English](CONTENT_MODERATION.en.md) | [日本語](CONTENT_MODERATION.md)
+
 # Content Moderation
 
 Daimon のモデレーションは、一般的なSNSコメント欄より少し難しいです。理由は、Daimonが投稿だけでなく「観点(POV)」を会話の単位にするからです。

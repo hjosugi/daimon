@@ -1,3 +1,6 @@
+<!-- i18n: language-switcher -->
+[English](API_FEED_LOAD_LATENCY.md) | [日本語](API_FEED_LOAD_LATENCY.ja.md)
+
 # API Feed Load Latency Memo
 
 Date: 2026-07-05
