@@ -6,6 +6,7 @@ import App from "./App"
 import { ToastProvider } from "./components/ui/ToastProvider"
 import { I18nProvider } from "./i18n"
 import "./index.css"
+import { ThemeProvider } from "./theme"
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -24,11 +25,13 @@ const router = createBrowserRouter([{ path: "*", element: <App /> }])
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <I18nProvider>
-        <ToastProvider>
-          <RouterProvider router={router} />
-        </ToastProvider>
-      </I18nProvider>
+      <ThemeProvider>
+        <I18nProvider>
+          <ToastProvider>
+            <RouterProvider router={router} />
+          </ToastProvider>
+        </I18nProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   </React.StrictMode>,
 )

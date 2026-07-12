@@ -87,7 +87,7 @@ export const ModalFrame: React.FC<ModalFrameProps> = ({
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className={`relative z-10 bg-[#0f0f1f] rounded-lg border border-cyan-500/18 w-full ${maxWidthClassName} mx-auto overflow-hidden max-h-[90vh] overflow-y-auto`}
+        className={`modal-surface relative z-10 bg-[#0f0f1f] rounded-xl border border-cyan-500/18 w-full ${maxWidthClassName} mx-auto overflow-hidden max-h-[90vh] overflow-y-auto`}
       >
         <div
           className={`${headerClassName} border-b p-4 flex items-center justify-between`}

@@ -2,20 +2,36 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Daimon</title>
+    <meta name="theme-color" content="#11131d" />
+    <meta
+      name="description"
+      content="Daimon — 視点と感性の距離から会話を見つけるソーシャルネットワーク"
+    />
+    <title>Daimon — 視点でつながるSNS</title>
+    <script>
+      try {
+        const theme = localStorage.getItem("daimon_theme") === "light" ? "light" : "dark"
+        document.documentElement.dataset.theme = theme
+        document.documentElement.style.colorScheme = theme
+      } catch {
+        document.documentElement.dataset.theme = "dark"
+      }
+    </script>
     <style>
-      /* Critical CSS to prevent layout shift */
       * {
         box-sizing: border-box;
       }
       body {
         margin: 0;
-        background: #151520;
-        color: #7dd3fc;
-        font-family: 'Courier New', 'Monaco', 'Menlo', monospace;
+        background: #11131d;
+        color: #d9edf4;
         min-height: 100vh;
+      }
+      html[data-theme="light"] body {
+        background: #f4f7fb;
+        color: #17313c;
       }
       #root {
         min-height: 100vh;

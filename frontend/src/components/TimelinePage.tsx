@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { Pencil } from "lucide-react"
+import { MessageCircle, Pencil } from "lucide-react"
 import { useState } from "react"
 import type { User } from "../api/client"
 import { getTimeline } from "../api/client"
@@ -31,6 +31,13 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
 }) => {
   const { t } = useI18n()
   const [showPostForm, setShowPostForm] = useState(false)
+  const openComposer = () => {
+    if (!user) {
+      onAuthRequired()
+      return
+    }
+    setShowPostForm(true)
+  }
   const {
     data: posts = [],
     isLoading,
@@ -50,7 +57,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
         boostPopular,
         includeFarPosts,
       ),
-    staleTime: 1000 * 60 * 1,
+    staleTime: 1000 * 60 * 5,
   })
 
   return (
@@ -63,7 +70,6 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
         />
       )}
 
-      {/* Timeline */}
       <div className="space-y-4">
         <QueryStateView
           isLoading={isLoading}
@@ -71,9 +77,25 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
           isEmpty={posts.length === 0}
           loadingClassName="flex justify-center p-8 text-cyan-300/90"
           errorClassName="text-center py-12 text-red-400/70"
-          emptyClassName="text-center py-12 text-cyan-300/70"
+          emptyClassName="empty-state"
           error={<p className="font-mono">{t("timeline.loadError")}</p>}
-          empty={<p className="font-mono">{t("timeline.noPosts")}</p>}
+          empty={
+            <>
+              <span className="empty-state-icon" aria-hidden="true">
+                <MessageCircle size={28} />
+              </span>
+              <h2>{t("timeline.noPosts")}</h2>
+              <p>{t("timeline.emptyHint")}</p>
+              <button
+                type="button"
+                className="empty-state-action"
+                onClick={openComposer}
+              >
+                <Pencil size={16} />
+                {t("timeline.createPost")}
+              </button>
+            </>
+          }
         >
           {posts.map((post) => (
             <PostCard
@@ -87,7 +109,6 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
         </QueryStateView>
       </div>
 
-      {/* Floating Action Button - Pencil */}
       <button
         type="button"
         onClick={() => {
@@ -99,6 +120,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
         }}
         className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-r from-cyan-500/90 to-fuchsia-500/90 text-black rounded-full hover:from-cyan-400 hover:to-fuchsia-400 transition-all flex items-center justify-center z-40 font-mono font-bold"
         title={t("timeline.createPost")}
+        aria-label={t("timeline.createPost")}
       >
         <Pencil size={24} className="sm:w-6 sm:h-6" />
       </button>

@@ -5,6 +5,12 @@ const en = {
   "locale.en": "English",
   "locale.switch": "Language",
 
+  "theme.label": "Appearance",
+  "theme.dark": "Dark",
+  "theme.light": "Light",
+  "theme.switchToDark": "Switch to dark mode",
+  "theme.switchToLight": "Switch to light mode",
+
   "nav.home": "HOME",
   "nav.primary": "Primary navigation",
   "nav.search": "SEARCH",
@@ -79,6 +85,8 @@ const en = {
     "DELETING YOUR ACCOUNT WILL PERMANENTLY DELETE ALL YOUR POSTS, COMMENTS, AND LIKES. THIS ACTION CANNOT BE UNDONE.",
 
   "timeline.noPosts": "NO POSTS YET. START A CONVERSATION!",
+  "timeline.emptyHint":
+    "Share the first perspective and give this timeline a pulse.",
   "timeline.createPost": "Create post",
   "timeline.loadError": "[ERROR] FAILED TO LOAD",
 
@@ -244,6 +252,12 @@ const ja: Messages = {
   "locale.en": "English",
   "locale.switch": "言語",
 
+  "theme.label": "表示テーマ",
+  "theme.dark": "ダーク",
+  "theme.light": "ライト",
+  "theme.switchToDark": "ダークモードに切り替える",
+  "theme.switchToLight": "ライトモードに切り替える",
+
   "nav.home": "ホーム",
   "nav.primary": "メインナビゲーション",
   "nav.search": "検索",
@@ -318,6 +332,8 @@ const ja: Messages = {
     "アカウントを削除すると、投稿、コメント、いいねが完全に削除されます。この操作は取り消せません。",
 
   "timeline.noPosts": "まだ投稿がありません。会話を始めましょう。",
+  "timeline.emptyHint":
+    "最初の視点を投稿して、タイムラインを動かしてみましょう。",
   "timeline.createPost": "投稿する",
   "timeline.loadError": "[エラー] 読み込みに失敗しました",
 

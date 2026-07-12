@@ -42,7 +42,6 @@ export const api = ky.create({
           request.headers.set("Authorization", `Bearer ${token}`)
         }
         request.headers.set("Accept-Language", getPreferredLocale())
-        request.headers.set("X-Daimon-Locale", getPreferredLocale())
       },
     ],
   },

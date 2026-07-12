@@ -1,6 +1,7 @@
-import { Languages } from "lucide-react"
+import { Languages, Moon, Sun } from "lucide-react"
 import type React from "react"
 import { type Locale, localeLabels, locales, useI18n } from "../i18n"
+import { type Theme, useTheme } from "../theme"
 import { ModalFrame } from "./ui/ModalFrame"
 
 interface SettingsModalProps {
@@ -25,6 +26,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onIncludeFarPostsChange,
 }) => {
   const { locale, setLocale, t } = useI18n()
+  const { theme, setTheme } = useTheme()
   if (!isOpen) return null
 
   return (
@@ -127,6 +129,30 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               {t("settings.includeDiverse")}
             </span>
           </label>
+        </div>
+
+        <div className="pt-4 border-t border-cyan-500/15">
+          <div className="flex items-center justify-between gap-3">
+            <span className="flex items-center gap-2 text-sm text-cyan-300/85 font-mono">
+              {theme === "dark" ? <Moon size={16} /> : <Sun size={16} />}
+              {t("theme.label")}
+            </span>
+            <fieldset className="theme-segment" aria-label={t("theme.label")}>
+              {(["light", "dark"] as Theme[]).map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  className="theme-segment-button"
+                  data-active={theme === item}
+                  aria-pressed={theme === item}
+                  onClick={() => setTheme(item)}
+                >
+                  {item === "light" ? <Sun size={14} /> : <Moon size={14} />}
+                  {item === "light" ? t("theme.light") : t("theme.dark")}
+                </button>
+              ))}
+            </fieldset>
+          </div>
         </div>
 
         <div className="pt-4 border-t border-cyan-500/15">

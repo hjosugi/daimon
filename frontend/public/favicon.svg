@@ -1,5 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <title>Daimon</title>
-  <circle cx="50" cy="50" r="40" fill="#646cff"/>
-  <text x="50" y="60" font-family="Arial" font-size="40" fill="white" text-anchor="middle" font-weight="bold">D</text>
+  <defs>
+    <linearGradient id="bg" x1="8" y1="6" x2="58" y2="60" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#182332"/>
+      <stop offset="1" stop-color="#21162d"/>
+    </linearGradient>
+    <linearGradient id="signal" x1="14" y1="14" x2="52" y2="52" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#67e8f9"/>
+      <stop offset="1" stop-color="#e879f9"/>
+    </linearGradient>
+  </defs>
+  <rect x="3" y="3" width="58" height="58" rx="15" fill="url(#bg)"/>
+  <path d="M18 17h12c11.6 0 19 5.7 19 15s-7.4 15-19 15H18V17Z" fill="none" stroke="url(#signal)" stroke-width="6" stroke-linejoin="round"/>
+  <path d="M18 25v14" stroke="#d9edf4" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="35.5" cy="32" r="3.5" fill="#d9edf4"/>
 </svg>
