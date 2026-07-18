@@ -46,7 +46,6 @@ func routerWithUnavailableDatabase(t *testing.T) (http.Handler, func()) {
 		t.Fatalf("create pool: %v", err)
 	}
 	cfg := config.Config{
-		QdrantURL:   "http://127.0.0.1:1",
 		EmbedURL:    "http://127.0.0.1:1",
 		CORSOrigins: []string{"http://localhost:5173"},
 	}

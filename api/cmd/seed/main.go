@@ -57,17 +57,17 @@ func main() {
 	if err := db.EnsureSchema(ctx, pool); err != nil {
 		log.Fatalf("schema: %v", err)
 	}
-	qc := qdrant.New(cfg.QdrantURL, cfg.QdrantAPIKey)
+	qc := qdrant.New(pool)
 
 	if *fresh {
 		truncate(ctx, pool)
 		if err := qc.RecreateCollection(ctx); err != nil {
-			log.Printf("  ! Qdrant reset skipped: %v", err)
+			log.Printf("  ! Vector index reset skipped: %v", err)
 		} else {
-			log.Println("  ✓ Qdrant collection recreated")
+			log.Println("  ✓ Vector index recreated")
 		}
 	} else if err := qc.EnsureCollection(ctx); err != nil {
-		log.Fatalf("qdrant collection: %v", err)
+		log.Fatalf("vector index: %v", err)
 	}
 
 	base := countUsers(ctx, pool)
@@ -157,7 +157,7 @@ func main() {
 			})
 		}
 		if err := qc.Upsert(ctx, pts); err != nil {
-			log.Fatalf("qdrant upsert: %v", err)
+			log.Fatalf("vector index upsert: %v", err)
 		}
 		log.Printf("    %d/%d", end, len(metas))
 	}

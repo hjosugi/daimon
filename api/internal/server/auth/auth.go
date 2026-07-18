@@ -247,7 +247,7 @@ func (h *Handler) HandleDeleteAccount(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(postIDs) > 0 {
 		if err := h.qdrant.Delete(ctx, postIDs); err != nil {
-			respond.Warn(h.logger, r, "qdrant account cleanup failed", err)
+			respond.Warn(h.logger, r, "vector account cleanup failed", err)
 		}
 	}
 	httpx.JSON(w, http.StatusOK, map[string]string{"message": "Account deleted successfully"})

@@ -104,6 +104,18 @@ CREATE TABLE IF NOT EXISTS bookmarks (
 CREATE INDEX IF NOT EXISTS ix_bookmarks_user ON bookmarks (user_id);
 CREATE INDEX IF NOT EXISTS ix_bookmarks_post ON bookmarks (post_id);
 
+-- Rebuildable semantic index. Exact cosine search is performed by the API for
+-- the current small dataset, avoiding a separate always-on vector database.
+CREATE TABLE IF NOT EXISTS post_vectors (
+  post_id    varchar PRIMARY KEY REFERENCES posts(id) ON DELETE CASCADE,
+  vector     real[] NOT NULL,
+  payload    jsonb NOT NULL DEFAULT '{}'::jsonb,
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT post_vectors_dimensions CHECK (array_length(vector, 1) = 384)
+);
+CREATE INDEX IF NOT EXISTS ix_post_vectors_user
+  ON post_vectors ((payload->>'user_id'));
+
 -- Daimon accesses PostgreSQL only through the trusted server-side Go API.
 -- Supabase exposes tables in the public schema through its Data API, so keep
 -- the browser-facing anon/authenticated roles closed and enable RLS as an
@@ -119,6 +131,7 @@ ALTER TABLE pov_likes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pov_comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE follows ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bookmarks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE post_vectors ENABLE ROW LEVEL SECURITY;
 
 -- The anon/authenticated roles are Supabase-specific and do not exist in the
 -- plain PostgreSQL instance used by local development and CI.
@@ -129,7 +142,7 @@ BEGIN
   FOREACH api_role IN ARRAY ARRAY['anon', 'authenticated'] LOOP
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = api_role) THEN
       EXECUTE format(
-        'REVOKE ALL ON TABLE users, sessions, posts, povs, likes, comments, pov_likes, pov_comments, follows, bookmarks FROM %I',
+        'REVOKE ALL ON TABLE users, sessions, posts, povs, likes, comments, pov_likes, pov_comments, follows, bookmarks, post_vectors FROM %I',
         api_role
       );
       EXECUTE format(

@@ -86,7 +86,7 @@ func (h *Handler) gatherTimelineHits(ctx context.Context, r *http.Request, uid s
 	hits, err := h.qdrant.Search(ctx, searchVector, timelineSearchLimit(req), nil, true)
 	if err != nil || len(hits) == 0 {
 		if err != nil {
-			respond.Warn(h.logger, r, "timeline qdrant search failed", err)
+			respond.Warn(h.logger, r, "timeline vector search failed", err)
 		}
 		return nil, false
 	}
@@ -109,7 +109,7 @@ func (h *Handler) appendPopularTimelineHits(ctx context.Context, r *http.Request
 				hits = append(hits, qdrantPointToHit(p, searchVector))
 			}
 		} else {
-			respond.Warn(h.logger, r, "timeline popular qdrant retrieve failed", err)
+			respond.Warn(h.logger, r, "timeline popular vector retrieve failed", err)
 		}
 	}
 	return hits
@@ -158,7 +158,7 @@ func (h *Handler) HandleSearch(w http.ResponseWriter, r *http.Request) {
 		}
 		hits, err := h.qdrant.Search(ctx, vector, min(req.Limit*3, 200), req.Povs, false)
 		if err != nil {
-			respond.Warn(h.logger, r, "search qdrant search failed", err)
+			respond.Warn(h.logger, r, "semantic vector search failed", err)
 			httpx.JSON(w, http.StatusOK, []postResp{})
 			return
 		}

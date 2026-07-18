@@ -52,7 +52,6 @@ func newIntegrationHarness(t *testing.T) integrationHarness {
 	}
 
 	cfg := config.Config{
-		QdrantURL:   "http://127.0.0.1:1",
 		EmbedURL:    "http://127.0.0.1:1",
 		CORSOrigins: []string{"http://localhost:5173"},
 	}

@@ -64,14 +64,8 @@ func (h *Handler) HandleCreatePost(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if err := tx.Commit(ctx); err != nil {
-		respond.Internal(w, r, h.logger, "Could not commit", err)
-		return
-	}
-
-	// Qdrant upsert is best-effort (regenerable index).
 	if embErr == nil && len(vector) > 0 {
-		if err := h.qdrant.Upsert(ctx, []qdrant.Point{{
+		if err := h.qdrant.UpsertTx(ctx, tx, []qdrant.Point{{
 			ID:     id,
 			Vector: vector,
 			Payload: map[string]any{
@@ -81,8 +75,13 @@ func (h *Handler) HandleCreatePost(w http.ResponseWriter, r *http.Request) {
 				"created_at": now.Unix(),
 			},
 		}}); err != nil {
-			respond.Warn(h.logger, r, "qdrant post upsert failed", err)
+			respond.Internal(w, r, h.logger, "Could not index post", err)
+			return
 		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		respond.Internal(w, r, h.logger, "Could not commit", err)
+		return
 	}
 
 	httpx.JSON(w, http.StatusOK, postResp{
@@ -110,7 +109,7 @@ func (h *Handler) HandleDeletePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.qdrant.Delete(r.Context(), []string{id}); err != nil {
-		respond.Warn(h.logger, r, "qdrant post delete failed", err)
+		respond.Warn(h.logger, r, "vector post delete failed", err)
 	}
 	httpx.JSON(w, http.StatusOK, map[string]string{"message": "Post deleted successfully"})
 }

@@ -23,7 +23,6 @@ Go API を host で動かす場合:
 make deps-up
 cd api
 DATABASE_URL=postgresql://daimon:daimon@localhost:5432/daimon \
-QDRANT_URL=http://localhost:6333 \
 EMBED_URL=http://localhost:8001 \
 REDIS_URL=redis://localhost:6379 \
 go run ./cmd/server
@@ -39,7 +38,6 @@ Schema は Go API 起動時に `api/internal/db/schema.sql` から冪等に boot
 curl -sf http://localhost:8000/livez
 curl -sf http://localhost:8000/readyz
 curl -sf http://localhost:8001/health
-curl -sf http://localhost:6333/healthz
 ```
 
 `/livez` はAPIプロセスの生存確認だけを行います。`/health` と `/readyz` は
@@ -113,9 +111,8 @@ docker run --rm --name daimon-test-postgres \
 
 本番 deploy は root の `cloudbuild.yaml` から Cloud Run へ出します。
 
-必要な Cloud Build substitutions:
+必要な Cloud Build substitution:
 
-- `_QDRANT_URL`: Qdrant Cloud URL
 - `_CORS_ORIGINS`: Browser caller origins
 
 本番Go APIのURLは `https://daimon-api-629174432708.asia-northeast1.run.app` です。
@@ -125,7 +122,6 @@ frontendの `VITE_API_BASE_URL` に設定しないでください。
 必要な Secret Manager secrets:
 
 - `database-url`: API が使う Postgres connection string
-- `qdrant-api-key`: API が使う Qdrant Cloud API key
 
 Supabase を使う場合、`database-url` には Cloud Run からIPv4で接続できる
 Session pooler URLを保存します。実値やDBパスワードはリポジトリへcommitせず、
@@ -137,7 +133,7 @@ Managerだけを正本にします。
 ```bash
 gcloud builds submit \
   --config=cloudbuild.yaml \
-  --substitutions=_QDRANT_URL=https://example.qdrant.io:6333,_CORS_ORIGINS=https://daimon-sandy.vercel.app
+  --substitutions=_CORS_ORIGINS=https://daimon-sandy.vercel.app
 ```
 
 Cloud Build は `daimon-api` / `daimon-ml` を `$SHORT_SHA` と `latest` の両方で push します。次回 build は `latest` を pull し、`--cache-from` で Docker layer cache を再利用します。
@@ -162,7 +158,9 @@ GitHub Actions の `Production smoke` は本番frontendのSPA deep link、API re
 activityも兼ねます。URLを変更する場合はrepository
 variablesの `PRODUCTION_FRONTEND_URL` と `PRODUCTION_API_URL` を設定してください。
 
-`daimon-ml` は internal ingress のため、外部端末から直接 health check できない構成です。API の `EMBED_URL` は Cloud Build が ML service URL を取得して deploy 時に設定します。
+`daimon-ml` は匿名呼び出しを拒否し、API と worker の service account だけに
+`roles/run.invoker` を付与します。API の `EMBED_URL` は Cloud Build が ML service
+URL を取得して deploy 時に設定し、Google 署名 ID token を付けて呼び出します。
 
 ## Incident Triage
 
@@ -183,10 +181,10 @@ Local stack の API が待機したままの場合は、`compose.yml` の health
 ```bash
 docker compose -f compose.yml ps
 curl -sf http://localhost:8001/health
-curl -sf http://localhost:6333/healthz
 ```
 
-Qdrant index は PostgreSQL の投稿データから再構築できる検索 index です。PostgreSQL が正本で、Qdrant write は best-effort です。
+`post_vectors` は PostgreSQL 内の再構築可能な検索 index です。小規模運用では
+exact cosine scan を使い、外部 vector database の固定費と障害点を増やしません。
 
 Session tokens are stored as SHA-256 hashes in `sessions.id`. The rollout from
 plaintext tokens intentionally invalidates existing sessions; users can log in

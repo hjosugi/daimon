@@ -8,15 +8,15 @@ Daimon は、投稿テキストの意味ベクトルと POV（視点）タグを
 単なるキーワード検索ではなく、以下を組み合わせます。
 
 - 投稿本文を Sentence Transformers で 384 次元ベクトルに変換
-- Qdrant で近傍検索し候補投稿を取得
-- PostgreSQL を基盤として本文、ユーザー、POV、いいね、コメントを保持
+- PostgreSQL の `post_vectors` で cosine 近傍検索し候補投稿を取得
+- PostgreSQL を基盤として本文、ユーザー、POV、いいね、コメント、検索 vector を保持
 - Sense-Distance ランキングで、近い投稿だけでなく bridge 投稿も混ぜる
 
 ## まず知ること
 
 スタックは **Go 中心**で、Python は ML が本当に必要な部分（`ml-service/`: embedding + spaCy POV 抽出）だけに絞っています。API・シード・スキーマ管理はすべて Go です。
 
-`compose.yml` が PostgreSQL / Qdrant / Redis / ML(`:8001`) / Go API(`:8000`) を起動します。
+`compose.yml` が PostgreSQL / Redis / ML(`:8001`) / Go API(`:8000`) を起動します。
 スキーマは Go API が起動時に冪等にブートストラップ（`CREATE TABLE IF NOT EXISTS`）するため、
 別途のマイグレーション手順はありません。テストデータは Go のシーダ（`api/cmd/seed`）で投入します。
 
@@ -28,7 +28,7 @@ Daimon は、投稿テキストの意味ベクトルと POV（視点）タグを
 | `api/` | Go の HTTP API（認証・投稿・検索・タイムライン・ランキング）＋ `cmd/seed`・`cmd/batch` |
 | `ml-service/` | **唯一の Python**。embedding と POV 抽出だけを担当 |
 | `docs/` | 共有ドキュメント。`*.local.md` は gitignore される詳細メモ用 |
-| `compose.yml` | PostgreSQL / Qdrant / Redis / ML / Go API のローカル構成 |
+| `compose.yml` | PostgreSQL / Redis / ML / Go API のローカル構成 |
 
 ## アーキテクチャ概要
 
@@ -39,25 +39,20 @@ Daimon は、投稿テキストの意味ベクトルと POV（視点）タグを
     v
 Go API (:8000)
     |                 |
-    | SQL             | HTTP
+    | SQL             | 認証付き HTTP
     v                 v
 PostgreSQL        MLサービス (:8001)
-正本DB              embedding / POV抽出
-    |
-    | 投稿ID、メタデータ
-    v
-Qdrant (:6333)
-ベクトル検索インデックス
+正本 + vector index  embedding / POV抽出
 ```
 
 重要な考え方はこれです。
 
-- PostgreSQL: システム・オブ・レコード。消えてはいけないデータ、関係、集計の正本
-- Qdrant: 検索システム。再構築可能な検索インデックス
-- MLサービス: Go API から分離した CPU 推論プロセス
+- PostgreSQL: 正本と小規模向け semantic index。投稿と vector を同じ transaction で保持
+- `post_vectors`: 384 次元 vector と検索 payload を持つ再構築可能な table
+- MLサービス: Go API から分離した CPU 推論プロセス。Cloud Run IAM 認証が必須
 - Redis: 任意のリードモデルキャッシュ。未設定なら何もしない（no-op）
 
-投稿作成時は、本文と POV を PostgreSQL に保存し、embedding が取得できた場合だけ Qdrant に upsert します。Qdrant への書き込みはベストエフォートで、壊れても PostgreSQL から再生成できる前提です。
+投稿作成時は、本文、POV、embedding を PostgreSQL の同じ transaction に保存します。現在の小規模データでは exact cosine scan を使い、別の常時稼働 vector database を不要にしています。
 
 ## Quick Start
 
@@ -67,7 +62,7 @@ Qdrant (:6333)
 make fresh
 ```
 
-これはローカルの Docker/Podman ボリュームを削除し、DB / Qdrant / Redis / ML / Go API をビルドして、シードデータを投入し、フロントエンドを起動します。
+これはローカルの Docker/Podman ボリュームを削除し、DB / Redis / ML / Go API をビルドして、シードデータを投入し、フロントエンドを起動します。
 
 毎回データを消したくない場合は:
 
@@ -81,7 +76,6 @@ make web
 - フロントエンド: http://localhost:5173
 - API ライフサイクル確認: http://localhost:8000/livez
 - API 健康状態（PostgreSQL チェック）: http://localhost:8000/health または `/readyz`
-- Qdrant ダッシュボード: http://localhost:6333/dashboard
 
 シード済みユーザーは `seeduser1@example.com` / `password123` のような `@example.com` アカウントです。
 
@@ -96,7 +90,7 @@ make all      # = make dev: deps-up → Go API + frontend
 個別に進める場合:
 
 ```bash
-make deps-up        # db + qdrant + redis + ml を compose で起動
+make deps-up        # db + redis + ml を compose で起動
 make seed           # Go シーダでテストデータ投入（ML 必須・実埋め込み）
 make dev            # Go API + frontend
 ```
@@ -124,13 +118,13 @@ make web
 3. API が ML service の `POST /embed` に本文を渡す
 4. ML service が `paraphrase-multilingual-MiniLM-L12-v2`（多言語）で 384 次元ベクトルを返す
 5. API が PostgreSQL に投稿と POV を保存
-6. API が Qdrant の `posts` コレクションに `{post_id, user_id, tags, created_at}` とベクトルをアップサート
+6. API が PostgreSQL `post_vectors` に `{post_id, user_id, tags, created_at}` とベクトルを同じ transaction でアップサート
 
 タイムライン:
 
 1. UI が `POST /posts/timeline` を呼ぶ
 2. API がクエリテキストを embedding
-3. Qdrant から類似候補を 100-200 件取得
+3. PostgreSQL の vector index から cosine 類似候補を 100-200 件取得
 4. PostgreSQL から本文、POV、いいね・コメント数を一括ロード
 5. ユーザー自身の投稿ベクトルからセントロイドを作成
 6. `rank_by_sense_distance` / `RankBySenseDistance` で並べ替え
@@ -198,7 +192,7 @@ CI は GitHub Actions の `.github/workflows/ci.yml` で管理します。
 - API: Cloud Run サービス `daimon-api`
 - ML: Cloud Run サービス `daimon-ml`
 
-Cloud Build トリガーには少なくとも `_QDRANT_URL` を設定してください。API のデプロイは Secret Manager の `database-url` と `qdrant-api-key` を参照します。MLサービスは API からのみ呼び出す想定で、Cloud Run の ingress は `internal` に設定しています。
+Cloud Build トリガーは `_CORS_ORIGINS` を設定します。API のデプロイは Secret Manager の `database-url` だけを参照します。MLサービスは ingress を許可しても匿名実行を拒否し、API と worker の service account だけに `roles/run.invoker` を与えます。
 
 現時点では Bazel は導入していません。Go / pnpm / uv / Docker の境界が明確で、Bazel を導入するよりも GitHub Actions のジョブ分割と Cloud Build のイメージビルドに寄せた方が運用は楽です。モノレポが大きくなり、生成物や多言語キャッシュを一元化したくなった段階で再検討します。
 

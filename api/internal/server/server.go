@@ -42,7 +42,7 @@ type Server struct {
 
 func New(pool *pgxpool.Pool, cfg config.Config) *Server {
 	embedClient := embed.New(cfg.EmbedURL)
-	qdrantClient := qdrant.New(cfg.QdrantURL, cfg.QdrantAPIKey)
+	qdrantClient := qdrant.New(pool)
 	cacheClient := cache.New(cfg.RedisURL)
 	logger := slog.Default().With("component", "api")
 	return &Server{
@@ -59,11 +59,10 @@ func New(pool *pgxpool.Pool, cfg config.Config) *Server {
 	}
 }
 
-// Bootstrap prepares external resources (best-effort; the Qdrant index is
-// regenerable, so failures here are logged, not fatal).
+// Bootstrap prepares the rebuildable PostgreSQL vector index.
 func (s *Server) Bootstrap(ctx context.Context) {
 	if err := s.qdrant.EnsureCollection(ctx); err != nil {
-		s.logger.WarnContext(ctx, "qdrant ensure collection failed", "error", err)
+		s.logger.WarnContext(ctx, "vector index bootstrap failed", "error", err)
 	}
 }
 

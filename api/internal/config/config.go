@@ -7,24 +7,20 @@ import (
 
 // Config holds all runtime configuration, loaded from the environment.
 type Config struct {
-	DatabaseURL  string
-	QdrantURL    string // e.g. http://localhost:6333 or https://xxx.cloud.qdrant.io:6333
-	QdrantAPIKey string
-	EmbedURL     string // Python ML service base URL, e.g. http://localhost:8001
-	RedisURL     string // e.g. redis://localhost:6379 ("" disables caching)
-	CORSOrigins  []string
-	Port         string
+	DatabaseURL string
+	EmbedURL    string // Python ML service base URL, e.g. http://localhost:8001
+	RedisURL    string // e.g. redis://localhost:6379 ("" disables caching)
+	CORSOrigins []string
+	Port        string
 }
 
 func FromEnv() Config {
 	return Config{
-		DatabaseURL:  env("DATABASE_URL", "postgresql://daimon:daimon@localhost:5432/daimon"),
-		QdrantURL:    env("QDRANT_URL", "http://localhost:6333"),
-		QdrantAPIKey: os.Getenv("QDRANT_API_KEY"),
-		EmbedURL:     env("EMBED_URL", "http://localhost:8001"),
-		RedisURL:     os.Getenv("REDIS_URL"),
-		CORSOrigins:  splitCSV(env("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000")),
-		Port:         env("PORT", "8000"),
+		DatabaseURL: env("DATABASE_URL", "postgresql://daimon:daimon@localhost:5432/daimon"),
+		EmbedURL:    env("EMBED_URL", "http://localhost:8001"),
+		RedisURL:    os.Getenv("REDIS_URL"),
+		CORSOrigins: splitCSV(env("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000")),
+		Port:        env("PORT", "8000"),
 	}
 }
 

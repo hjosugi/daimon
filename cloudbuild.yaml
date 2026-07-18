@@ -1,12 +1,10 @@
 # Cloud Build deploys the production Go API and Python ML service to Cloud Run.
 #
 # Expected Cloud Build trigger substitutions:
-#   _QDRANT_URL     Required. Qdrant Cloud URL, e.g. https://...:6333
 #   _CORS_ORIGINS   Required for browser callers. Defaults to the current Vercel URL.
 #
 # Expected Secret Manager secrets:
 #   database-url     Supabase/Postgres connection string used by the API
-#   qdrant-api-key   Qdrant Cloud API key used by the API
 #
 # Expected Artifact Registry repo:
 #   ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}
@@ -16,7 +14,6 @@ substitutions:
   _AR_REPO: daimon
   _API_SERVICE: daimon-api
   _ML_SERVICE: daimon-ml
-  _QDRANT_URL: REQUIRED_QDRANT_URL
   _CORS_ORIGINS: https://daimon-sandy.vercel.app
   _API_CPU: "1"
   _API_MEMORY: 512Mi
@@ -26,11 +23,11 @@ substitutions:
   _ML_MEMORY: 2Gi
   _ML_MIN_INSTANCES: "0"
   _ML_MAX_INSTANCES: "1"
-  _ML_INGRESS: internal
+  _ML_INGRESS: all
 
 options:
   logging: CLOUD_LOGGING_ONLY
-  machineType: E2_HIGHCPU_8
+  machineType: E2_MEDIUM
 
 steps:
   - id: validate-config
@@ -39,10 +36,6 @@ steps:
     args:
       - -ceu
       - |
-        test "${_QDRANT_URL}" != "REQUIRED_QDRANT_URL" || {
-          echo "Missing required Cloud Build substitution: _QDRANT_URL" >&2
-          exit 1
-        }
         test -n "${_CORS_ORIGINS}" || {
           echo "Missing required Cloud Build substitution: _CORS_ORIGINS" >&2
           exit 1
@@ -89,7 +82,7 @@ steps:
       - --max=${_ML_MAX_INSTANCES}
       - --ingress=${_ML_INGRESS}
       - --startup-probe=tcpSocket.port=8001,periodSeconds=10,timeoutSeconds=10,failureThreshold=60
-      - --allow-unauthenticated
+      - --no-allow-unauthenticated
       - --cpu-throttling
       - --no-cpu-boost
 
@@ -149,8 +142,8 @@ steps:
           --allow-unauthenticated \
           --cpu-throttling \
           --no-cpu-boost \
-          --set-env-vars="^|^QDRANT_URL=${_QDRANT_URL}|EMBED_URL=$${ML_URL}|CORS_ORIGINS=${_CORS_ORIGINS}" \
-          --set-secrets="DATABASE_URL=database-url:latest,QDRANT_API_KEY=qdrant-api-key:latest"
+          --set-env-vars="^|^EMBED_URL=$${ML_URL}|EMBED_AUTH=true|CORS_ORIGINS=${_CORS_ORIGINS}" \
+          --set-secrets="DATABASE_URL=database-url:latest"
 
 images:
   - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/daimon-api:$SHORT_SHA

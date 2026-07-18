@@ -41,7 +41,7 @@ func main() {
 		log.Fatalf("db: %v", err)
 	}
 	defer pool.Close()
-	qc := qdrant.New(cfg.QdrantURL, cfg.QdrantAPIKey)
+	qc := qdrant.New(pool)
 	em := embed.New(cfg.EmbedURL)
 
 	start := time.Now()

@@ -1,7 +1,7 @@
 # Daimon — one-command local setup & dev (run from repo root).
 #
 #   make fresh   ★★ FROM ZERO (Docker): wipe data → build → seed → run UI
-#   make docker  Containerized stack: db + qdrant + redis + ml + Go API via compose
+#   make docker  Containerized stack: db + redis + ml + Go API via compose
 #   make seed    Load test data via the Go seeder (make seed ARGS="--posts 50000")
 #   make web     Frontend dev server only (use alongside make docker)
 #   make dev     Run the Go API (:8000) + frontend (:5173) on the host
@@ -33,7 +33,7 @@ UV := $(shell command -v uv >/dev/null 2>&1 && echo uv || echo "mise exec -- uv"
 
 # Env for host-run Go commands: point them at the compose-published ports.
 LOCAL_DB  := DATABASE_URL=postgresql://daimon:daimon@localhost:5432/daimon
-LOCAL_SVC := QDRANT_URL=http://localhost:6333 EMBED_URL=http://localhost:8001 REDIS_URL=redis://localhost:6379
+LOCAL_SVC := EMBED_URL=http://localhost:8001 REDIS_URL=redis://localhost:6379
 
 .PHONY: all fresh setup infra infra-db deps-up batch wait-db wait-ml frontend frontend-ensure ensure-pnpm ml-setup ml-dev seed seed-large dev docker docker-logs docker-down web down clean
 
@@ -59,10 +59,10 @@ infra-db:
 	@echo "Using compose provider: $(COMPOSE)"
 	$(COMPOSE) up -d db
 
-# Start only the dependencies (db + qdrant + redis + ml) — for running the Go
+# Start only the dependencies (db + redis + ml) — for running the Go
 # API on the host (so :8000 stays free for go run / a debugger).
 deps-up:
-	$(COMPOSE) up -d db qdrant redis ml
+	$(COMPOSE) up -d db redis ml
 
 # Run the precompute batch (timeline feeds + popular/related POVs) into Redis.
 batch:
@@ -117,11 +117,11 @@ dev: deps-up wait-db frontend-ensure
 	  ( cd frontend && $(PNPM) dev ) & \
 	  wait
 
-# ★ Everything from zero (Docker). Wipes ALL local data (Postgres + Qdrant
-# volumes), rebuilds images, seeds test data, then runs the UI.
+# ★ Everything from zero (Docker). Wipes local Postgres data, rebuilds images,
+# seeds test data, then runs the UI.
 # Override seeded count: `make fresh POSTS=50000`.
 fresh:
-	@echo "⚠️  Wiping containers + volumes (all local Postgres + Qdrant data)..."
+	@echo "⚠️  Wiping containers + volumes (all local Postgres data)..."
 	-$(COMPOSE) down -v --remove-orphans
 	$(COMPOSE) up -d --build
 	@echo "⏳ Waiting for Go API (build + schema bootstrap; ML image bakes models)..."
@@ -132,11 +132,11 @@ fresh:
 	@echo "🎨 Starting frontend (:5173). Ctrl-C stops the UI; api keeps running in Docker."
 	@$(MAKE) web
 
-# Fully containerized stack: db + qdrant + redis + ml + Go API in Docker/Podman.
+# Fully containerized stack: db + redis + ml + Go API in Docker/Podman.
 # (Frontend stays on the host — run `make web` in another terminal.)
 docker:
 	$(COMPOSE) up -d --build
-	@echo "✅ db + qdrant + redis + ml + Go API (:8000) are up. Logs: 'make docker-logs'."
+	@echo "✅ db + redis + ml + Go API (:8000) are up. Logs: 'make docker-logs'."
 	@echo "   Start the UI with: make web   (frontend :5173)"
 
 docker-logs:

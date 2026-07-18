@@ -18,7 +18,7 @@ func (h *Handler) userSense(ctx context.Context, uid string) (map[string]bool, [
 	}
 	centroid, err := feedcore.UserCentroid(ctx, h.qdrant, uid)
 	if err != nil {
-		h.logger.WarnContext(ctx, "user qdrant points failed", "error", err)
+		h.logger.WarnContext(ctx, "user vector points failed", "error", err)
 	}
 	return tags, centroid
 }
