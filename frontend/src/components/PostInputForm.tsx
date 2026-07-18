@@ -36,6 +36,10 @@ export const PostInputForm: React.FC<PostInputFormProps> = ({
     onSuccess: () => {
       composer.reset()
       queryClient.invalidateQueries({ queryKey: ["timeline"] })
+      if (user) {
+        queryClient.invalidateQueries({ queryKey: ["my-posts", user.id] })
+        queryClient.invalidateQueries({ queryKey: ["user-posts", user.id] })
+      }
       onPostCreated?.()
     },
     onError: (error) => showMutationError(error, "toast.createPostFailed"),

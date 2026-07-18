@@ -110,6 +110,8 @@ export function usePostCardActions(post: Post, currentUser?: User | null) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["timeline"] })
       queryClient.invalidateQueries({ queryKey: ["search"] })
+      queryClient.invalidateQueries({ queryKey: ["my-posts"] })
+      queryClient.invalidateQueries({ queryKey: ["user-posts"] })
     },
     onError: (error) => showMutationError(error, "toast.deletePostFailed"),
   })
