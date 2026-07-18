@@ -14,6 +14,13 @@ export const stanceBarColors: Record<POVCommentStance, string> = {
   note: "bg-fuchsia-400/80",
 }
 
+export const stanceSymbols: Record<POVCommentStance, string> = {
+  support: "😊",
+  question: "🤔",
+  oppose: "😕",
+  note: "💭",
+}
+
 export const stanceOrder: POVCommentStance[] = [
   "support",
   "question",

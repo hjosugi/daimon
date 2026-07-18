@@ -1,4 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query"
+import { Pencil } from "lucide-react"
 import {
   lazy,
   Suspense,
@@ -24,7 +25,9 @@ import {
   type User,
 } from "./api/client"
 import { Header } from "./components/Header"
+import { PostInputForm } from "./components/PostInputForm"
 import { TimelinePage } from "./components/TimelinePage"
+import { ModalFrame } from "./components/ui/ModalFrame"
 import { useI18n } from "./i18n"
 import type { Page } from "./types/navigation"
 
@@ -152,6 +155,7 @@ const POVRoute: React.FC<POVRouteProps> = ({
 }
 
 function App() {
+  const { t } = useI18n()
   const location = useLocation()
   const navigate = useNavigate()
   const [similarityWeight, setSimilarityWeight] = useState<number>(0.7)
@@ -163,6 +167,8 @@ function App() {
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [showProfileModal, setShowProfileModal] = useState(false)
+  const [showPostComposer, setShowPostComposer] = useState(false)
+  const [openComposerAfterAuth, setOpenComposerAfterAuth] = useState(false)
 
   const currentPage = useMemo(
     () => pageFromPath(location.pathname),
@@ -177,6 +183,14 @@ function App() {
   const openAuthModal = useCallback(() => setShowAuthModal(true), [])
   const openProfileModal = useCallback(() => setShowProfileModal(true), [])
   const openSettingsModal = useCallback(() => setShowSettingsModal(true), [])
+  const openPostComposer = useCallback(() => {
+    if (!user) {
+      setOpenComposerAfterAuth(true)
+      setShowAuthModal(true)
+      return
+    }
+    setShowPostComposer(true)
+  }, [user])
 
   // Check if user is logged in
   useEffect(() => {
@@ -189,6 +203,7 @@ function App() {
   const handleLogout = useCallback(() => {
     logout()
     setUser(null)
+    setShowPostComposer(false)
   }, [])
 
   const handlePageChange = useCallback(
@@ -274,7 +289,7 @@ function App() {
                 similarityWeight={similarityWeight}
                 boostPopular={boostPopular}
                 includeFarPosts={includeFarPosts}
-                onAuthRequired={openAuthModal}
+                onCompose={openPostComposer}
                 onTagClick={handleTagClick}
                 onUserClick={handleUserClick}
               />
@@ -332,15 +347,47 @@ function App() {
         </Routes>
       </Suspense>
 
+      <button
+        type="button"
+        onClick={openPostComposer}
+        className="compose-action compose-fab fixed bottom-6 right-6 sm:bottom-8 sm:right-8 w-14 h-14 sm:w-16 sm:h-16 rounded-full transition-all flex items-center justify-center z-40 font-mono"
+        title={t("timeline.createPost")}
+        aria-label={t("timeline.createPost")}
+      >
+        <Pencil size={24} aria-hidden="true" />
+      </button>
+
+      {showPostComposer && user && (
+        <ModalFrame
+          title={t("postForm.title")}
+          onClose={() => setShowPostComposer(false)}
+          maxWidthClassName="max-w-3xl"
+        >
+          <PostInputForm
+            user={user}
+            onAuthRequired={openAuthModal}
+            onPostCreated={() => setShowPostComposer(false)}
+            showHeader={false}
+          />
+        </ModalFrame>
+      )}
+
       <Suspense fallback={null}>
         {/* Auth Modal */}
         {showAuthModal && (
           <AuthModal
             isOpen={showAuthModal}
-            onClose={() => setShowAuthModal(false)}
-            onSuccess={(user) => {
-              setUser(user)
+            onClose={() => {
               setShowAuthModal(false)
+              setOpenComposerAfterAuth(false)
+            }}
+            onSuccess={(authenticatedUser) => {
+              setUser(authenticatedUser)
+              setShowAuthModal(false)
+              if (openComposerAfterAuth) {
+                setShowPostComposer(true)
+                setOpenComposerAfterAuth(false)
+              }
             }}
           />
         )}

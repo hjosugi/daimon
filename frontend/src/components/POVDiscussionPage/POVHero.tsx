@@ -2,7 +2,7 @@ import { Flag, Hash } from "lucide-react"
 import type React from "react"
 import type { POVCommentStance } from "../../api/client"
 import { useI18n } from "../../i18n"
-import { stanceBarColors, stanceOrder } from "./stanceStyles"
+import { stanceBarColors, stanceOrder, stanceSymbols } from "./stanceStyles"
 
 interface POVHeroProps {
   pov: string
@@ -65,11 +65,17 @@ export const POVHero: React.FC<POVHeroProps> = ({
               </div>
               <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[10px] font-mono text-cyan-300/70">
                 {stanceOrder.map((key) => (
-                  <span key={key} className="flex items-center gap-1">
-                    <span
-                      className={`inline-block w-2 h-2 rounded-sm ${stanceBarColors[key]}`}
-                    />
-                    {stanceLabels[key]} {stanceCounts[key]}
+                  <span
+                    key={key}
+                    role="img"
+                    className="flex items-center gap-1"
+                    title={stanceLabels[key]}
+                    aria-label={`${stanceLabels[key]}: ${stanceCounts[key]}`}
+                  >
+                    <span aria-hidden="true" className="text-sm leading-none">
+                      {stanceSymbols[key]}
+                    </span>
+                    <span aria-hidden="true">{stanceCounts[key]}</span>
                   </span>
                 ))}
               </div>
@@ -85,12 +91,11 @@ export const POVHero: React.FC<POVHeroProps> = ({
               : "border-cyan-500/20 text-cyan-300/80 hover:border-fuchsia-500/40 hover:text-fuchsia-200"
           }`}
           title={stood ? t("pov.unstandTitle") : t("pov.standTitle")}
+          aria-label={stood ? t("pov.unstandTitle") : t("pov.standTitle")}
+          aria-pressed={stood}
         >
           <Flag size={16} className={stood ? "fill-fuchsia-300/40" : ""} />
           <span className="text-sm font-bold leading-none">{standCount}</span>
-          <span className="text-[9px] leading-none">
-            {stood ? t("pov.stood") : t("pov.stand")}
-          </span>
         </button>
       </div>
     </section>

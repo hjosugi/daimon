@@ -3,7 +3,7 @@ import type React from "react"
 import type { POVComment, POVCommentStance } from "../../api/client"
 import { useI18n } from "../../i18n"
 import { formatRelativeDate } from "../../utils/date"
-import { stanceClasses } from "./stanceStyles"
+import { stanceClasses, stanceSymbols } from "./stanceStyles"
 
 interface POVCommentListProps {
   comments: POVComment[]
@@ -69,9 +69,12 @@ export const POVCommentList: React.FC<POVCommentListProps> = ({
                   @{comment.username}
                 </button>
                 <span
-                  className={`px-1.5 py-0.5 rounded border text-[10px] font-mono ${stanceClasses[comment.stance]}`}
+                  role="img"
+                  aria-label={stanceLabels[comment.stance]}
+                  title={stanceLabels[comment.stance]}
+                  className={`inline-flex min-w-7 items-center justify-center px-1.5 py-0.5 rounded border text-sm leading-none ${stanceClasses[comment.stance]}`}
                 >
-                  {stanceLabels[comment.stance]}
+                  {stanceSymbols[comment.stance]}
                 </span>
                 <span className="text-[10px] text-cyan-300/55 font-mono">
                   {formatRelativeDate(comment.created_at, locale)}

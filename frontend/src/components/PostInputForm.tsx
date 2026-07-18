@@ -14,12 +14,14 @@ interface PostInputFormProps {
   user: User | null
   onAuthRequired: () => void
   onPostCreated?: () => void
+  showHeader?: boolean
 }
 
 export const PostInputForm: React.FC<PostInputFormProps> = ({
   user,
   onAuthRequired,
   onPostCreated,
+  showHeader = true,
 }) => {
   const { t } = useI18n()
   const queryClient = useQueryClient()
@@ -58,12 +60,14 @@ export const PostInputForm: React.FC<PostInputFormProps> = ({
 
   return (
     <div className="bg-[#1f1f35] rounded-lg border border-cyan-500/15 overflow-hidden">
-      <div className="p-3 sm:p-4 border-b border-cyan-500/15 bg-[#2a2a50]">
-        <h2 className="text-xs sm:text-sm font-semibold text-cyan-200 flex items-center gap-1.5 sm:gap-2 font-mono">
-          <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-cyan-400/70 rounded-full" />
-          {t("postForm.title")}
-        </h2>
-      </div>
+      {showHeader && (
+        <div className="p-3 sm:p-4 border-b border-cyan-500/15 bg-[#2a2a50]">
+          <h2 className="text-xs sm:text-sm font-semibold text-cyan-200 flex items-center gap-1.5 sm:gap-2 font-mono">
+            <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-cyan-400/70 rounded-full" />
+            {t("postForm.title")}
+          </h2>
+        </div>
+      )}
       <div className="p-3 sm:p-4">
         <form onSubmit={handleSubmit} className="space-y-4">
           <TextComposer

@@ -44,7 +44,7 @@ export const TextComposer: React.FC<TextComposerProps> = ({
         <button
           type="submit"
           disabled={isSubmitting || !value.trim()}
-          className="absolute bottom-3 sm:bottom-4 right-3 sm:right-4 p-2 sm:p-2.5 bg-gradient-to-r from-cyan-500/90 to-fuchsia-500/90 text-black rounded-full hover:from-cyan-400 hover:to-fuchsia-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-mono font-bold"
+          className="compose-action absolute bottom-3 sm:bottom-4 right-3 sm:right-4 p-2 sm:p-2.5 rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-all font-mono"
         >
           {isSubmitting ? (
             <Loader2

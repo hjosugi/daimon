@@ -2,7 +2,7 @@ import { MessageSquare, Send } from "lucide-react"
 import type React from "react"
 import type { POVCommentStance, User } from "../../api/client"
 import { useI18n } from "../../i18n"
-import { stanceClasses } from "./stanceStyles"
+import { stanceClasses, stanceOrder, stanceSymbols } from "./stanceStyles"
 
 interface POVCommentComposerProps {
   user: User | null
@@ -40,18 +40,21 @@ export const POVCommentComposer: React.FC<POVCommentComposerProps> = ({
         <span>{t("pov.commentsTitle")}</span>
       </div>
       <div className="grid grid-cols-4 gap-1.5">
-        {(Object.keys(stanceLabels) as POVCommentStance[]).map((key) => (
+        {stanceOrder.map((key) => (
           <button
             key={key}
             type="button"
             onClick={() => onStanceChange(key)}
-            className={`px-2 py-1.5 rounded border text-xs font-mono transition-colors ${
+            aria-label={stanceLabels[key]}
+            aria-pressed={stance === key}
+            title={stanceLabels[key]}
+            className={`min-h-11 px-2 py-1.5 rounded border text-xl leading-none transition-all ${
               stance === key
-                ? stanceClasses[key]
-                : "border-cyan-500/15 text-cyan-300/75 hover:border-cyan-500/35"
+                ? `${stanceClasses[key]} scale-[1.03]`
+                : "border-cyan-500/15 bg-[#151520] hover:border-cyan-500/35 hover:bg-cyan-900/10"
             }`}
           >
-            {stanceLabels[key]}
+            <span aria-hidden="true">{stanceSymbols[key]}</span>
           </button>
         ))}
       </div>
@@ -71,7 +74,7 @@ export const POVCommentComposer: React.FC<POVCommentComposerProps> = ({
         <button
           type="submit"
           disabled={isPending || !text.trim()}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-gradient-to-r from-cyan-500/95 to-fuchsia-500/95 text-black text-xs font-bold font-mono disabled:opacity-50 disabled:cursor-not-allowed"
+          className="compose-action inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono disabled:opacity-50 disabled:cursor-not-allowed transition-all"
         >
           <Send size={13} />
           {t("common.post")}
