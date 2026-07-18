@@ -1,3 +1,5 @@
+import type { LucideIcon } from "lucide-react"
+import { CircleAlert, CircleHelp, Heart, MessageCircle } from "lucide-react"
 import type { POVCommentStance } from "../../api/client"
 
 export const stanceClasses: Record<POVCommentStance, string> = {
@@ -14,11 +16,11 @@ export const stanceBarColors: Record<POVCommentStance, string> = {
   note: "bg-fuchsia-400/80",
 }
 
-export const stanceSymbols: Record<POVCommentStance, string> = {
-  support: "😊",
-  question: "🤔",
-  oppose: "😕",
-  note: "💭",
+export const stanceIcons: Record<POVCommentStance, LucideIcon> = {
+  support: Heart,
+  question: CircleHelp,
+  oppose: CircleAlert,
+  note: MessageCircle,
 }
 
 export const stanceOrder: POVCommentStance[] = [

@@ -2,7 +2,7 @@ import { Flag, Hash } from "lucide-react"
 import type React from "react"
 import type { POVCommentStance } from "../../api/client"
 import { useI18n } from "../../i18n"
-import { stanceBarColors, stanceOrder, stanceSymbols } from "./stanceStyles"
+import { stanceBarColors, stanceIcons, stanceOrder } from "./stanceStyles"
 
 interface POVHeroProps {
   pov: string
@@ -73,7 +73,16 @@ export const POVHero: React.FC<POVHeroProps> = ({
                     aria-label={`${stanceLabels[key]}: ${stanceCounts[key]}`}
                   >
                     <span aria-hidden="true" className="text-sm leading-none">
-                      {stanceSymbols[key]}
+                      {(() => {
+                        const Icon = stanceIcons[key]
+                        return (
+                          <Icon
+                            aria-hidden="true"
+                            size={14}
+                            strokeWidth={1.8}
+                          />
+                        )
+                      })()}
                     </span>
                     <span aria-hidden="true">{stanceCounts[key]}</span>
                   </span>

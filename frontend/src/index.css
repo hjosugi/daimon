@@ -433,6 +433,16 @@
   box-shadow: 0 8px 26px rgb(0 0 0 / 8%);
 }
 
+.pov-comment-textarea::placeholder {
+  color: rgb(134 185 196 / 78%);
+  opacity: 1;
+}
+
+:root[data-theme="light"] .pov-comment-textarea::placeholder {
+  color: #587783;
+  opacity: 1;
+}
+
 /* Map the existing dark utility palette to light surfaces without duplicating every component. */
 :root[data-theme="light"] [class*="bg-[#151520]"] {
   background-color: var(--app-bg);

@@ -2,7 +2,7 @@ import { MessageSquare, Send } from "lucide-react"
 import type React from "react"
 import type { POVCommentStance, User } from "../../api/client"
 import { useI18n } from "../../i18n"
-import { stanceClasses, stanceOrder, stanceSymbols } from "./stanceStyles"
+import { stanceClasses, stanceIcons, stanceOrder } from "./stanceStyles"
 
 interface POVCommentComposerProps {
   user: User | null
@@ -54,7 +54,10 @@ export const POVCommentComposer: React.FC<POVCommentComposerProps> = ({
                 : "border-cyan-500/15 bg-[#151520] hover:border-cyan-500/35 hover:bg-cyan-900/10"
             }`}
           >
-            <span aria-hidden="true">{stanceSymbols[key]}</span>
+            {(() => {
+              const Icon = stanceIcons[key]
+              return <Icon aria-hidden="true" size={20} strokeWidth={1.8} />
+            })()}
           </button>
         ))}
       </div>
@@ -65,7 +68,7 @@ export const POVCommentComposer: React.FC<POVCommentComposerProps> = ({
         placeholder={
           user ? t("pov.commentPlaceholder") : t("pov.loginToComment")
         }
-        className="w-full rounded border border-cyan-500/15 bg-[#151520] px-3 py-2 text-sm text-cyan-100 placeholder:text-cyan-300/45 focus:border-cyan-500/40 focus:ring-1 focus:ring-cyan-500/20 resize-none"
+        className="pov-comment-textarea w-full rounded border border-cyan-500/15 bg-[#151520] px-3 py-2 text-sm text-cyan-100 placeholder:text-cyan-300/45 focus:border-cyan-500/40 focus:ring-1 focus:ring-cyan-500/20 resize-none"
       />
       <div className="flex items-center justify-between">
         <span className="text-[10px] text-cyan-300/55 font-mono">
