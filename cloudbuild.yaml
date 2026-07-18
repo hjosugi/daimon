@@ -20,10 +20,12 @@ substitutions:
   _CORS_ORIGINS: https://daimon-sandy.vercel.app
   _API_CPU: "1"
   _API_MEMORY: 512Mi
-  _API_MAX_INSTANCES: "5"
+  _API_MIN_INSTANCES: "0"
+  _API_MAX_INSTANCES: "1"
   _ML_CPU: "2"
   _ML_MEMORY: 2Gi
-  _ML_MAX_INSTANCES: "3"
+  _ML_MIN_INSTANCES: "0"
+  _ML_MAX_INSTANCES: "1"
   _ML_INGRESS: internal
 
 options:
@@ -83,11 +85,13 @@ steps:
       - --port=8001
       - --cpu=${_ML_CPU}
       - --memory=${_ML_MEMORY}
-      - --max-instances=${_ML_MAX_INSTANCES}
+      - --min=${_ML_MIN_INSTANCES}
+      - --max=${_ML_MAX_INSTANCES}
       - --ingress=${_ML_INGRESS}
       - --startup-probe=tcpSocket.port=8001,periodSeconds=10,timeoutSeconds=10,failureThreshold=60
       - --allow-unauthenticated
-      - --cpu-boost
+      - --cpu-throttling
+      - --no-cpu-boost
 
   - id: capture-ml-url
     name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
@@ -139,10 +143,12 @@ steps:
           --port=8000 \
           --cpu="${_API_CPU}" \
           --memory="${_API_MEMORY}" \
-          --max-instances="${_API_MAX_INSTANCES}" \
+          --min="${_API_MIN_INSTANCES}" \
+          --max="${_API_MAX_INSTANCES}" \
           --ingress=all \
           --allow-unauthenticated \
-          --cpu-boost \
+          --cpu-throttling \
+          --no-cpu-boost \
           --set-env-vars="^|^QDRANT_URL=${_QDRANT_URL}|EMBED_URL=$${ML_URL}|CORS_ORIGINS=${_CORS_ORIGINS}" \
           --set-secrets="DATABASE_URL=database-url:latest,QDRANT_API_KEY=qdrant-api-key:latest"
 

@@ -103,3 +103,40 @@ CREATE TABLE IF NOT EXISTS bookmarks (
 );
 CREATE INDEX IF NOT EXISTS ix_bookmarks_user ON bookmarks (user_id);
 CREATE INDEX IF NOT EXISTS ix_bookmarks_post ON bookmarks (post_id);
+
+-- Daimon accesses PostgreSQL only through the trusted server-side Go API.
+-- Supabase exposes tables in the public schema through its Data API, so keep
+-- the browser-facing anon/authenticated roles closed and enable RLS as an
+-- additional guardrail. The production postgres connection used by the API
+-- remains able to bootstrap and query the schema.
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE povs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE likes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pov_likes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pov_comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE follows ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bookmarks ENABLE ROW LEVEL SECURITY;
+
+-- The anon/authenticated roles are Supabase-specific and do not exist in the
+-- plain PostgreSQL instance used by local development and CI.
+DO $$
+DECLARE
+  api_role text;
+BEGIN
+  FOREACH api_role IN ARRAY ARRAY['anon', 'authenticated'] LOOP
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = api_role) THEN
+      EXECUTE format(
+        'REVOKE ALL ON TABLE users, sessions, posts, povs, likes, comments, pov_likes, pov_comments, follows, bookmarks FROM %I',
+        api_role
+      );
+      EXECUTE format(
+        'ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM %I',
+        api_role
+      );
+    END IF;
+  END LOOP;
+END
+$$;

@@ -127,6 +127,11 @@ frontendの `VITE_API_BASE_URL` に設定しないでください。
 - `database-url`: API が使う Postgres connection string
 - `qdrant-api-key`: API が使う Qdrant Cloud API key
 
+Supabase を使う場合、`database-url` には Cloud Run からIPv4で接続できる
+Session pooler URLを保存します。実値やDBパスワードはリポジトリへcommitせず、
+ローカルでは `.env.example` を `.env` にコピーし、productionではSecret
+Managerだけを正本にします。
+
 手動実行例:
 
 ```bash
@@ -147,8 +152,14 @@ gcloud run services describe daimon-api --region=asia-northeast1 --format='value
 curl -sf "$(gcloud run services describe daimon-api --region=asia-northeast1 --format='value(status.url)')/health"
 ```
 
+Cloud Run はAPI、MLともに最小0・最大1、request-based billingで運用します。
+アクセスがない間はゼロ台まで縮退し、急な負荷でも1台を超えないため、低コストを
+優先した構成です。MLを使う最初のリクエストではcold startが発生します。
+
 GitHub Actions の `Production smoke` は本番frontendのSPA deep link、API readiness、
-現行Go APIのroute contractを1時間ごとに確認します。URLを変更する場合はrepository
+現行Go APIのroute contractを6時間ごとに確認します。`/readyz` はPostgreSQLにも
+接続するため、Supabase Free projectの低活動によるpauseを避けるための日次DB
+activityも兼ねます。URLを変更する場合はrepository
 variablesの `PRODUCTION_FRONTEND_URL` と `PRODUCTION_API_URL` を設定してください。
 
 `daimon-ml` は internal ingress のため、外部端末から直接 health check できない構成です。API の `EMBED_URL` は Cloud Build が ML service URL を取得して deploy 時に設定します。
