@@ -59,13 +59,6 @@ func New(pool *pgxpool.Pool, cfg config.Config) *Server {
 	}
 }
 
-// Bootstrap prepares the rebuildable PostgreSQL vector index.
-func (s *Server) Bootstrap(ctx context.Context) {
-	if err := s.qdrant.EnsureCollection(ctx); err != nil {
-		s.logger.WarnContext(ctx, "vector index bootstrap failed", "error", err)
-	}
-}
-
 func (s *Server) Router() http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)

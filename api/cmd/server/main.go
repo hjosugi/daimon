@@ -31,7 +31,6 @@ func main() {
 	s := server.New(pool, cfg)
 	appCtx, appCancel := context.WithCancel(context.Background())
 	defer appCancel()
-	go bootstrapQdrant(appCtx, s)
 	go ensureSchema(appCtx, pool)
 
 	srv := &http.Server{
@@ -56,12 +55,6 @@ func main() {
 	defer cancel2()
 	_ = srv.Shutdown(shutdownCtx)
 	log.Println("daimon-api stopped")
-}
-
-func bootstrapQdrant(ctx context.Context, s *server.Server) {
-	bootCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
-	s.Bootstrap(bootCtx)
 }
 
 func ensureSchema(ctx context.Context, pool *pgxpool.Pool) {
