@@ -1,3 +1,6 @@
+<!-- i18n: language-switcher -->
+[English](PRODUCT_AND_UX.en.md) | [日本語](PRODUCT_AND_UX.md)
+
 # Product And UX
 
 Daimon は「投稿SNS」ではなく、「観点(POV)を通じて他人の感性構造に触れる場所」です。

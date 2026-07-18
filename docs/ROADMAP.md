@@ -1,3 +1,6 @@
+<!-- i18n: language-switcher -->
+[English](ROADMAP.en.md) | [日本語](ROADMAP.md)
+
 # Roadmap
 
 Daimon の優先順位は、「深い理論をそのまま見せる」ことではなく、「軽い操作で深い接続が起きる」ことです。
