@@ -2,7 +2,7 @@ import { MessageSquare, Send } from "lucide-react"
 import type React from "react"
 import type { POVCommentStance, User } from "../../api/client"
 import { useI18n } from "../../i18n"
-import { stanceClasses, stanceIcons, stanceOrder } from "./stanceStyles"
+import { stanceClasses, stanceOrder, stanceSymbols } from "./stanceStyles"
 
 interface POVCommentComposerProps {
   user: User | null
@@ -54,10 +54,9 @@ export const POVCommentComposer: React.FC<POVCommentComposerProps> = ({
                 : "border-cyan-500/15 bg-[#151520] hover:border-cyan-500/35 hover:bg-cyan-900/10"
             }`}
           >
-            {(() => {
-              const Icon = stanceIcons[key]
-              return <Icon aria-hidden="true" size={20} strokeWidth={1.8} />
-            })()}
+            <span aria-hidden="true" className="text-xl leading-none">
+              {stanceSymbols[key]}
+            </span>
           </button>
         ))}
       </div>

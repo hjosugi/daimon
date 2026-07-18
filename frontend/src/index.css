@@ -475,6 +475,14 @@
   color: var(--magenta);
 }
 
+:root[data-theme="light"] [class*="text-emerald-200"] {
+  color: #0f766e;
+}
+
+:root[data-theme="light"] [class*="text-rose-200"] {
+  color: #be123c;
+}
+
 :root[data-theme="light"] [class*="border-cyan-"] {
   border-color: var(--border);
 }

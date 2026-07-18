@@ -2,7 +2,7 @@ import { Flag, Hash } from "lucide-react"
 import type React from "react"
 import type { POVCommentStance } from "../../api/client"
 import { useI18n } from "../../i18n"
-import { stanceBarColors, stanceIcons, stanceOrder } from "./stanceStyles"
+import { stanceBarColors, stanceOrder, stanceSymbols } from "./stanceStyles"
 
 interface POVHeroProps {
   pov: string
@@ -73,16 +73,7 @@ export const POVHero: React.FC<POVHeroProps> = ({
                     aria-label={`${stanceLabels[key]}: ${stanceCounts[key]}`}
                   >
                     <span aria-hidden="true" className="text-sm leading-none">
-                      {(() => {
-                        const Icon = stanceIcons[key]
-                        return (
-                          <Icon
-                            aria-hidden="true"
-                            size={14}
-                            strokeWidth={1.8}
-                          />
-                        )
-                      })()}
+                      {stanceSymbols[key]}
                     </span>
                     <span aria-hidden="true">{stanceCounts[key]}</span>
                   </span>
@@ -94,7 +85,7 @@ export const POVHero: React.FC<POVHeroProps> = ({
         <button
           type="button"
           onClick={onToggleStand}
-          className={`shrink-0 flex flex-col items-center justify-center gap-0.5 px-3 py-2 rounded border font-mono transition-colors ${
+          className={`shrink-0 flex flex-row items-center justify-center gap-1.5 px-3 py-2 rounded border font-mono transition-colors ${
             stood
               ? "border-fuchsia-500/50 bg-fuchsia-900/30 text-fuchsia-100"
               : "border-cyan-500/20 text-cyan-300/80 hover:border-fuchsia-500/40 hover:text-fuchsia-200"
