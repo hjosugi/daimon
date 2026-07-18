@@ -130,6 +130,9 @@ const en = {
   "saved.loginRequired": "Log in to see your saved posts",
   "saved.empty": "No saved posts yet",
   "saved.loadError": "Failed to load saved posts",
+  "saved.searchPlaceholder": "Search saved posts...",
+  "saved.povPlaceholder": "Filter by POV...",
+  "saved.noMatch": "No saved posts match",
 
   "mine.title": "Your posts",
   "mine.loginRequired": "Log in to see your posts",
@@ -376,6 +379,9 @@ const ja: Messages = {
   "saved.loginRequired": "ログインすると保存した投稿が見られます",
   "saved.empty": "まだ保存した投稿はありません",
   "saved.loadError": "読み込みに失敗しました",
+  "saved.searchPlaceholder": "保存した投稿を検索...",
+  "saved.povPlaceholder": "POVで絞り込み...",
+  "saved.noMatch": "条件に一致する保存投稿はありません",
 
   "mine.title": "あなたの投稿",
   "mine.loginRequired": "ログインすると自分の投稿が見られます",

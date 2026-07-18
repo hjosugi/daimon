@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { Bookmark } from "lucide-react"
 import type React from "react"
+import { useMemo, useState } from "react"
 import { getSavedPosts, type User } from "../api/client"
 import { useI18n } from "../i18n"
 import { PostCard } from "./PostCard"
@@ -13,6 +14,8 @@ interface SavedPageProps {
 
 export const SavedPage: React.FC<SavedPageProps> = ({ user, onTagClick }) => {
   const { t } = useI18n()
+  const [query, setQuery] = useState("")
+  const [povQuery, setPovQuery] = useState("")
   const {
     data: posts = [],
     isLoading,
@@ -23,6 +26,16 @@ export const SavedPage: React.FC<SavedPageProps> = ({ user, onTagClick }) => {
     enabled: !!user,
     staleTime: 1000 * 15,
   })
+
+  const filteredPosts = useMemo(() => {
+    const text = query.trim().toLocaleLowerCase()
+    const pov = povQuery.trim().replace(/^#/, "").toLocaleLowerCase()
+    return posts.filter((post) => {
+      const matchesText = !text || post.text.toLocaleLowerCase().includes(text)
+      const matchesPov = !pov || post.povs?.some((tag) => tag.toLocaleLowerCase().includes(pov))
+      return matchesText && matchesPov
+    })
+  }, [posts, povQuery, query])
 
   return (
     <div className="min-h-screen bg-[#151520]">
@@ -42,15 +55,32 @@ export const SavedPage: React.FC<SavedPageProps> = ({ user, onTagClick }) => {
             {t("saved.loginRequired")}
           </div>
         ) : (
+          <>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={t("saved.searchPlaceholder")}
+                aria-label={t("saved.searchPlaceholder")}
+                className="w-full rounded border border-cyan-500/25 bg-[#151520] px-3 py-2 text-sm text-cyan-100 placeholder:text-cyan-100/55 outline-none focus:border-cyan-300/70"
+              />
+              <input
+                value={povQuery}
+                onChange={(e) => setPovQuery(e.target.value)}
+                placeholder={t("saved.povPlaceholder")}
+                aria-label={t("saved.povPlaceholder")}
+                className="w-full rounded border border-cyan-500/25 bg-[#151520] px-3 py-2 text-sm text-cyan-100 placeholder:text-cyan-100/55 outline-none focus:border-cyan-300/70"
+              />
+            </div>
           <QueryStateView
             isLoading={isLoading}
             isError={isError}
-            isEmpty={posts.length === 0}
+            isEmpty={filteredPosts.length === 0}
             error={t("saved.loadError")}
-            empty={t("saved.empty")}
+            empty={posts.length === 0 ? t("saved.empty") : t("saved.noMatch")}
           >
             <div className="space-y-2">
-              {posts.map((post) => (
+              {filteredPosts.map((post) => (
                 <PostCard
                   key={post.id}
                   post={post}
@@ -60,6 +90,7 @@ export const SavedPage: React.FC<SavedPageProps> = ({ user, onTagClick }) => {
               ))}
             </div>
           </QueryStateView>
+          </>
         )}
       </div>
     </div>
