@@ -10,6 +10,7 @@ ENV HF_HOME=/opt/models/hf
 ENV SENTENCE_TRANSFORMERS_HOME=/opt/models/st
 ENV UV_COMPILE_BYTECODE=1
 ENV UV_LINK_MODE=copy
+ENV UV_PYTHON_INSTALL_DIR=/opt/python
 
 COPY pyproject.toml uv.lock ./
 RUN uv sync --locked --no-dev --no-install-project
@@ -29,6 +30,7 @@ ENV SENTENCE_TRANSFORMERS_HOME=/opt/models/st
 ENV PATH=/app/.venv/bin:$PATH
 
 COPY --from=build /app/.venv ./.venv
+COPY --from=build /opt/python /opt/python
 COPY --from=build /opt/models /opt/models
 COPY . .
 
