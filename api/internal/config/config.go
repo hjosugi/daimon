@@ -39,7 +39,9 @@ func splitCSV(s string) []string {
 	parts := strings.Split(s, ",")
 	out := make([]string, 0, len(parts))
 	for _, p := range parts {
-		if t := strings.TrimSpace(p); t != "" {
+		t := strings.Trim(strings.TrimSpace(p), `"'`)
+		t = strings.TrimSpace(t)
+		if t != "" {
 			out = append(out, t)
 		}
 	}
