@@ -499,6 +499,18 @@
   background-color: var(--magenta-soft);
 }
 
+:root[data-theme="light"] [class*="text-amber-300"] {
+  color: rgb(146 94 0);
+}
+
+:root[data-theme="light"] [class*="bg-amber-900"] {
+  background-color: rgb(255 247 218);
+}
+
+:root[data-theme="light"] [class*="border-amber-"] {
+  border-color: rgb(220 170 70 / 45%);
+}
+
 @media (max-width: 980px) {
   .header-shell {
     grid-template-columns: auto 1fr;
