@@ -16,8 +16,9 @@ import (
 const VectorDim = 384
 
 type Client struct {
-	base string
-	http *http.Client
+	base   string
+	http   *http.Client
+	tokens *identityTokenSource
 }
 
 func New(base string) *Client {
@@ -27,7 +28,11 @@ func New(base string) *Client {
 // NewWithTimeout is like New but with a custom HTTP timeout (e.g. seeding sends
 // large embedding batches that take longer than the default request budget).
 func NewWithTimeout(base string, timeout time.Duration) *Client {
-	return &Client{base: base, http: &http.Client{Timeout: timeout}}
+	return &Client{
+		base:   base,
+		http:   &http.Client{Timeout: timeout},
+		tokens: newIdentityTokenSource(base),
+	}
 }
 
 func (c *Client) post(ctx context.Context, path string, in, out any) error {
@@ -37,6 +42,13 @@ func (c *Client) post(ctx context.Context, path string, in, out any) error {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	if c.tokens != nil {
+		token, err := c.tokens.Token(ctx)
+		if err != nil {
+			return fmt.Errorf("ml service identity token: %w", err)
+		}
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
 	resp, err := c.http.Do(req)
 	if err != nil {
 		return err
