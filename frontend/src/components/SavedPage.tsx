@@ -32,7 +32,8 @@ export const SavedPage: React.FC<SavedPageProps> = ({ user, onTagClick }) => {
     const pov = povQuery.trim().replace(/^#/, "").toLocaleLowerCase()
     return posts.filter((post) => {
       const matchesText = !text || post.text.toLocaleLowerCase().includes(text)
-      const matchesPov = !pov || post.povs?.some((tag) => tag.toLocaleLowerCase().includes(pov))
+      const matchesPov =
+        !pov || post.povs?.some((tag) => tag.toLocaleLowerCase().includes(pov))
       return matchesText && matchesPov
     })
   }, [posts, povQuery, query])
@@ -72,24 +73,24 @@ export const SavedPage: React.FC<SavedPageProps> = ({ user, onTagClick }) => {
                 className="w-full rounded border border-cyan-500/25 bg-[#151520] px-3 py-2 text-sm text-cyan-100 placeholder:text-cyan-100/55 outline-none focus:border-cyan-300/70"
               />
             </div>
-          <QueryStateView
-            isLoading={isLoading}
-            isError={isError}
-            isEmpty={filteredPosts.length === 0}
-            error={t("saved.loadError")}
-            empty={posts.length === 0 ? t("saved.empty") : t("saved.noMatch")}
-          >
-            <div className="space-y-2">
-              {filteredPosts.map((post) => (
-                <PostCard
-                  key={post.id}
-                  post={post}
-                  onTagClick={onTagClick}
-                  currentUser={user}
-                />
-              ))}
-            </div>
-          </QueryStateView>
+            <QueryStateView
+              isLoading={isLoading}
+              isError={isError}
+              isEmpty={filteredPosts.length === 0}
+              error={t("saved.loadError")}
+              empty={posts.length === 0 ? t("saved.empty") : t("saved.noMatch")}
+            >
+              <div className="space-y-2">
+                {filteredPosts.map((post) => (
+                  <PostCard
+                    key={post.id}
+                    post={post}
+                    onTagClick={onTagClick}
+                    currentUser={user}
+                  />
+                ))}
+              </div>
+            </QueryStateView>
           </>
         )}
       </div>
