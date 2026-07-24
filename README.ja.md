@@ -183,6 +183,7 @@ CI は GitHub Actions の `.github/workflows/ci.yml` で管理します。
 - `ml-service`: `uv sync --locked`、`ruff check`、pytest、FastAPI アプリのインポートスモークテスト
 - `deploy-config`: `compose.yml` / `cloudbuild.yaml` / Vercel SPA リライトの検証と API / ML Docker イメージビルド
 - `production-smoke`: 本番フロントエンド、SPA のディープリンク、DBの準備状況、Go API のルート契約の定期確認
+- `db-activity`: Supabase Free プロジェクトの pause 防止。1日2回、heartbeat INSERT と REST API リクエストで実アクティビティを生成
 
 依存関係の更新は `.github/dependabot.yml` がフロントエンド（npm）、API（gomod）、ML（uv）、GitHub Actions、Dockerを管理します。
 

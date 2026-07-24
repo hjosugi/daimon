@@ -153,10 +153,32 @@ Cloud Run はAPI、MLともに最小0・最大1、request-based billingで運用
 優先した構成です。MLを使う最初のリクエストではcold startが発生します。
 
 GitHub Actions の `Production smoke` は本番frontendのSPA deep link、API readiness、
-現行Go APIのroute contractを6時間ごとに確認します。`/readyz` はPostgreSQLにも
-接続するため、Supabase Free projectの低活動によるpauseを避けるための日次DB
-activityも兼ねます。URLを変更する場合はrepository
+現行Go APIのroute contractを6時間ごとに確認します。URLを変更する場合はrepository
 variablesの `PRODUCTION_FRONTEND_URL` と `PRODUCTION_API_URL` を設定してください。
+
+## Supabase Pause Prevention
+
+Supabase Free projectは「sufficient activity」が7日間ないとpauseされます。
+`/readyz` のPostgreSQL Pingは6時間ごとに成功していても sufficient activity には
+カウントされませんでした（2026-07-24 に smoke が全て green のまま pause 警告
+メールを受信）。session pooler経由の接続・Pingだけでは不十分と判断し、
+`.github/workflows/db-activity.yml` が1日2回、Supabaseが確実にカウントする
+activityを生成します。
+
+- `public.keepalive_heartbeats` への実INSERT（30日より古い行は削除）
+- Supabase REST API gateway (`/rest/v1/`) への認証付きリクエスト
+
+必要なrepository secrets（少なくとも一方。両方推奨）:
+
+- `SUPABASE_DB_URL`: session pooler接続文字列。Secret Manager `database-url` と同じ値
+- `SUPABASE_URL` + `SUPABASE_ANON_KEY`: SupabaseダッシュボードのProject URLとanon key
+
+secretsが未設定の場合、workflowは明示的にfailして設定を促します。
+`keepalive_heartbeats` はworkflowが冪等に作成・管理するテーブルで、
+`api/internal/db/schema.sql` には含めません。
+
+daimon-friends workerの直接接続による投稿（4回/日）もpause防止の保証には
+なりません。pause防止のためにfleetの投稿量を増やさないでください。
 
 `daimon-ml` は匿名呼び出しを拒否し、API と worker の service account だけに
 `roles/run.invoker` を付与します。API の `EMBED_URL` は Cloud Build が ML service

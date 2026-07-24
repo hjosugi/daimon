@@ -1,0 +1,70 @@
+name: DB activity
+
+# Supabase pauses Free projects that do not see "sufficient activity" for
+# 7 days. The production-smoke /readyz check opens a connection and pings
+# PostgreSQL every 6 hours, but that alone did not count as sufficient
+# activity (pause warning received 2026-07-24 while smoke was green).
+# This workflow generates activity Supabase counts: a real write through
+# the session pooler and a request through the Supabase REST API gateway.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "23 1,13 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-activity
+  cancel-in-progress: false
+
+jobs:
+  keepalive:
+    name: Supabase keepalive
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+    steps:
+      - name: Require at least one credential
+        run: |
+          if [ -n "$SUPABASE_DB_URL" ]; then exit 0; fi
+          if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_ANON_KEY" ]; then exit 0; fi
+          {
+            echo "## DB activity: no credentials configured"
+            echo "Set repository secrets so this workflow can generate real database activity:"
+            echo '- `SUPABASE_DB_URL`: session pooler connection string (same value as the Secret Manager `database-url`)'
+            echo '- `SUPABASE_URL` + `SUPABASE_ANON_KEY`: project URL and anon key, for a REST API request'
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::error::No Supabase credentials configured; cannot generate database activity."
+          exit 1
+
+      - name: Write heartbeat row through the session pooler
+        if: env.SUPABASE_DB_URL != ''
+        run: |
+          psql "$SUPABASE_DB_URL" --no-psqlrc --quiet --set=ON_ERROR_STOP=1 <<'SQL'
+          create table if not exists public.keepalive_heartbeats (
+            id bigint generated always as identity primary key,
+            source text not null,
+            created_at timestamptz not null default now()
+          );
+          insert into public.keepalive_heartbeats (source)
+          values ('github-actions:db-activity');
+          delete from public.keepalive_heartbeats
+          where created_at < now() - interval '30 days';
+          SQL
+          echo "Heartbeat row written through the session pooler." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Touch the Supabase REST API
+        if: env.SUPABASE_URL != '' && env.SUPABASE_ANON_KEY != ''
+        run: |
+          curl --fail --show-error --silent \
+            --retry 4 --retry-all-errors --retry-delay 5 \
+            --connect-timeout 10 --max-time 60 \
+            --header "apikey: ${SUPABASE_ANON_KEY}" \
+            --header "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            "${SUPABASE_URL}/rest/v1/" >/dev/null
+          echo "Supabase REST API request sent." >> "$GITHUB_STEP_SUMMARY"
