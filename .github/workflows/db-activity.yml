@@ -5,7 +5,7 @@ name: DB activity
 # PostgreSQL every 6 hours, but that alone did not count as sufficient
 # activity (pause warning received 2026-07-24 while smoke was green).
 # This workflow generates activity Supabase counts: a real write through
-# the session pooler and a request through the Supabase REST API gateway.
+# the session pooler and a database RPC through the Supabase REST API gateway.
 
 on:
   workflow_dispatch:
@@ -27,17 +27,17 @@ jobs:
     env:
       SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
     steps:
       - name: Require at least one credential
         run: |
           if [ -n "$SUPABASE_DB_URL" ]; then exit 0; fi
-          if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_ANON_KEY" ]; then exit 0; fi
+          if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_PUBLISHABLE_KEY" ]; then exit 0; fi
           {
             echo "## DB activity: no credentials configured"
             echo "Set repository secrets so this workflow can generate real database activity:"
             echo '- `SUPABASE_DB_URL`: session pooler connection string (same value as the Secret Manager `database-url`)'
-            echo '- `SUPABASE_URL` + `SUPABASE_ANON_KEY`: project URL and anon key, for a REST API request'
+            echo '- `SUPABASE_URL` + `SUPABASE_PUBLISHABLE_KEY`: project URL and publishable key, for a REST API RPC'
           } >> "$GITHUB_STEP_SUMMARY"
           echo "::error::No Supabase credentials configured; cannot generate database activity."
           exit 1
@@ -58,13 +58,15 @@ jobs:
           SQL
           echo "Heartbeat row written through the session pooler." >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Touch the Supabase REST API
-        if: env.SUPABASE_URL != '' && env.SUPABASE_ANON_KEY != ''
+      - name: Call the Supabase keepalive RPC
+        if: env.SUPABASE_URL != '' && env.SUPABASE_PUBLISHABLE_KEY != ''
         run: |
           curl --fail --show-error --silent \
             --retry 4 --retry-all-errors --retry-delay 5 \
             --connect-timeout 10 --max-time 60 \
-            --header "apikey: ${SUPABASE_ANON_KEY}" \
-            --header "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
-            "${SUPABASE_URL}/rest/v1/" >/dev/null
-          echo "Supabase REST API request sent." >> "$GITHUB_STEP_SUMMARY"
+            --request POST \
+            --header "apikey: ${SUPABASE_PUBLISHABLE_KEY}" \
+            --header "Content-Type: application/json" \
+            --data '{}' \
+            "${SUPABASE_URL}/rest/v1/rpc/keepalive_ping" >/dev/null
+          echo "Supabase REST API database RPC completed." >> "$GITHUB_STEP_SUMMARY"
