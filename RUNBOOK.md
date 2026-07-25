@@ -166,16 +166,19 @@ Supabase Free projectは「sufficient activity」が7日間ないとpauseされ�
 activityを生成します。
 
 - `public.keepalive_heartbeats` への実INSERT（30日より古い行は削除）
-- Supabase REST API gateway (`/rest/v1/`) への認証付きリクエスト
+- Supabase REST API gateway経由の `keepalive_ping()` DB RPC
 
 必要なrepository secrets（少なくとも一方。両方推奨）:
 
 - `SUPABASE_DB_URL`: session pooler接続文字列。Secret Manager `database-url` と同じ値
-- `SUPABASE_URL` + `SUPABASE_ANON_KEY`: SupabaseダッシュボードのProject URLとanon key
+- `SUPABASE_URL` + `SUPABASE_PUBLISHABLE_KEY`: SupabaseダッシュボードのProject URLと
+  `sb_publishable_...` key
 
 secretsが未設定の場合、workflowは明示的にfailして設定を促します。
 `keepalive_heartbeats` はworkflowが冪等に作成・管理するテーブルで、
-`api/internal/db/schema.sql` には含めません。
+`api/internal/db/schema.sql` には含めません。REST API側は、同schemaに含まれる
+データを返さない `keepalive_ping()` だけをanon roleへ許可します。publishable keyは
+`apikey` headerで送り、JWTではないため `Authorization: Bearer` には設定しません。
 
 daimon-friends workerの直接接続による投稿（4回/日）もpause防止の保証には
 なりません。pause防止のためにfleetの投稿量を増やさないでください。
