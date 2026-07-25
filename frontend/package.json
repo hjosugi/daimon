@@ -16,7 +16,7 @@
     "preview": "NODE_OPTIONS=--disable-warning=DEP0205 vite preview"
   },
   "dependencies": {
-    "@tanstack/react-query": "^5.90.18",
+    "@tanstack/react-query": "^5.101.4",
     "ky": "^1.14.2",
     "lucide-react": "^1.24.0",
     "react": "^19.2.7",
