@@ -116,6 +116,20 @@ CREATE TABLE IF NOT EXISTS post_vectors (
 CREATE INDEX IF NOT EXISTS ix_post_vectors_user
   ON post_vectors ((payload->>'user_id'));
 
+-- A deliberately data-free RPC for the scheduled Supabase keepalive workflow.
+-- It lets the publishable key generate a real user database query without
+-- exposing any application table through the Data API.
+CREATE OR REPLACE FUNCTION public.keepalive_ping()
+RETURNS integer
+LANGUAGE sql
+IMMUTABLE
+PARALLEL SAFE
+SET search_path = ''
+AS $$
+  SELECT 1;
+$$;
+REVOKE ALL ON FUNCTION public.keepalive_ping() FROM PUBLIC;
+
 -- Daimon accesses PostgreSQL only through the trusted server-side Go API.
 -- Supabase exposes tables in the public schema through its Data API, so keep
 -- the browser-facing anon/authenticated roles closed and enable RLS as an
@@ -149,6 +163,9 @@ BEGIN
         'ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM %I',
         api_role
       );
+      IF api_role = 'anon' THEN
+        EXECUTE 'GRANT EXECUTE ON FUNCTION public.keepalive_ping() TO anon';
+      END IF;
     END IF;
   END LOOP;
 END
