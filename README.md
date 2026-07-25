@@ -184,7 +184,7 @@ CI は GitHub Actions の `.github/workflows/ci.yml` で管理します。
 - `ml-service`: `uv sync --locked`、`ruff check`、pytest、FastAPI app の import smoke test
 - `deploy-config`: `compose.yml` / `cloudbuild.yaml` / Vercel SPA rewrite の検証と API / ML Docker image build
 - `production-smoke`: 本番frontend、SPA deep link、DB readiness、Go API route contractの定期確認
-- `db-activity`: Supabase Free projectのpause防止。1日2回、heartbeat INSERTとREST APIリクエストで実activityを生成
+- `db-activity`: Supabase Free projectのpause防止。1日2回、heartbeat INSERTとREST API DB RPCで実activityを生成
 
 依存更新は `.github/dependabot.yml` が frontend(npm) / api(gomod) / ml(uv) / GitHub Actions / Docker を管理します。
 
