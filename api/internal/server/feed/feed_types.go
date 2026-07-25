@@ -28,12 +28,15 @@ type timelineReq struct {
 	SimilarityWeight float32 `json:"similarity_weight"`
 	BoostPopular     bool    `json:"boost_popular"`
 	IncludeFarPosts  bool    `json:"include_far_posts"`
+	Limit            int     `json:"limit"`
+	Offset           int     `json:"offset"`
 }
 
 type searchReq struct {
 	Query string   `json:"query"`
 	Povs  []string `json:"povs"`
 	Limit int      `json:"limit"`
+	Sort  string   `json:"sort"`
 }
 
 type povLikeSummary struct {

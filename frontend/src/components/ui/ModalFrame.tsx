@@ -24,6 +24,14 @@ export const ModalFrame: React.FC<ModalFrameProps> = ({
 
   useEffect(() => {
     const previousFocus = document.activeElement
+    const previousOverflow = document.body.style.overflow
+    const previousPaddingRight = document.body.style.paddingRight
+    const scrollbarWidth =
+      window.innerWidth - document.documentElement.clientWidth
+    document.body.style.overflow = "hidden"
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`
+    }
     const panel = panelRef.current
     panel?.focus()
 
@@ -68,6 +76,8 @@ export const ModalFrame: React.FC<ModalFrameProps> = ({
     document.addEventListener("keydown", onKeyDown)
     return () => {
       document.removeEventListener("keydown", onKeyDown)
+      document.body.style.overflow = previousOverflow
+      document.body.style.paddingRight = previousPaddingRight
       if (previousFocus instanceof HTMLElement) previousFocus.focus()
     }
   }, [onClose])

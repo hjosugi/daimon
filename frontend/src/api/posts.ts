@@ -38,6 +38,8 @@ export const getTimeline = async (
   similarityWeight = 0.7,
   boostPopular = false,
   includeFarPosts = false,
+  limit = 20,
+  offset = 0,
 ): Promise<Post[]> => {
   return await api
     .post("posts/timeline", {
@@ -46,6 +48,8 @@ export const getTimeline = async (
         similarity_weight: similarityWeight,
         boost_popular: boostPopular,
         include_far_posts: includeFarPosts,
+        limit,
+        offset,
       },
     })
     .json<Post[]>()
@@ -58,6 +62,7 @@ export const searchPosts = async (params: SearchParams): Promise<Post[]> => {
         query: params.query || null,
         povs: params.tags || null,
         limit: params.limit || 20,
+        sort: params.sort || "relevance",
       },
     })
     .json<Post[]>()
