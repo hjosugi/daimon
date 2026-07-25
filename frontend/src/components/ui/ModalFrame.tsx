@@ -1,6 +1,7 @@
 import { X } from "lucide-react"
 import type React from "react"
 import { useEffect, useId, useRef } from "react"
+import { createPortal } from "react-dom"
 import { useI18n } from "../../i18n"
 
 interface ModalFrameProps {
@@ -82,7 +83,7 @@ export const ModalFrame: React.FC<ModalFrameProps> = ({
     }
   }, [onClose])
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-3 sm:p-4">
       <button
         type="button"
@@ -120,6 +121,7 @@ export const ModalFrame: React.FC<ModalFrameProps> = ({
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
