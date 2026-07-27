@@ -62,6 +62,9 @@ PostgreSQL        MLサービス (:8001)
 make fresh
 ```
 
+Go Task を使う環境では、同じ開発操作を `task fresh` のように実行できます。
+利用可能なタスクは `task --list` で確認でき、既存の Makefile 入口も引き続き利用できます。
+
 これはローカルの Docker/Podman ボリュームを削除し、DB / Redis / ML / Go API をビルドして、シードデータを投入し、フロントエンドを起動します。
 
 毎回データを消したくない場合は:

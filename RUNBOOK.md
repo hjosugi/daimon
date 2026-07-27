@@ -10,6 +10,9 @@
 make fresh
 ```
 
+Go Task を利用する場合は `task fresh` と実行できます。`Taskfile.yml` は
+Makefile と同じ開発操作を提供し、利用可能なタスクは `task --list` で確認できます。
+
 既存データを残して container stack を起動する場合:
 
 ```bash

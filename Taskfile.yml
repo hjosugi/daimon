@@ -1,0 +1,247 @@
+# Daimon — one-command local setup & dev (run from repo root).
+#
+#   task fresh   ★★ FROM ZERO (Docker): wipe data → build → seed → run UI
+#   task docker  Containerized stack: db + redis + ml + Go API via compose
+#   task seed    Load test data via the Go seeder (task seed ARGS="--posts 50000")
+#   task web     Frontend dev server only (use alongside task docker)
+#   task dev     Run the Go API (:8000) + frontend (:5173) on the host
+#   task batch   Run the precompute batch (timeline/suggest) into Redis
+#   task down / task clean   Stop infra / also remove node_modules
+#
+# The ONLY Python in the stack is the ML microservice (ml-service/: embeddings +
+# spaCy POV extraction). Everything else — API, seeding, schema — is Go. The
+# schema is bootstrapped by the Go API on boot (and by the seeder), so there is
+# no separate migration step.
+
+version: '3'
+
+vars:
+  PNPM_VERSION: "9.15.0"
+  POSTS: '{{default "12000" .POSTS}}'
+  ARGS: '{{default "" .ARGS}}'
+
+  # Auto-detect a Compose provider (works for Docker and Podman/CachyOS setups).
+  COMPOSE:
+    sh: |
+      if command -v podman-compose >/dev/null 2>&1; then echo "podman-compose"
+      elif podman compose version >/dev/null 2>&1; then echo "podman compose"
+      elif docker compose version >/dev/null 2>&1; then echo "docker compose"
+      elif command -v docker-compose >/dev/null 2>&1; then echo "docker-compose"
+      else echo "docker compose"
+      fi
+
+  # Resolve pnpm even when its mise shim isn't on the (non-interactive) PATH yet.
+  PNPM:
+    sh: command -v pnpm >/dev/null 2>&1 && echo pnpm || echo "mise exec -- pnpm"
+
+  # Resolve uv for the Python ML microservice.
+  UV:
+    sh: command -v uv >/dev/null 2>&1 && echo uv || echo "mise exec -- uv"
+
+tasks:
+  default:
+    cmds:
+      - task: dev
+
+  # Initial setup: bring up infra, wait for DB, install frontend deps.
+  setup:
+    desc: Bring up infra, wait for DB, install frontend deps
+    cmds:
+      - task: infra
+      - task: wait-db
+      - task: frontend
+      - cmd: |
+          echo ""
+          echo "✅ Setup complete. Next: 'task dev'  (or 'task docker' + 'task web')"
+
+  ml-setup:
+    desc: Install Python ML service dependencies (uv sync)
+    dir: ml-service
+    cmds:
+      - "{{.UV}} sync --locked"
+
+  ml-dev:
+    desc: Run ML development server on :8001
+    dir: ml-service
+    cmds:
+      - "{{.UV}} run uvicorn app:app --host 0.0.0.0 --port 8001 --reload"
+
+  infra:
+    desc: Start the full compose stack (db + redis + ml + api)
+    cmds:
+      - 'echo "Using compose provider: {{.COMPOSE}}"'
+      - "{{.COMPOSE}} up -d"
+
+  # Start ONLY Postgres.
+  infra-db:
+    desc: Start only PostgreSQL
+    cmds:
+      - 'echo "Using compose provider: {{.COMPOSE}}"'
+      - "{{.COMPOSE}} up -d db"
+
+  # Start only the dependencies (db + redis + ml) — for running the Go
+  # API on the host (so :8000 stays free for go run / a debugger).
+  deps-up:
+    desc: Start dependencies only (db + redis + ml) for host Go API development
+    cmds:
+      - "{{.COMPOSE}} up -d db redis ml"
+
+  # Portable readiness check: wait for the published TCP port.
+  wait-db:
+    desc: Wait for PostgreSQL to be ready on 127.0.0.1:5432
+    cmds:
+      - |
+        echo "⏳ Waiting for Postgres on 127.0.0.1:5432 ..."
+        until (exec 3<>/dev/tcp/127.0.0.1/5432) 2>/dev/null; do sleep 1; done
+        echo "✅ Postgres ready."
+
+  # The ML service only answers /health once its model is warm (loaded in the
+  # FastAPI lifespan), so this also guarantees embeddings are ready.
+  wait-ml:
+    desc: Wait for ML service on :8001 (model warm-up)
+    cmds:
+      - |
+        echo "⏳ Waiting for ML service on :8001 (model warm-up) ..."
+        until curl -sf http://localhost:8001/health >/dev/null 2>&1; do sleep 2; done
+        echo "✅ ML ready."
+
+  # Provide pnpm at the pinned version. Prefer mise (this repo's toolchain),
+  # then corepack, then a global npm install as a last resort.
+  ensure-pnpm:
+    desc: Ensure pnpm is available at the pinned version
+    cmds:
+      - |
+        command -v pnpm >/dev/null 2>&1 && exit 0
+        echo "pnpm not found — provisioning..."
+        if command -v mise >/dev/null 2>&1; then mise use -g pnpm@{{.PNPM_VERSION}}
+        elif command -v corepack >/dev/null 2>&1; then corepack enable && corepack prepare pnpm@{{.PNPM_VERSION}} --activate
+        else npm install -g pnpm@{{.PNPM_VERSION}}
+        fi
+
+  frontend:
+    desc: Install frontend dependencies with pnpm
+    deps: [ensure-pnpm]
+    dir: frontend
+    cmds:
+      - "{{.PNPM}} install"
+
+  frontend-ensure:
+    desc: Install frontend dependencies only if node_modules is missing
+    deps: [ensure-pnpm]
+    cmds:
+      - test -d frontend/node_modules || (cd frontend && {{.PNPM}} install)
+
+  # Run the precompute batch (timeline feeds + popular/related POVs) into Redis.
+  batch:
+    desc: Run the precompute batch (timeline/suggest) into Redis
+    dir: api
+    env:
+      DATABASE_URL: "postgresql://daimon:daimon@localhost:5432/daimon"
+      EMBED_URL: "http://localhost:8001"
+      REDIS_URL: "redis://localhost:6379"
+    cmds:
+      - go run ./cmd/batch
+
+  # Seed realistic test data: users (@example.com / password123) + ~12k posts with
+  # real embeddings (via the ML service) + POVs + likes/comments. Override e.g.:
+  #   task seed ARGS="--posts 50000"
+  #   task seed ARGS="--fresh"
+  seed:
+    desc: "Seed realistic test data (override: task seed ARGS='--posts 50000')"
+    cmds:
+      - task: infra
+      - task: wait-db
+      - task: wait-ml
+      - cmd: |
+          cd api && DATABASE_URL=postgresql://daimon:daimon@localhost:5432/daimon \
+            EMBED_URL=http://localhost:8001 REDIS_URL=redis://localhost:6379 \
+            go run ./cmd/seed {{.ARGS}}
+
+  # Scale seed with SYNTHETIC vectors (no ML service) — for load/latency testing
+  # at high volume. Default 1,000,000 posts; override with ARGS.
+  seed-large:
+    desc: "Scale seed with synthetic vectors for load testing (task seed-large ARGS='--posts 500000')"
+    cmds:
+      - task: infra
+      - task: wait-db
+      - cmd: |
+          cd api && DATABASE_URL=postgresql://daimon:daimon@localhost:5432/daimon \
+            EMBED_URL=http://localhost:8001 REDIS_URL=redis://localhost:6379 \
+            go run ./cmd/seed --posts 1000000 --fake-vectors --no-comments {{.ARGS}}
+
+  # Run the Go API (:8000) + frontend (:5173) on the host (deps via compose).
+  dev:
+    desc: Run Go API (:8000) + frontend (:5173) on the host (deps via compose)
+    cmds:
+      - task: deps-up
+      - task: wait-db
+      - task: frontend-ensure
+      - |
+        echo "Starting Go API (:8000) + frontend (:5173). Ctrl-C stops both."
+        trap 'kill 0' INT TERM
+        ( cd api && DATABASE_URL=postgresql://daimon:daimon@localhost:5432/daimon \
+            EMBED_URL=http://localhost:8001 REDIS_URL=redis://localhost:6379 \
+            PORT=8000 go run ./cmd/server ) &
+        ( cd frontend && {{.PNPM}} dev ) &
+        wait
+
+  # ★ Everything from zero (Docker). Wipes local Postgres data, rebuilds images,
+  # seeds test data, then runs the UI.
+  # Override seeded count: `task fresh POSTS=50000`.
+  fresh:
+    desc: "★ FROM ZERO: wipe data → build → seed → run UI (override: task fresh POSTS=50000)"
+    cmds:
+      - echo "⚠️  Wiping containers + volumes (all local Postgres data)..."
+      - cmd: "{{.COMPOSE}} down -v --remove-orphans"
+        ignore_error: true
+      - "{{.COMPOSE}} up -d --build"
+      - |
+        echo "⏳ Waiting for Go API (build + schema bootstrap; ML image bakes models)..."
+        until curl -sf http://localhost:8000/health >/dev/null 2>&1; do sleep 3; done
+      - task: wait-ml
+      - echo "🌱 Seeding {{.POSTS}} posts (users @example.com / password123)..."
+      - cmd: |
+          cd api && DATABASE_URL=postgresql://daimon:daimon@localhost:5432/daimon \
+            EMBED_URL=http://localhost:8001 REDIS_URL=redis://localhost:6379 \
+            go run ./cmd/seed --posts {{.POSTS}}
+      - echo "🎨 Starting frontend (:5173). Ctrl-C stops the UI; api keeps running in Docker."
+      - task: web
+
+  # Fully containerized stack: db + redis + ml + Go API in Docker/Podman.
+  # (Frontend stays on the host — run `task web` in another terminal.)
+  docker:
+    desc: Start fully containerized stack (db + redis + ml + Go API)
+    cmds:
+      - "{{.COMPOSE}} up -d --build"
+      - |
+        echo "✅ db + redis + ml + Go API (:8000) are up. Logs: 'task docker-logs'."
+      - |
+        echo "   Start the UI with: task web   (frontend :5173)"
+
+  docker-logs:
+    desc: Follow logs for api and ml services
+    cmds:
+      - "{{.COMPOSE}} logs -f api ml"
+
+  docker-down:
+    desc: Stop the Docker compose stack
+    cmds:
+      - "{{.COMPOSE}} down"
+
+  # Frontend dev server only (use alongside `task docker`).
+  web:
+    desc: "Frontend dev server only (use alongside 'task docker')"
+    cmds:
+      - task: frontend-ensure
+      - cd frontend && {{.PNPM}} dev
+
+  down:
+    desc: Stop compose stack
+    cmds:
+      - "{{.COMPOSE}} down"
+
+  clean:
+    desc: Stop compose stack and remove node_modules
+    cmds:
+      - task: down
+      - rm -rf frontend/node_modules
