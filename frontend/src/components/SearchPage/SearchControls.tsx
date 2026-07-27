@@ -30,7 +30,7 @@ export const SearchControls: React.FC<SearchControlsProps> = ({ search }) => {
               }
             }}
             placeholder={t("search.placeholder")}
-            className="w-full pl-9 pr-3 py-2 bg-[#2a2a50] rounded border border-cyan-500/15 focus:border-cyan-500/35 focus:ring-1 focus:ring-cyan-500/20 text-cyan-200 placeholder:text-cyan-300/70 text-sm font-mono transition-all"
+            className="search-primary-input w-full pl-9 pr-9 py-2 bg-[#2a2a50] rounded border border-cyan-500/15 focus:border-cyan-500/35 focus:ring-1 focus:ring-cyan-500/20 text-sm font-mono transition-all"
           />
           {search.hasSearch && (
             <button
@@ -82,6 +82,18 @@ export const SearchControls: React.FC<SearchControlsProps> = ({ search }) => {
               <ChevronDown size={14} />
             )}
           </button>
+          <label className="search-sort-control">
+            <span>{t("search.sortLabel")}</span>
+            <select
+              value={search.sort}
+              onChange={(event) =>
+                search.setSort(event.target.value as "relevance" | "newest")
+              }
+            >
+              <option value="relevance">{t("search.sortRelevance")}</option>
+              <option value="newest">{t("search.sortNewest")}</option>
+            </select>
+          </label>
         </div>
 
         {search.searchTags.length > 0 && (
@@ -137,7 +149,7 @@ export const SearchControls: React.FC<SearchControlsProps> = ({ search }) => {
                   }
                 }}
                 placeholder={t("search.povInputPlaceholder")}
-                className="flex-1 px-2 py-1.5 bg-[#2a2a50] rounded border border-fuchsia-500/25 focus:ring-1 focus:ring-fuchsia-500/30 focus:border-fuchsia-500/40 text-fuchsia-300 placeholder:text-fuchsia-400/60 text-xs font-mono transition-all"
+                className="search-pov-input flex-1 px-2 py-1.5 bg-[#2a2a50] rounded border border-fuchsia-500/25 focus:ring-1 focus:ring-fuchsia-500/30 focus:border-fuchsia-500/40 text-xs font-mono transition-all"
               />
               <button
                 type="button"

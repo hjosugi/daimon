@@ -123,12 +123,15 @@ task web
 タイムライン:
 
 1. UI が `POST /posts/timeline` を呼ぶ
-2. API がクエリテキストを embedding
-3. PostgreSQL の vector index から cosine 類似候補を 100-200 件取得
-4. PostgreSQL から本文、POV、いいね・コメント数を一括ロード
-5. ユーザー自身の投稿ベクトルからセントロイドを作成
+2. 自分の投稿と保存投稿から個人用セントロイドを作成
+3. 通常の個人フィードはセントロイドを再利用する。匿名・任意クエリのときだけクエリを embedding
+4. PostgreSQL の vector index から cosine 類似候補を 100-200 件取得
+5. PostgreSQL から本文、POV、いいね・コメント数を一括ロード
 6. `rank_by_sense_distance` / `RankBySenseDistance` で並べ替え
 7. UI に `match_reason.reason`, `sense_distance`, `is_bridge` を返す
+8. UI は20件ずつ受け取り、末尾が近づいたときだけ次を読み込む
+
+検索は本文の完全一致・部分一致、POV一致、意味ベクトル検索を重ね、関連順と新しい順を切り替えられます。
 
 ランキングの中心式:
 

@@ -1,6 +1,7 @@
 import { X } from "lucide-react"
 import type React from "react"
 import { useEffect, useId, useRef } from "react"
+import { createPortal } from "react-dom"
 import { useI18n } from "../../i18n"
 
 interface ModalFrameProps {
@@ -24,6 +25,14 @@ export const ModalFrame: React.FC<ModalFrameProps> = ({
 
   useEffect(() => {
     const previousFocus = document.activeElement
+    const previousOverflow = document.body.style.overflow
+    const previousPaddingRight = document.body.style.paddingRight
+    const scrollbarWidth =
+      window.innerWidth - document.documentElement.clientWidth
+    document.body.style.overflow = "hidden"
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`
+    }
     const panel = panelRef.current
     panel?.focus()
 
@@ -68,11 +77,13 @@ export const ModalFrame: React.FC<ModalFrameProps> = ({
     document.addEventListener("keydown", onKeyDown)
     return () => {
       document.removeEventListener("keydown", onKeyDown)
+      document.body.style.overflow = previousOverflow
+      document.body.style.paddingRight = previousPaddingRight
       if (previousFocus instanceof HTMLElement) previousFocus.focus()
     }
   }, [onClose])
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-3 sm:p-4">
       <button
         type="button"
@@ -110,6 +121,7 @@ export const ModalFrame: React.FC<ModalFrameProps> = ({
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

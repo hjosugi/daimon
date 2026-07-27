@@ -21,7 +21,7 @@ const (
 	UserCentroidLimit                       = 200
 	DefaultTimelineSimilarityWeight         = 0.7
 	DefaultTimelineBridgeWeight             = 0.3
-	DefaultTimelineTopK                     = 10
+	DefaultTimelineTopK                     = 80
 )
 
 // PostMeta is the small post metadata subset needed to build ranking

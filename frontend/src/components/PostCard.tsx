@@ -2,7 +2,6 @@ import type React from "react"
 import { memo, useState } from "react"
 import type { Post, User } from "../api/client"
 import { DeletePostDialog } from "./PostCard/DeletePostDialog"
-import { MatchDetailsModal } from "./PostCard/MatchDetailsModal"
 import { MatchReasonDetailsModal } from "./PostCard/MatchReasonDetailsModal"
 import { PostActions } from "./PostCard/PostActions"
 import { PostContent } from "./PostCard/PostContent"
@@ -23,7 +22,6 @@ const PostCardComponent: React.FC<PostCardProps> = ({
   onUserClick,
 }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [showMatchDetails, setShowMatchDetails] = useState(false)
   const [showMatchReasonDetails, setShowMatchReasonDetails] = useState(false)
   const actions = usePostCardActions(post, currentUser)
 
@@ -46,7 +44,7 @@ const PostCardComponent: React.FC<PostCardProps> = ({
         post={post}
         currentUser={currentUser}
         onDelete={() => setShowDeleteConfirm(true)}
-        onMatchDetailsClick={() => setShowMatchDetails(true)}
+        onMatchDetailsClick={() => setShowMatchReasonDetails(true)}
         onUserClick={onUserClick}
       />
 
@@ -54,13 +52,6 @@ const PostCardComponent: React.FC<PostCardProps> = ({
         <MatchReasonDetailsModal
           post={post}
           onClose={() => setShowMatchReasonDetails(false)}
-        />
-      )}
-
-      {showMatchDetails && (
-        <MatchDetailsModal
-          post={post}
-          onClose={() => setShowMatchDetails(false)}
         />
       )}
 
