@@ -16,6 +16,7 @@
 # Local-only infra / docs not needed for the frontend build.
 /compose.yml
 /cloudbuild.yaml
-/Makefile
+/Taskfile.yml
+/graphify-out/
 /docs/
 /RUNBOOK.md

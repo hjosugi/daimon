@@ -7,23 +7,24 @@
 完全に作り直す場合:
 
 ```bash
-make fresh
+task fresh
 ```
 
-Go Task を利用する場合は `task fresh` と実行できます。`Taskfile.yml` は
-Makefile と同じ開発操作を提供し、利用可能なタスクは `task --list` で確認できます。
+すべてのローカル開発操作は `Taskfile.yml` を正本とします。Task CLI の導入方法は
+[公式ドキュメント](https://taskfile.dev/docs/installation)を参照し、利用可能なタスクは
+`task --list` で確認してください。
 
 既存データを残して container stack を起動する場合:
 
 ```bash
-make docker
-make web
+task docker
+task web
 ```
 
 Go API を host で動かす場合:
 
 ```bash
-make deps-up
+task deps-up
 cd api
 DATABASE_URL=postgresql://daimon:daimon@localhost:5432/daimon \
 EMBED_URL=http://localhost:8001 \
@@ -49,25 +50,25 @@ PostgreSQLへ `Ping` し、接続できなければ `503` を返します。
 Seed data を投入する場合:
 
 ```bash
-make seed
+task seed
 ```
 
 High-volume seed を synthetic vector で投入する場合:
 
 ```bash
-make seed-large ARGS="--posts 100000"
+task seed-large ARGS="--posts 100000"
 ```
 
 Logs:
 
 ```bash
-make docker-logs
+task docker-logs
 ```
 
 Stack を止める場合:
 
 ```bash
-make down
+task down
 ```
 
 Volume ごと消す場合:
@@ -83,7 +84,7 @@ GitHub Actions の `.github/workflows/ci.yml` は以下を検証します。
 - API: `go test ./...`, `go vet ./...`, server / batch build
 - Frontend: `pnpm install --frozen-lockfile`, Biome lint, Vite build
 - ML service: `uv sync --locked`, `uv run ruff check .`, `uv run pytest`, FastAPI import smoke test
-- Deploy config: `docker compose -f compose.yml config`, `cloudbuild.yaml` shape check, API / ML Docker image build
+- Deploy config: `task --list`, `docker compose -f compose.yml config`, `cloudbuild.yaml` shape check, API / ML Docker image build
 
 ローカルで同じ系統の確認をする場合:
 

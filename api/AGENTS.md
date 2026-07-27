@@ -85,7 +85,7 @@ Saves/bookmarks are stronger preference signals than likes and are blended into 
 From repo root, the usual dependency stack is:
 
 ```bash
-make deps-up
+task deps-up
 ```
 
 From this workspace:

@@ -30,6 +30,7 @@ spaCy POV 抽出）だけに絞っています。API・シード・スキーマ�
 | `ml-service/` | **唯一の Python**。embedding と POV 抽出だけを担当 |
 | `docs/` | 共有ドキュメント。`*.local.md` は gitignore される詳細メモ用 |
 | `compose.yml` | PostgreSQL / Redis / ML / Go API のローカル構成 |
+| `Taskfile.yml` | ローカル開発・テストデータ・コンテナ操作の正式な入口 |
 
 ## アーキテクチャ概要
 
@@ -60,19 +61,20 @@ PostgreSQL        ML service (:8001)
 迷ったらこれです。
 
 ```bash
-make fresh
+task fresh
 ```
 
-Go Task を使う環境では、同じ開発操作を `task fresh` のように実行できます。
-利用可能な task は `task --list` で確認でき、既存の Makefile 入口も引き続き利用できます。
+開発コマンドは [Go Task](https://taskfile.dev/) で統一しています。Task CLI が未導入なら
+公式の[インストール手順](https://taskfile.dev/docs/installation)に従って導入してください。
+利用可能なコマンドは `task --list` で確認できます。
 
 これはローカルの Docker/Podman volume を消して、DB / Redis / ML / Go API を build し、seed data を入れて、frontend を起動します。
 
 毎回データを消したくない場合:
 
 ```bash
-make docker
-make web
+task docker
+task web
 ```
 
 開く URL:
@@ -88,21 +90,21 @@ seed 済みユーザーは `seeduser1@example.com` / `password123` のような 
 Go API（:8000）と frontend（:5173）をホストで動かす場合（依存は compose）:
 
 ```bash
-make all      # = make dev: deps-up → Go API + frontend
+task dev      # deps-up → Go API + frontend
 ```
 
 個別に進める場合:
 
 ```bash
-make deps-up        # db + redis + ml を compose で起動
-make seed           # Go シーダでテストデータ投入（ML 必須・実埋め込み）
-make dev            # Go API + frontend
+task deps-up        # db + redis + ml を compose で起動
+task seed           # Go シーダでテストデータ投入（ML 必須・実埋め込み）
+task dev            # Go API + frontend
 ```
 
 Go API だけをホストでデバッグしたい場合:
 
 ```bash
-make deps-up
+task deps-up
 cd api
 go run ./cmd/server
 ```
@@ -110,7 +112,7 @@ go run ./cmd/server
 別ターミナルで:
 
 ```bash
-make web
+task web
 ```
 
 ## ML と Vector の流れ
@@ -171,14 +173,14 @@ base   = alpha * near + (1 - alpha) * bridge + 0.15 * has_common_pov
 ## よく使うコマンド
 
 ```bash
-make fresh        # まっさらから Docker/Podman stack + seed + frontend
-make docker       # Docker/Podman stack 起動
-make web          # frontend のみ起動
-make docker-logs  # api / ml logs
-make seed         # realistic seed data
-make seed-large   # synthetic vectors で高負荷 seed
-make down         # compose down
-make clean        # venv / node_modules も削除
+task fresh        # まっさらから Docker/Podman stack + seed + frontend
+task docker       # Docker/Podman stack 起動
+task web          # frontend のみ起動
+task docker-logs  # api / ml logs
+task seed         # realistic seed data
+task seed-large   # synthetic vectors で高負荷 seed
+task down         # compose down
+task clean        # node_modules も削除
 ```
 
 ## CI/CD
@@ -188,7 +190,7 @@ CI は GitHub Actions の `.github/workflows/ci.yml` で管理します。
 - `api`: `go test ./...`、`go vet ./...`、`cmd/server` / `cmd/batch` の build
 - `frontend`: `pnpm install --frozen-lockfile`、Biome check、Vite production build
 - `ml-service`: `uv sync --locked`、`ruff check`、pytest、FastAPI app の import smoke test
-- `deploy-config`: `compose.yml` / `cloudbuild.yaml` / Vercel SPA rewrite の検証と API / ML Docker image build
+- `deploy-config`: `Taskfile.yml` / `compose.yml` / `cloudbuild.yaml` / Vercel SPA rewrite の検証と API / ML Docker image build
 - `production-smoke`: 本番frontend、SPA deep link、DB readiness、Go API route contractの定期確認
 
 依存更新は `.github/dependabot.yml` が frontend(npm) / api(gomod) / ml(uv) / GitHub Actions / Docker を管理します。

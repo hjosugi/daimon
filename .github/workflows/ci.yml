@@ -108,6 +108,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - name: Install Task
+        uses: go-task/setup-task@v2
+        with:
+          version: 3.52.0
+      - name: Validate Taskfile
+        run: |
+          task --list --json >/tmp/daimon-tasks.json
+          jq -e '
+            ([.tasks[].name] | length) == 23 and
+            (["fresh", "docker", "dev", "seed", "down", "clean"] -
+              [.tasks[].name] | length == 0)
+          ' /tmp/daimon-tasks.json >/dev/null
       - name: Validate compose file
         run: docker compose -f compose.yml config >/dev/null
       - name: Validate Cloud Build file shape
@@ -123,9 +135,19 @@ jobs:
             )
           ' vercel.json >/dev/null
       - name: Build API Docker image
-        run: docker build --pull -t daimon-api-ci ./api
+        run: |
+          for attempt in 1 2 3; do
+            docker build --pull -t daimon-api-ci ./api && exit 0
+            test "$attempt" -eq 3 && exit 1
+            sleep $((attempt * 10))
+          done
       - name: Build ML Docker image
-        run: docker build --pull -t daimon-ml-ci ./ml-service
+        run: |
+          for attempt in 1 2 3; do
+            docker build --pull -t daimon-ml-ci ./ml-service && exit 0
+            test "$attempt" -eq 3 && exit 1
+            sleep $((attempt * 10))
+          done
       - name: Smoke test ML Docker runtime
         run: >-
           docker run --rm

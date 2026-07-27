@@ -131,7 +131,7 @@ The root `compose.yml` builds this service as `ml` and exposes port `8001`.
 From repo root:
 
 ```bash
-make deps-up
+task deps-up
 ```
 
 or:

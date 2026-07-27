@@ -3,7 +3,7 @@
 //   - suggest:related:{pov}      vector-nearest POVs (semantic suggestions)
 //   - feed:{userId}              the Sense-Distance home feed per user
 //
-// Run on a schedule (Cloud Run Jobs + Cloud Scheduler) or locally via `make batch`.
+// Run on a schedule (Cloud Run Jobs + Cloud Scheduler) or locally via `task batch`.
 package main
 
 import (

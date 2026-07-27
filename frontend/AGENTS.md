@@ -84,13 +84,13 @@ pnpm lint
 The backend stack can be started from repo root with:
 
 ```bash
-make docker
+task docker
 ```
 
 or, if running Go API on host:
 
 ```bash
-make deps-up
+task deps-up
 cd ../api
 go run ./cmd/server
 ```

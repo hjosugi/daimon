@@ -1,17 +1,17 @@
 {
   "name": "daimon",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "packageManager": "pnpm@9.15.0",
   "scripts": {
-    "fresh": "make fresh",
-    "start": "make all",
-    "all": "make all",
-    "setup": "make setup",
-    "dev": "make dev",
-    "seed": "make seed",
-    "down": "make down",
-    "clean": "make clean",
+    "fresh": "task fresh",
+    "start": "task dev",
+    "all": "task dev",
+    "setup": "task setup",
+    "dev": "task dev",
+    "seed": "task seed",
+    "down": "task down",
+    "clean": "task clean",
     "build": "cd frontend && pnpm install && pnpm run build"
   },
   "license": "0BSD"

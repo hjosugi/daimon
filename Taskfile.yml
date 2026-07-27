@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
 # Daimon — one-command local setup & dev (run from repo root).
 #
 #   task fresh   ★★ FROM ZERO (Docker): wipe data → build → seed → run UI
@@ -40,6 +41,7 @@ vars:
 
 tasks:
   default:
+    desc: Run the default development stack
     cmds:
       - task: dev
 
