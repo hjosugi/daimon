@@ -59,16 +59,19 @@ PostgreSQL        MLサービス (:8001)
 迷ったらこれ。
 
 ```bash
-task fresh
+make fresh
 ```
+
+Go Task を使う環境では、同じ開発操作を `task fresh` のように実行できます。
+利用可能なタスクは `task --list` で確認でき、既存の Makefile 入口も引き続き利用できます。
 
 これはローカルの Docker/Podman ボリュームを削除し、DB / Redis / ML / Go API をビルドして、シードデータを投入し、フロントエンドを起動します。
 
 毎回データを消したくない場合は:
 
 ```bash
-task docker
-task web
+make docker
+make web
 ```
 
 開く URL:
@@ -84,21 +87,21 @@ task web
 Go API（:8000）とフロントエンド（:5173）をホストで動かす場合（依存は compose）:
 
 ```bash
-task dev      # = task dev: deps-up → Go API + frontend
+make all      # = make dev: deps-up → Go API + frontend
 ```
 
 個別に進める場合:
 
 ```bash
-task deps-up        # db + redis + ml を compose で起動
-task seed           # Go シーダでテストデータ投入（ML 必須・実埋め込み）
-task dev            # Go API + frontend
+make deps-up        # db + redis + ml を compose で起動
+make seed           # Go シーダでテストデータ投入（ML 必須・実埋め込み）
+make dev            # Go API + frontend
 ```
 
 Go API だけをホストでデバッグしたい場合:
 
 ```bash
-task deps-up
+make deps-up
 cd api
 go run ./cmd/server
 ```
@@ -106,7 +109,7 @@ go run ./cmd/server
 別ターミナルで:
 
 ```bash
-task web
+make web
 ```
 
 ## ML とベクトルの流れ
@@ -167,14 +170,14 @@ base   = alpha * near + (1 - alpha) * bridge + 0.15 * has_common_pov
 ## よく使うコマンド
 
 ```bash
-task fresh        # まっさらから Docker/Podman stack + seed + frontend
-task docker       # Docker/Podman stack 起動
-task web          # frontend のみ起動
-task docker-logs  # API / ML のログ確認
-task seed         # 実用的なシードデータ投入
-task seed-large   # 合成ベクトルを用いた高負荷シード
-task down         # compose の停止
-task clean        # venv / node_modules も削除
+make fresh        # まっさらから Docker/Podman stack + seed + frontend
+make docker       # Docker/Podman stack 起動
+make web          # frontend のみ起動
+make docker-logs  # API / ML のログ確認
+make seed         # 実用的なシードデータ投入
+make seed-large   # 合成ベクトルを用いた高負荷シード
+make down         # compose の停止
+make clean        # venv / node_modules も削除
 ```
 
 ## CI/CD

@@ -7,14 +7,17 @@
 完全に作り直す場合:
 
 ```bash
-task fresh
+make fresh
 ```
+
+Go Task を利用する場合は `task fresh` と実行できます。`Taskfile.yml` は
+Makefile と同じ開発操作を提供し、利用可能なタスクは `task --list` で確認できます。
 
 既存データを残して container stack を起動する場合:
 
 ```bash
-task docker
-task web
+make docker
+make web
 ```
 
 Go API を host で動かす場合:
@@ -46,25 +49,25 @@ PostgreSQLへ `Ping` し、接続できなければ `503` を返します。
 Seed data を投入する場合:
 
 ```bash
-task seed
+make seed
 ```
 
 High-volume seed を synthetic vector で投入する場合:
 
 ```bash
-task seed-large ARGS="--posts 100000"
+make seed-large ARGS="--posts 100000"
 ```
 
 Logs:
 
 ```bash
-task docker-logs
+make docker-logs
 ```
 
 Stack を止める場合:
 
 ```bash
-task down
+make down
 ```
 
 Volume ごと消す場合:

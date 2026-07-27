@@ -69,14 +69,14 @@ tasks:
   infra:
     desc: Start the full compose stack (db + redis + ml + api)
     cmds:
-      - echo "Using compose provider: {{.COMPOSE}}"
+      - 'echo "Using compose provider: {{.COMPOSE}}"'
       - "{{.COMPOSE}} up -d"
 
   # Start ONLY Postgres.
   infra-db:
     desc: Start only PostgreSQL
     cmds:
-      - echo "Using compose provider: {{.COMPOSE}}"
+      - 'echo "Using compose provider: {{.COMPOSE}}"'
       - "{{.COMPOSE}} up -d db"
 
   # Start only the dependencies (db + redis + ml) — for running the Go
@@ -136,9 +136,9 @@ tasks:
     desc: Run the precompute batch (timeline/suggest) into Redis
     dir: api
     env:
-      DATABASE_URL: ******localhost:5432/daimon
-      EMBED_URL: http://localhost:8001
-      REDIS_URL: redis://localhost:6379
+      DATABASE_URL: "postgresql://daimon:daimon@localhost:5432/daimon"
+      EMBED_URL: "http://localhost:8001"
+      REDIS_URL: "redis://localhost:6379"
     cmds:
       - go run ./cmd/batch
 
@@ -213,8 +213,10 @@ tasks:
     desc: Start fully containerized stack (db + redis + ml + Go API)
     cmds:
       - "{{.COMPOSE}} up -d --build"
-      - echo "✅ db + redis + ml + Go API (:8000) are up. Logs: 'task docker-logs'."
-      - echo "   Start the UI with: task web   (frontend :5173)"
+      - |
+        echo "✅ db + redis + ml + Go API (:8000) are up. Logs: 'task docker-logs'."
+      - |
+        echo "   Start the UI with: task web   (frontend :5173)"
 
   docker-logs:
     desc: Follow logs for api and ml services
