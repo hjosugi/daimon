@@ -83,6 +83,7 @@ export interface SearchParams {
   query?: string
   tags?: string[]
   limit?: number
+  sort?: "relevance" | "newest"
 }
 
 export interface UserProfile {

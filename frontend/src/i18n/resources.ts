@@ -89,6 +89,8 @@ const en = {
     "Share the first perspective and give this timeline a pulse.",
   "timeline.createPost": "Create post",
   "timeline.loadError": "[ERROR] FAILED TO LOAD",
+  "timeline.loadingMore": "Bringing a few more thoughts...",
+  "timeline.caughtUp": "You are caught up. Take your time.",
 
   "postForm.title": "WHAT'S ON YOUR MIND?",
   "postForm.placeholder":
@@ -118,6 +120,9 @@ const en = {
   "search.start": "START SEARCHING",
   "search.description": "SEARCH POSTS BY KEYWORDS OR POVS",
   "search.loadError": "[ERROR] FAILED TO LOAD",
+  "search.sortLabel": "Sort",
+  "search.sortRelevance": "Relevance",
+  "search.sortNewest": "Newest",
 
   "settings.title": "TIMELINE SETTINGS",
   "settings.discoveryVsEmpathy": "DISCOVERY VS EMPATHY ({percent}% EMPATHY)",
@@ -171,6 +176,8 @@ const en = {
 
   "post.whyMatched": "WHY THIS MATCHED",
   "post.matchReasonDetails": "MATCH REASON DETAILS",
+  "post.matchMetric": "Match",
+  "post.senseDistance": "Sense distance",
   "post.commonPovs": "COMMON POVS",
   "post.matchedPovs": "MATCHED POVS",
   "post.yourPostsContributed": "YOUR POSTS THAT CONTRIBUTED",
@@ -193,7 +200,7 @@ const en = {
   "post.bridge": "BRIDGE",
   "post.noMatch": "No match",
   "post.matchPercent": "{percent}% MATCH",
-  "post.matchTitle": "Click to see your posts that contributed to this match",
+  "post.matchTitle": "See why this post appeared",
   "post.bridgeTitle": "Far perspective with shared values",
   "post.commonPovReason": "Common POVs: {povs}",
   "post.reason.bridgeShared": "Far perspective, shared values: {povs}",
@@ -339,6 +346,8 @@ const ja: Messages = {
     "最初の視点を投稿して、タイムラインを動かしてみましょう。",
   "timeline.createPost": "投稿する",
   "timeline.loadError": "[エラー] 読み込みに失敗しました",
+  "timeline.loadingMore": "もう少し考えを読み込んでいます...",
+  "timeline.caughtUp": "ここまで読みました。ゆっくりどうぞ。",
 
   "postForm.title": "いま考えていること",
   "postForm.placeholder": "じっくり考えを共有する...（Ctrl+Enterで投稿）",
@@ -367,6 +376,9 @@ const ja: Messages = {
   "search.start": "検索を開始",
   "search.description": "キーワードまたはPOVで投稿を検索",
   "search.loadError": "[エラー] 読み込みに失敗しました",
+  "search.sortLabel": "並び順",
+  "search.sortRelevance": "関連順",
+  "search.sortNewest": "新しい順",
 
   "settings.title": "タイムライン設定",
   "settings.discoveryVsEmpathy": "発見と共感（共感 {percent}%）",
@@ -420,6 +432,8 @@ const ja: Messages = {
 
   "post.whyMatched": "なぜ表示されたか",
   "post.matchReasonDetails": "一致理由の詳細",
+  "post.matchMetric": "一致度",
+  "post.senseDistance": "感性の距離",
   "post.commonPovs": "共通POV",
   "post.matchedPovs": "一致したPOV",
   "post.yourPostsContributed": "一致に影響したあなたの投稿",
@@ -442,7 +456,7 @@ const ja: Messages = {
   "post.bridge": "ブリッジ",
   "post.noMatch": "一致なし",
   "post.matchPercent": "一致 {percent}%",
-  "post.matchTitle": "一致に影響したあなたの投稿を見る",
+  "post.matchTitle": "この投稿が表示された理由を見る",
   "post.bridgeTitle": "遠い視点だが価値観を共有",
   "post.commonPovReason": "共通の視点: {povs}",
   "post.reason.bridgeShared": "遠い視点・共通の価値観: {povs}",

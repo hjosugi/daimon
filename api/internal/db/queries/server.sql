@@ -131,6 +131,21 @@ SELECT DISTINCT post_id FROM povs
 WHERE lower(pov) = lower($1) OR lower(pov) LIKE '%' || lower($1) || '%'
 LIMIT $2
 
+-- name: feed.search_text_ids
+SELECT po.id
+FROM posts po
+WHERE lower(po.text) LIKE '%' || lower($1) || '%'
+  AND (
+    COALESCE(cardinality($2::text[]), 0) = 0
+    OR EXISTS (
+      SELECT 1
+      FROM povs pv
+      WHERE pv.post_id = po.id AND pv.pov = ANY($2::text[])
+    )
+  )
+ORDER BY po.created_at DESC
+LIMIT $3
+
 -- name: feed.user_post_ids
 SELECT id FROM posts WHERE user_id=$1 ORDER BY created_at DESC LIMIT 50
 

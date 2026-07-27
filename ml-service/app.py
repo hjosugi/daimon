@@ -235,7 +235,8 @@ def embed(req: TextReq):
     try:
         vector = encode_full(req.text or "")
         validate_vector(vector, "embed")
-    except Exception as exc:
+    # This endpoint boundary converts any inference/runtime failure into a 503.
+    except Exception as exc:  # noqa: BLE001
         raise_inference_error("embedding_failed", exc)
     return {"vector": vector}
 
@@ -269,7 +270,8 @@ def embed_batch(req: BatchReq):
             )
         for idx, vector in enumerate(vectors):
             validate_vector(vector, f"embed_batch[{idx}]")
-    except Exception as exc:
+    # This endpoint boundary converts any inference/runtime failure into a 503.
+    except Exception as exc:  # noqa: BLE001
         raise_inference_error("embedding_failed", exc)
     return {"vectors": vectors}
 
@@ -368,6 +370,7 @@ def povs(req: TextReq):
             if key not in seen and len(p) <= 300:
                 seen.add(key)
                 out.append(p)
-    except Exception as exc:
+    # This endpoint boundary converts any extraction/runtime failure into a 503.
+    except Exception as exc:  # noqa: BLE001
         raise_inference_error("pov_extraction_failed", exc)
     return {"povs": out[:5]}
