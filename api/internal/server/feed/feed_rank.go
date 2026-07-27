@@ -8,6 +8,39 @@ import (
 	"daimon/api/internal/ranking"
 )
 
+const (
+	defaultTimelinePageSize = 20
+	maxTimelinePageSize     = 30
+	maxTimelineResults      = 100
+)
+
+func normalizeTimelinePage(req *timelineReq) {
+	if req.Limit <= 0 {
+		req.Limit = defaultTimelinePageSize
+	}
+	if req.Limit > maxTimelinePageSize {
+		req.Limit = maxTimelinePageSize
+	}
+	if req.Offset < 0 {
+		req.Offset = 0
+	}
+	if req.Offset > maxTimelineResults {
+		req.Offset = maxTimelineResults
+	}
+}
+
+func timelineRankLimit(req timelineReq) int {
+	return min(req.Offset+req.Limit, maxTimelineResults)
+}
+
+func timelinePage[T any](items []T, req timelineReq) []T {
+	if req.Offset >= len(items) {
+		return nil
+	}
+	end := min(req.Offset+req.Limit, len(items))
+	return items[req.Offset:end]
+}
+
 func defaultTimelineQuery(q string) bool {
 	q = strings.TrimSpace(strings.ToLower(q))
 	return q == "" || q == "general interest"

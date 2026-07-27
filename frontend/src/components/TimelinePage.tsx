@@ -1,10 +1,13 @@
-import { useQuery } from "@tanstack/react-query"
-import { MessageCircle, Pencil } from "lucide-react"
+import { useInfiniteQuery } from "@tanstack/react-query"
+import { Loader2, MessageCircle, Pencil } from "lucide-react"
+import { useEffect, useMemo, useRef } from "react"
 import type { User } from "../api/client"
 import { getTimeline } from "../api/client"
 import { useI18n } from "../i18n"
 import { PostCard } from "./PostCard"
 import { QueryStateView } from "./ui/QueryStateView"
+
+const TIMELINE_PAGE_SIZE = 20
 
 interface TimelinePageProps {
   user: User | null
@@ -28,27 +31,66 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
   onUserClick,
 }) => {
   const { t } = useI18n()
+  const loadMoreRef = useRef<HTMLDivElement>(null)
   const {
-    data: posts = [],
+    data,
     isLoading,
     isError,
-  } = useQuery({
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: [
       "timeline",
+      user?.id,
       similarityWeight,
       queryText,
       boostPopular,
       includeFarPosts,
     ],
-    queryFn: () =>
+    queryFn: ({ pageParam }) =>
       getTimeline(
         queryText || "General interest",
         similarityWeight,
         boostPopular,
         includeFarPosts,
+        TIMELINE_PAGE_SIZE,
+        pageParam,
       ),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, pages) =>
+      lastPage.length === TIMELINE_PAGE_SIZE
+        ? pages.length * TIMELINE_PAGE_SIZE
+        : undefined,
     staleTime: 1000 * 60 * 5,
   })
+
+  const posts = useMemo(() => {
+    const seen = new Set<string>()
+    return (data?.pages ?? []).flatMap((page) =>
+      page.filter((post) => {
+        if (seen.has(post.id)) return false
+        seen.add(post.id)
+        return true
+      }),
+    )
+  }, [data])
+
+  useEffect(() => {
+    const target = loadMoreRef.current
+    if (!target || !hasNextPage) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !isFetchingNextPage) {
+          void fetchNextPage()
+        }
+      },
+      { rootMargin: "600px 0px" },
+    )
+    observer.observe(target)
+    return () => observer.disconnect()
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage])
 
   return (
     <main className="max-w-3xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6 relative">
@@ -80,14 +122,30 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
           }
         >
           {posts.map((post) => (
-            <PostCard
-              key={post.id}
-              post={post}
-              onTagClick={onTagClick}
-              onUserClick={onUserClick}
-              currentUser={user}
-            />
+            <div key={post.id} className="feed-item-enter">
+              <PostCard
+                post={post}
+                onTagClick={onTagClick}
+                onUserClick={onUserClick}
+                currentUser={user}
+              />
+            </div>
           ))}
+          <div
+            ref={loadMoreRef}
+            className="timeline-load-more"
+            aria-live="polite"
+          >
+            {isFetchingNextPage && (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                <span>{t("timeline.loadingMore")}</span>
+              </>
+            )}
+            {!hasNextPage && posts.length > 0 && (
+              <span>{t("timeline.caughtUp")}</span>
+            )}
+          </div>
         </QueryStateView>
       </div>
     </main>
