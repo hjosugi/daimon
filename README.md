@@ -60,7 +60,7 @@ PostgreSQL        ML service (:8001)
 迷ったらこれです。
 
 ```bash
-make fresh
+task fresh
 ```
 
 これはローカルの Docker/Podman volume を消して、DB / Redis / ML / Go API を build し、seed data を入れて、frontend を起動します。
@@ -68,8 +68,8 @@ make fresh
 毎回データを消したくない場合:
 
 ```bash
-make docker
-make web
+task docker
+task web
 ```
 
 開く URL:
@@ -85,21 +85,21 @@ seed 済みユーザーは `seeduser1@example.com` / `password123` のような 
 Go API（:8000）と frontend（:5173）をホストで動かす場合（依存は compose）:
 
 ```bash
-make all      # = make dev: deps-up → Go API + frontend
+task dev      # = task dev: deps-up → Go API + frontend
 ```
 
 個別に進める場合:
 
 ```bash
-make deps-up        # db + redis + ml を compose で起動
-make seed           # Go シーダでテストデータ投入（ML 必須・実埋め込み）
-make dev            # Go API + frontend
+task deps-up        # db + redis + ml を compose で起動
+task seed           # Go シーダでテストデータ投入（ML 必須・実埋め込み）
+task dev            # Go API + frontend
 ```
 
 Go API だけをホストでデバッグしたい場合:
 
 ```bash
-make deps-up
+task deps-up
 cd api
 go run ./cmd/server
 ```
@@ -107,7 +107,7 @@ go run ./cmd/server
 別ターミナルで:
 
 ```bash
-make web
+task web
 ```
 
 ## ML と Vector の流れ
@@ -165,14 +165,14 @@ base   = alpha * near + (1 - alpha) * bridge + 0.15 * has_common_pov
 ## よく使うコマンド
 
 ```bash
-make fresh        # まっさらから Docker/Podman stack + seed + frontend
-make docker       # Docker/Podman stack 起動
-make web          # frontend のみ起動
-make docker-logs  # api / ml logs
-make seed         # realistic seed data
-make seed-large   # synthetic vectors で高負荷 seed
-make down         # compose down
-make clean        # venv / node_modules も削除
+task fresh        # まっさらから Docker/Podman stack + seed + frontend
+task docker       # Docker/Podman stack 起動
+task web          # frontend のみ起動
+task docker-logs  # api / ml logs
+task seed         # realistic seed data
+task seed-large   # synthetic vectors で高負荷 seed
+task down         # compose down
+task clean        # venv / node_modules も削除
 ```
 
 ## CI/CD

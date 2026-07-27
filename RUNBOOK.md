@@ -7,14 +7,14 @@
 完全に作り直す場合:
 
 ```bash
-make fresh
+task fresh
 ```
 
 既存データを残して container stack を起動する場合:
 
 ```bash
-make docker
-make web
+task docker
+task web
 ```
 
 Go API を host で動かす場合:
@@ -46,25 +46,25 @@ PostgreSQLへ `Ping` し、接続できなければ `503` を返します。
 Seed data を投入する場合:
 
 ```bash
-make seed
+task seed
 ```
 
 High-volume seed を synthetic vector で投入する場合:
 
 ```bash
-make seed-large ARGS="--posts 100000"
+task seed-large ARGS="--posts 100000"
 ```
 
 Logs:
 
 ```bash
-make docker-logs
+task docker-logs
 ```
 
 Stack を止める場合:
 
 ```bash
-make down
+task down
 ```
 
 Volume ごと消す場合:
