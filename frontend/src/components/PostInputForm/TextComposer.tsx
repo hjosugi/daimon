@@ -39,7 +39,7 @@ export const TextComposer: React.FC<TextComposerProps> = ({
           }}
           placeholder={t("postForm.placeholder")}
           maxLength={POST_CONSTRAINTS.MAX_TEXT_LENGTH}
-          className="w-full min-h-32 sm:min-h-48 p-3 sm:p-4 pr-12 sm:pr-14 bg-[#2a2a50] rounded-lg border border-cyan-500/15 focus:border-cyan-500/35 focus:ring-1 focus:ring-cyan-500/20 resize-y text-sm sm:text-base text-cyan-100 placeholder:text-cyan-300/70 leading-relaxed font-mono transition-all"
+          className="composer-textarea w-full min-h-32 sm:min-h-48 p-3 sm:p-4 pr-12 sm:pr-14 bg-[#2a2a50] rounded-lg border border-cyan-500/15 focus:border-cyan-500/35 focus:ring-1 focus:ring-cyan-500/20 resize-y text-sm sm:text-base leading-relaxed font-mono transition-all"
         />
         <button
           type="submit"
@@ -58,8 +58,8 @@ export const TextComposer: React.FC<TextComposerProps> = ({
       </div>
       <div className="flex justify-end -mt-2">
         <span
-          className={`text-[11px] font-mono ${
-            nearLimit ? "text-fuchsia-400/90" : "text-cyan-300/45"
+          className={`composer-counter text-[11px] font-mono ${
+            nearLimit ? "composer-counter-near-limit" : ""
           }`}
         >
           {value.length.toLocaleString()} /{" "}

@@ -23,6 +23,7 @@ func (h *Handler) HandleTimeline(w http.ResponseWriter, r *http.Request) {
 	if !httpx.Decode(w, r, &req) {
 		return
 	}
+	normalizeTimelinePage(&req)
 	ctx := r.Context()
 	uid := session.UserID(ctx)
 
@@ -31,14 +32,17 @@ func (h *Handler) HandleTimeline(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vector, err := h.embed.Embed(ctx, req.QueryText)
-	if err != nil {
-		respond.Warn(h.logger, r, "timeline embedding failed", err)
-		httpx.JSON(w, http.StatusOK, []postResp{}) // degrade gracefully
-		return
+	userTags, centroid := h.timelineSense(ctx, uid)
+	searchVector := centroid
+	if len(searchVector) == 0 || !defaultTimelineQuery(req.QueryText) {
+		vector, err := h.embed.Embed(ctx, req.QueryText)
+		if err != nil {
+			respond.Warn(h.logger, r, "timeline embedding failed", err)
+			httpx.JSON(w, http.StatusOK, []postResp{}) // degrade gracefully
+			return
+		}
+		searchVector = vector
 	}
-
-	userTags, centroid, searchVector := h.resolveTimelineVector(ctx, uid, req, vector)
 	hits, ok := h.gatherTimelineHits(ctx, r, uid, req, searchVector, userTags)
 	if !ok {
 		httpx.JSON(w, http.StatusOK, []postResp{})
@@ -57,22 +61,18 @@ func (h *Handler) cachedTimeline(ctx context.Context, uid string, req timelineRe
 	}
 	var ids []string
 	if h.cache.GetJSON(ctx, "feed:"+uid, &ids) && len(ids) > 0 {
-		if out := h.materializeIDs(ctx, ids, uid); len(out) > 0 {
+		if out := h.materializeIDs(ctx, timelinePage(ids, req), uid); len(out) > 0 {
 			return out, true
 		}
 	}
 	return nil, false
 }
 
-func (h *Handler) resolveTimelineVector(ctx context.Context, uid string, req timelineReq, queryVector []float32) (map[string]bool, []float32, []float32) {
+func (h *Handler) timelineSense(ctx context.Context, uid string) (map[string]bool, []float32) {
 	userTags, centroid := h.userSense(ctx, uid)
 	// Saves are a strong preference signal: blend the saved-post centroid in.
 	centroid = vec.BlendSaved(centroid, h.savedCentroid(ctx, uid))
-	searchVector := queryVector
-	if uid != "" && len(centroid) > 0 && defaultTimelineQuery(req.QueryText) {
-		searchVector = centroid
-	}
-	return userTags, centroid, searchVector
+	return userTags, centroid
 }
 
 func timelineSearchLimit(req timelineReq) int {
@@ -125,7 +125,8 @@ func (h *Handler) rankAndMaterializeTimeline(ctx context.Context, uid string, re
 	cands := feedcore.BuildCandidates(hits, b.rankingMeta(), b.povs, b.likeCounts, b.saveCounts, uid, time.Now().UTC())
 	ranked := ranking.RankBySenseDistance(cands, centroid, userTags,
 		req.SimilarityWeight, req.BoostPopular, req.IncludeFarPosts,
-		feedcore.DefaultTimelineBridgeWeight, feedcore.DefaultTimelineTopK)
+		feedcore.DefaultTimelineBridgeWeight, timelineRankLimit(req))
+	ranked = timelinePage(ranked, req)
 
 	out := make([]postResp, 0, len(ranked))
 	for _, c := range ranked {
@@ -142,6 +143,9 @@ func (h *Handler) HandleSearch(w http.ResponseWriter, r *http.Request) {
 	if req.Limit <= 0 {
 		req.Limit = 20
 	}
+	if req.Limit > 100 {
+		req.Limit = 100
+	}
 	ctx := r.Context()
 	uid := session.UserID(ctx)
 	userTags, _ := h.userSense(ctx, uid)
@@ -150,21 +154,45 @@ func (h *Handler) HandleSearch(w http.ResponseWriter, r *http.Request) {
 	scores := map[string]float32{}
 
 	if req.Query != "" {
+		textIDs, err := dbq.QueryStrings(
+			ctx,
+			h.pool,
+			dbq.SQL("feed.search_text_ids"),
+			req.Query,
+			req.Povs,
+			req.Limit,
+		)
+		if err == nil {
+			for _, id := range textIDs {
+				ids = append(ids, id)
+				scores[id] = 1
+			}
+		} else {
+			respond.Warn(h.logger, r, "text search failed", err)
+		}
+
 		vector, err := h.embed.Embed(ctx, req.Query)
 		if err != nil {
 			respond.Warn(h.logger, r, "search embedding failed", err)
-			httpx.JSON(w, http.StatusOK, []postResp{})
-			return
-		}
-		hits, err := h.qdrant.Search(ctx, vector, min(req.Limit*3, 200), req.Povs, false)
-		if err != nil {
-			respond.Warn(h.logger, r, "semantic vector search failed", err)
-			httpx.JSON(w, http.StatusOK, []postResp{})
-			return
-		}
-		for _, h := range hits {
-			ids = append(ids, h.ID)
-			scores[h.ID] = h.Score
+		} else {
+			hits, err := h.qdrant.Search(ctx, vector, min(req.Limit*3, 200), req.Povs, false)
+			if err != nil {
+				respond.Warn(h.logger, r, "semantic vector search failed", err)
+			} else {
+				seen := map[string]bool{}
+				for _, id := range ids {
+					seen[id] = true
+				}
+				for _, hit := range hits {
+					if !seen[hit.ID] {
+						ids = append(ids, hit.ID)
+						seen[hit.ID] = true
+					}
+					if hit.Score > scores[hit.ID] {
+						scores[hit.ID] = hit.Score
+					}
+				}
+			}
 		}
 		if len(req.Povs) == 0 {
 			povIDs, err := dbq.QueryStrings(ctx, h.pool, dbq.SQL("feed.search_query_pov_ids"), req.Query, req.Limit)
@@ -178,6 +206,7 @@ func (h *Handler) HandleSearch(w http.ResponseWriter, r *http.Request) {
 					if !seen[pid] {
 						seen[pid] = true
 						filteredPOVIDs = append(filteredPOVIDs, pid)
+						scores[pid] = 1
 					}
 				}
 				ids = append(filteredPOVIDs, ids...)
@@ -245,7 +274,9 @@ func (h *Handler) HandleSearch(w http.ResponseWriter, r *http.Request) {
 			CreatedAt:    pm.createdAt.Format(time.RFC3339),
 		})
 	}
-	if req.Query != "" {
+	if req.Sort == "newest" {
+		sort.SliceStable(out, func(a, b int) bool { return out[a].CreatedAt > out[b].CreatedAt })
+	} else if req.Query != "" {
 		// Text search: rank by semantic relevance (highest cosine first).
 		// Sorting by date here would throw away the vector ranking entirely.
 		sort.SliceStable(out, func(a, b int) bool {
@@ -254,6 +285,9 @@ func (h *Handler) HandleSearch(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// POV-only search has no relevance score: newest first.
 		sort.SliceStable(out, func(a, b int) bool { return out[a].CreatedAt > out[b].CreatedAt })
+	}
+	if len(out) > req.Limit {
+		out = out[:req.Limit]
 	}
 	httpx.JSON(w, http.StatusOK, out)
 }

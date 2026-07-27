@@ -109,6 +109,8 @@ describe("useSearchController", () => {
       expect(mockedSearchPosts).toHaveBeenCalledWith({
         query: "exact pov",
         tags: undefined,
+        limit: 30,
+        sort: "relevance",
       })
       expect(result.current.posts).toEqual([searchPost])
     })

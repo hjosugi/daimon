@@ -23,6 +23,7 @@ export function useSearchController({
   const [searchTags, setSearchTags] = useState<string[]>(initialTags)
   const [searchTagInput, setSearchTagInput] = useState("")
   const [showPOVSearch, setShowPOVSearch] = useState(false)
+  const [sort, setSort] = useState<"relevance" | "newest">("relevance")
 
   const normalizedQuery = searchQuery.trim()
   const debouncedQuery = useDebouncedValue(
@@ -53,11 +54,13 @@ export function useSearchController({
     isLoading,
     isError,
   } = useQuery({
-    queryKey: ["search", debouncedQuery, searchTags],
+    queryKey: ["search", debouncedQuery, searchTags, sort],
     queryFn: () =>
       searchPosts({
         query: debouncedQuery || undefined,
         tags: searchTags.length > 0 ? searchTags : undefined,
+        limit: 30,
+        sort,
       }),
     enabled: debouncedQuery.length > 0 || searchTags.length > 0,
     staleTime: 1000 * 60,
@@ -135,6 +138,8 @@ export function useSearchController({
     setSearchTagInputValue,
     showPOVSearch,
     setShowPOVSearch,
+    sort,
+    setSort,
     queryPOVSuggestions,
     inputPOVSuggestions,
     posts,

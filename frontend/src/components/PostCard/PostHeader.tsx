@@ -88,17 +88,8 @@ const PostHeaderComponent: React.FC<PostHeaderProps> = ({
                 <button
                   type="button"
                   onClick={onMatchDetailsClick}
-                  disabled={post.match_reason.pov_match_rate === 0}
-                  className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded text-xs font-semibold whitespace-nowrap transition-all font-mono border ${
-                    post.match_reason.pov_match_rate === 0
-                      ? "bg-[#1f1f35] text-cyan-400/40 border-cyan-500/15 cursor-not-allowed"
-                      : "bg-fuchsia-900/25 text-fuchsia-300 border-fuchsia-500/18 hover:border-fuchsia-500/45 hover:bg-fuchsia-900/35 cursor-pointer active:scale-95"
-                  }`}
-                  title={
-                    post.match_reason.pov_match_rate === 0
-                      ? t("post.noMatch")
-                      : t("post.matchTitle")
-                  }
+                  className="px-2 sm:px-3 py-1 sm:py-1.5 rounded text-xs font-semibold whitespace-nowrap transition-all font-mono border bg-fuchsia-900/25 text-fuchsia-300 border-fuchsia-500/18 hover:border-fuchsia-500/45 hover:bg-fuchsia-900/35 cursor-pointer active:scale-95"
+                  title={t("post.matchTitle")}
                 >
                   {t("post.matchPercent", {
                     percent: Math.round(post.match_reason.pov_match_rate * 100),

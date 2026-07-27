@@ -30,7 +30,7 @@ export const ManualPOVInput: React.FC<ManualPOVInputProps> = ({
   return (
     <div className="pt-2 border-t border-cyan-500/12 relative">
       <div className="flex gap-2 items-center">
-        <Hash size={14} className="text-cyan-300/80" />
+        <Hash size={14} className="composer-hash" />
         <div className="flex-1 relative">
           <input
             ref={inputRef}
@@ -68,7 +68,7 @@ export const ManualPOVInput: React.FC<ManualPOVInputProps> = ({
               setTimeout(() => onShowSuggestionsChange(false), 200)
             }}
             placeholder={t("postForm.addPovPlaceholder")}
-            className="w-full px-2 py-1.5 bg-[#1f1f3a] rounded border border-cyan-500/12 focus:ring-1 focus:ring-cyan-500/20 focus:border-cyan-500/18 text-cyan-200/95 placeholder:text-cyan-300/50 text-sm font-mono transition-all"
+            className="composer-pov-input w-full px-2 py-1.5 bg-[#1f1f3a] rounded border border-cyan-500/12 focus:ring-1 focus:ring-cyan-500/20 focus:border-cyan-500/18 text-sm font-mono transition-all"
           />
           {nearLimit && (
             <div className="absolute top-full left-0 right-0 mt-1 text-xs text-cyan-300/70 px-2 font-mono">
