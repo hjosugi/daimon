@@ -30,13 +30,13 @@ const getPreferredLocale = () => {
 }
 
 export const api = ky.create({
-  prefixUrl: API_BASE_URL,
+  prefix: API_BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },
   hooks: {
     beforeRequest: [
-      (request) => {
+      ({ request }) => {
         const token = getAuthToken()
         if (token) {
           request.headers.set("Authorization", `Bearer ${token}`)
