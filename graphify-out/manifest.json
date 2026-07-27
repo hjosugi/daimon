@@ -60,8 +60,8 @@
     "semantic_hash": ""
   },
   "api/internal/db/db.go": {
-    "mtime": 1785153202.534842,
-    "ast_hash": "21354026e7cebb100510970f92fe24ae",
+    "mtime": 1785159967.539373,
+    "ast_hash": "c5f957bcaa35cc368cc35517b55e7fd9",
     "semantic_hash": ""
   },
   "api/internal/db/queries.go": {
@@ -1002,6 +1002,11 @@
   "frontend/public/favicon.svg": {
     "mtime": 1785153202.538637,
     "ast_hash": "6b9bd0cc5d2b49ae59eef635ea657c78",
+    "semantic_hash": ""
+  },
+  "api/internal/db/db_integration_test.go": {
+    "mtime": 1785159967.539373,
+    "ast_hash": "5f08d03d1679d2df1299438eaab03fbc",
     "semantic_hash": ""
   }
 }

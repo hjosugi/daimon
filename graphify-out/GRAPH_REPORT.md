@@ -1,16 +1,16 @@
 # Graph Report - daimon  (2026-07-27)
 
 ## Corpus Check
-- 189 files · ~77,919 words
+- 190 files · ~78,130 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1590 nodes · 2741 edges · 137 communities (120 shown, 17 thin omitted)
-- Extraction: 91% EXTRACTED · 9% INFERRED · 0% AMBIGUOUS · INFERRED: 253 edges (avg confidence: 0.79)
+- 1593 nodes · 2744 edges · 131 communities (115 shown, 16 thin omitted)
+- Extraction: 91% EXTRACTED · 9% INFERRED · 0% AMBIGUOUS · INFERRED: 254 edges (avg confidence: 0.79)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `53241e4a`
+- Built from commit: `4dd2dd54`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -29,9 +29,9 @@
 - Product And UX
 - useI18n
 - Product And UX
-- UserProfilePage.tsx
+- PostCard.tsx
 - useSearchController.ts
-- client.ts
+- User
 - What You Must Do When Invoked
 - AuthModal.tsx
 - Client
@@ -40,15 +40,15 @@
 - usePostCardActions.ts
 - compilerOptions
 - i18n/index.ts
-- UserID
-- Post
+- .HandleAddPOVComment
+- .HandleAddComment
 - Content Moderation
 - DAIMON — 研究・理論ドシエ（武器庫 / 完全版）
 - DAIMON — Research & Theoretical Dossier (Armory / Complete Edition)
 - devDependencies
 - Content Moderation
 - scripts
-- SQL
+- UserID
 - test_app.py
 - seed/main.go
 - Roadmap
@@ -56,12 +56,10 @@
 - Internal
 - Roadmap
 - dependencies
-- posts.ts
-- usePOVDiscussion.ts
+- @biomejs/biome
 - Codex Context: Daimon API Workspace
 - API Feed Load Latency Memo
 - Codex Context: Daimon Frontend Workspace
-- auth.ts
 - Codex Context: Daimon ML Service Workspace
 - Daimon
 - Daimon
@@ -76,7 +74,6 @@
 - Daimon Runbook
 - vercel.json
 - .HandleFollowingFeed
-- User
 - Handler
 - Handler
 - .requirePost
@@ -109,7 +106,7 @@
 - scripts
 - PULL_REQUEST_TEMPLATE.md
 - auth.go
-- PostContent.tsx
+- Post
 - .HandleGeneratePOVs
 - Handler
 - Daimon Docs
@@ -117,7 +114,6 @@
 - graphify reference: commit hook and native CLAUDE.md integration
 - graphify reference: incremental update and cluster-only
 - From Theory to Features
-- queries.go
 - follows.go
 - graphify reference: GitHub clone and cross-repo merge
 - graphify reference: transcribe video and audio
@@ -131,13 +127,11 @@
 - @tailwindcss/postcss
 - @testing-library/react
 - @types/react-dom
-- typescript
 - vitest
 - daimon/api
 - daimon-ml-service
 - schema.sql
-- useMutationErrorToast
-- .HandleSavePost
+- SQL
 
 ## God Nodes (most connected - your core abstractions)
 1. `useI18n()` - 71 edges
@@ -166,7 +160,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (137 total, 17 thin omitted)
+## Communities (131 total, 16 thin omitted)
 
 ### Community 0 - "timelineJob"
 Cohesion: 0.07
@@ -177,8 +171,8 @@ Cohesion: 0.08
 Nodes (41): clamp01(), Cosine(), dot(), explainReason(), normalize(), RankBySenseDistance(), T, tags() (+33 more)
 
 ### Community 2 - "SearchPostCard.tsx"
-Cohesion: 0.18
-Nodes (14): PostHeader, PostHeaderComponent(), PostHeaderProps, viewer, SearchPostCardComponent(), SearchPostCardProps, absoluteFormatters, formatRelativeDate() (+6 more)
+Cohesion: 0.19
+Nodes (13): PostHeader, PostHeaderComponent(), viewer, POVCommentList(), SearchPostCardComponent(), absoluteFormatters, formatRelativeDate(), relativeFormatters (+5 more)
 
 ### Community 3 - "Server"
 Cohesion: 0.07
@@ -217,32 +211,32 @@ Cohesion: 0.06
 Nodes (31): 1. Exploration Rewards, 2. Self-Disclosure Rewards, 3. Discovery Rewards, 4. Collection Rewards, 5. Belonging Rewards, 6. Growth Rewards, 7. Closure Rewards, Closure Beat (+23 more)
 
 ### Community 12 - "useI18n"
-Cohesion: 0.17
-Nodes (16): createPost(), AutoPOVSuggestions(), AutoPOVSuggestionsProps, PostInputForm(), PostInputFormProps, SelectedPOVChips(), SelectedPOVChipsProps, TextComposer() (+8 more)
+Cohesion: 0.15
+Nodes (18): createPost(), CommentsPanel(), PostActions(), PostActionsProps, PostCardActions, AutoPOVSuggestions(), AutoPOVSuggestionsProps, ManualPOVInput() (+10 more)
 
 ### Community 13 - "Product And UX"
 Cohesion: 0.06
 Nodes (31): 1. 探索の報酬, 2. 自己開示の報酬, 2種類の報酬, 3. 発見の報酬, 4. 収集の報酬, 5. 所属の報酬, 6. 成長の報酬, 7. Closureの報酬 (+23 more)
 
-### Community 14 - "UserProfilePage.tsx"
-Cohesion: 0.15
-Nodes (20): getTimeline(), getUserPosts(), getSavedPosts(), FollowUser, UserProfile, followUser(), getFollowers(), getUserProfile() (+12 more)
+### Community 14 - "PostCard.tsx"
+Cohesion: 0.14
+Nodes (15): getTimeline(), getSavedPosts(), MyPostsPage(), MyPostsPageProps, DeletePostDialog(), DeletePostDialogProps, PostCard, PostCardProps (+7 more)
 
 ### Community 15 - "useSearchController.ts"
 Cohesion: 0.13
-Nodes (19): generatePOVs(), searchPosts(), suggestPOVs(), ManualPOVInput(), ManualPOVInputProps, usePostComposer(), UsePostComposerOptions, sameTags() (+11 more)
+Nodes (22): searchPosts(), suggestPOVs(), UsePostComposerOptions, emptyInitialTags, SearchControls(), SearchControlsProps, SearchPage(), SearchPageProps (+14 more)
 
-### Community 16 - "client.ts"
-Cohesion: 0.37
-Nodes (8): POVCommentStance, POVCommentComposerProps, POVCommentListProps, POVHeroProps, stanceBarColors, stanceClasses, stanceOrder, stanceSymbols
+### Community 16 - "User"
+Cohesion: 0.22
+Nodes (15): POVCommentStance, User, POVCommentComposer(), POVCommentComposerProps, POVCommentListProps, POVDiscussionPage(), POVDiscussionPageProps, POVHero() (+7 more)
 
 ### Community 17 - "What You Must Do When Invoked"
 Cohesion: 0.08
 Nodes (24): For /graphify add and --watch, For /graphify query, For the commit hook and native CLAUDE.md integration, For --update and --cluster-only, /graphify, Honesty Rules, Interpreter guard for subcommands, Part A - Structural extraction for code files (+16 more)
 
 ### Community 18 - "AuthModal.tsx"
-Cohesion: 0.16
-Nodes (15): updateProfile(), AuthModalProps, emptyAuthForm, DeleteAccountDialog(), DeleteAccountDialogProps, ProfileModal(), ProfileModalProps, AvatarPicker() (+7 more)
+Cohesion: 0.12
+Nodes (26): deleteAccount(), login(), register(), updateProfile(), apiErrorMessage(), errorMessage(), hasJsonResponse(), localizedErrorMessage() (+18 more)
 
 ### Community 19 - "Client"
 Cohesion: 0.18
@@ -254,27 +248,27 @@ Nodes (14): Handler, Context, Request, ResponseWriter, Time, HashToken(), T, Tes
 
 ### Community 21 - "App.tsx"
 Cohesion: 0.07
-Nodes (32): getCurrentUser(), getAuthToken(), App(), AuthModal, MyPostsPage, pageFromPath(), pagePaths, POVDiscussionPage (+24 more)
+Nodes (33): getCurrentUser(), logout(), clearAuthSession(), App(), AuthModal, MyPostsPage, pageFromPath(), pagePaths (+25 more)
 
 ### Community 22 - "usePostCardActions.ts"
-Cohesion: 0.18
-Nodes (15): addComment(), getComments(), likePost(), unlikePost(), savePost(), unsavePost(), PostCardComponent(), postFeedKeys (+7 more)
+Cohesion: 0.05
+Nodes (58): resolveAPIBaseURL(), api, API_BASE_URL, getAuthToken(), addComment(), deletePost(), generateMockPOVs(), generatePOVs() (+50 more)
 
 ### Community 23 - "compilerOptions"
 Cohesion: 0.09
 Nodes (22): compilerOptions, allowImportingTsExtensions, isolatedModules, jsx, lib, module, moduleResolution, noEmit (+14 more)
 
 ### Community 24 - "i18n/index.ts"
-Cohesion: 0.18
-Nodes (18): SettingsModal(), SettingsModalProps, detectLocale(), getStorage(), I18nContext, I18nContextValue, I18nProvider(), interpolate() (+10 more)
+Cohesion: 0.13
+Nodes (22): MatchReasonDetailsModal(), MatchReasonDetailsModalProps, SettingsModal(), SettingsModalProps, ModalFrame(), ModalFrameProps, detectLocale(), getStorage() (+14 more)
 
-### Community 25 - "UserID"
-Cohesion: 0.24
-Nodes (9): cleanStance(), Handler, Request, ResponseWriter, povFromRoute(), UserID(), povCommentReq, povCommentResp (+1 more)
+### Community 25 - ".HandleAddPOVComment"
+Cohesion: 0.31
+Nodes (7): cleanStance(), Handler, Request, ResponseWriter, povFromRoute(), povCommentReq, povCommentResp
 
-### Community 26 - "Post"
-Cohesion: 0.15
-Nodes (15): Comment, Post, CommentsPanel(), CommentsPanelProps, DeletePostDialog(), DeletePostDialogProps, MatchDetailsModal(), MatchDetailsModalProps (+7 more)
+### Community 26 - ".HandleAddComment"
+Cohesion: 0.60
+Nodes (3): Handler, Request, ResponseWriter
 
 ### Community 27 - "Content Moderation"
 Cohesion: 0.11
@@ -290,7 +284,7 @@ Nodes (18): 0. In a sentence, 10. One-paragraph summary (like in an interview), 
 
 ### Community 30 - "devDependencies"
 Cohesion: 0.12
-Nodes (17): autoprefixer, @biomejs/biome, devDependencies, autoprefixer, @biomejs/biome, jsdom, @testing-library/jest-dom, @types/node (+9 more)
+Nodes (17): autoprefixer, devDependencies, autoprefixer, jsdom, @testing-library/jest-dom, @types/node, @types/react, typescript (+9 more)
 
 ### Community 31 - "Content Moderation"
 Cohesion: 0.12
@@ -300,25 +294,25 @@ Nodes (17): 1. 衝突ではなく理由を出す, 2. 数字で煽らない, 3. �
 Cohesion: 0.12
 Nodes (15): license, name, packageManager, private, scripts, all, build, clean (+7 more)
 
-### Community 33 - "SQL"
-Cohesion: 0.33
-Nodes (8): SQL(), T, TestLoginUserQueryIsCaseInsensitiveForUsername(), TestSQLLoadsNamedQuery(), TestSQLPanicsForUnknownQuery(), Request, ResponseWriter, Handler
+### Community 33 - "UserID"
+Cohesion: 0.39
+Nodes (5): UserID(), Request, ResponseWriter, Handler, ctxKey
 
 ### Community 34 - "test_app.py"
 Cohesion: 0.15
 Nodes (5): fixture, reset_model_state(), test_embed_batch_rejects_count_mismatch(), test_embed_endpoint_contract(), vector()
 
 ### Community 35 - "seed/main.go"
-Cohesion: 0.13
-Nodes (22): copyInto(), countUsers(), embedAll(), Context, Pool, main(), makePost(), normalize() (+14 more)
+Cohesion: 0.11
+Nodes (24): copyInto(), countUsers(), embedAll(), Context, Pool, main(), makePost(), normalize() (+16 more)
 
 ### Community 36 - "Roadmap"
 Cohesion: 0.14
 Nodes (13): Current Status, MVP Ideal State, Phase 1: Make POV pages the core of Daimon, Phase 2: post_pov_assertions, Phase 3: Coaxial disagreement cards, Phase 4: POV definitions, Phase 5: Exploration view, Phase 6: Closure interaction (+5 more)
 
 ### Community 37 - "Decode"
-Cohesion: 0.18
-Nodes (14): Decode(), Error(), Request, ResponseWriter, JSON(), T, TestDecodeRejectsOversizedBody(), TestDecodeRejectsTrailingJSON() (+6 more)
+Cohesion: 0.26
+Nodes (11): Decode(), Error(), Request, ResponseWriter, JSON(), T, TestDecodeRejectsOversizedBody(), TestDecodeRejectsTrailingJSON() (+3 more)
 
 ### Community 38 - "Internal"
 Cohesion: 0.29
@@ -332,14 +326,6 @@ Nodes (13): MVP完成形, Phase 1: POVページをDaimonの中心にする, Phas
 Cohesion: 0.15
 Nodes (13): dependencies, ky, lucide-react, react, react-dom, react-router-dom, @tanstack/react-query, ky (+5 more)
 
-### Community 41 - "posts.ts"
-Cohesion: 0.14
-Nodes (11): resolveAPIBaseURL(), api, API_BASE_URL, deletePost(), generateMockPOVs(), LoginData, MatchReason, POVSuggestion (+3 more)
-
-### Community 42 - "usePOVDiscussion.ts"
-Cohesion: 0.38
-Nodes (11): addPOVComment(), deletePOVComment(), getPOVComments(), getPOVLikeStatus(), likePOV(), povPath(), unlikePOV(), POVComment (+3 more)
-
 ### Community 43 - "Codex Context: Daimon API Workspace"
 Cohesion: 0.17
 Nodes (11): API Surface, Architecture Rules, Codex Context: Daimon API Workspace, Common Pitfalls, Important Data Model, Product Direction To Preserve, Project Overview, Ranking (+3 more)
@@ -351,10 +337,6 @@ Nodes (10): After, API Feed Load Latency Memo, Before, APIフィード読み込�
 ### Community 46 - "Codex Context: Daimon Frontend Workspace"
 Cohesion: 0.18
 Nodes (10): API Contract, Codex Context: Daimon Frontend Workspace, Common Pitfalls, Frontend Stack, Performance Rules, Product Concepts, Project Overview, Runtime (+2 more)
-
-### Community 47 - "auth.ts"
-Cohesion: 0.25
-Nodes (13): deleteAccount(), login(), logout(), register(), apiErrorMessage(), errorMessage(), hasJsonResponse(), localizedErrorMessage() (+5 more)
 
 ### Community 48 - "Codex Context: Daimon ML Service Workspace"
 Cohesion: 0.18
@@ -411,10 +393,6 @@ Nodes (7): buildCommand, framework, ignoreCommand, installCommand, outputDirecto
 ### Community 61 - ".HandleFollowingFeed"
 Cohesion: 0.62
 Nodes (4): Context, Handler, Request, ResponseWriter
-
-### Community 62 - "User"
-Cohesion: 0.21
-Nodes (12): User, POVDiscussionPageProps, emptyInitialTags, SearchControls(), SearchControlsProps, SearchPage(), SearchPageProps, SearchResults() (+4 more)
 
 ### Community 63 - "Handler"
 Cohesion: 0.60
@@ -544,9 +522,9 @@ Nodes (5): Checklist, Description, Related Issues, Testing, Type of Change
 Cohesion: 0.40
 Nodes (4): loginReq, profileUpdateReq, registerReq, userResp
 
-### Community 95 - "PostContent.tsx"
-Cohesion: 0.23
-Nodes (9): PostContent, PostContentComponent(), PostContentProps, renderTextWithHashtags(), POVList, POVListComponent(), POVListProps, removeControlCharacters() (+1 more)
+### Community 95 - "Post"
+Cohesion: 0.16
+Nodes (14): Post, MatchDetailsModal(), MatchDetailsModalProps, PostContent, PostContentComponent(), PostContentProps, renderTextWithHashtags(), PostHeaderProps (+6 more)
 
 ### Community 96 - ".HandleGeneratePOVs"
 Cohesion: 0.60
@@ -584,24 +562,20 @@ Nodes (3): References, Theory To Features, まとめ
 Cohesion: 0.36
 Nodes (11): bookmarks, comments, follows, likes, post_vectors, posts, pov_comments, pov_likes (+3 more)
 
-### Community 134 - "useMutationErrorToast"
-Cohesion: 0.27
-Nodes (8): createToastId(), Toast, ToastContext, ToastContextValue, ToastProvider(), ToastVariant, useToast(), useMutationErrorToast()
-
-### Community 135 - ".HandleSavePost"
-Cohesion: 0.60
-Nodes (3): Handler, Request, ResponseWriter
+### Community 135 - "SQL"
+Cohesion: 0.24
+Nodes (10): mustLoadQueries(), parseNamedQueries(), SQL(), T, TestLoginUserQueryIsCaseInsensitiveForUsername(), TestSQLLoadsNamedQuery(), TestSQLPanicsForUnknownQuery(), Handler (+2 more)
 
 ## Knowledge Gaps
 - **639 isolated node(s):** `cluster`, `daimon/api`, `decodeReq`, `registerReq`, `loginReq` (+634 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **17 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **16 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `SQL()` connect `SQL` to `timelineJob`, `.HandleTimeline`, `.requirePost`, `.HandleGeneratePOVs`, `Server`, `Decode`, `Internal`, `queries.go`, `.HandleSavePost`, `.HandleLikePOV`, `.HandleRegister`, `.HandleLike`, `UserID`, `.HandleFollowingFeed`?**
-  _High betweenness centrality (0.047) - this node is a cross-community bridge._
+- **Why does `SQL()` connect `SQL` to `timelineJob`, `.HandleTimeline`, `.requirePost`, `.HandleGeneratePOVs`, `Server`, `UserID`, `Internal`, `.HandleLikePOV`, `.HandleRegister`, `.HandleLike`, `.HandleAddPOVComment`, `.HandleAddComment`, `.HandleFollowingFeed`?**
+  _High betweenness centrality (0.045) - this node is a cross-community bridge._
 - **Why does `Theory To Features` connect `Theory To Features` to `10. Folksonomy / Open Vocabulary`, `11. Aspect-Based Sentiment`, `12. Explainable Recommendation`, `1. Tesler's Law`, `2. Perspective-getting`, `3. Opinion Space`, `4. Bridging-Based Ranking`, `5. Habermas Machine / Common Ground`, `6. Information Foraging`, `docs/README.md`, `7. Information As Reward`, `8. Self-Disclosure Reward`, `9. Optimal Distinctiveness`, `機能優先順位`?**
   _High betweenness centrality (0.033) - this node is a cross-community bridge._
 - **Why does `From Theory to Features` connect `From Theory to Features` to `10. Folksonomy / Open Vocabulary`, `11. Aspect-Based Sentiment`, `12. Explainable Recommendation`, `1. Tesler's Law`, `2. Perspective-getting`, `3. Opinion Space`, `4. Bridging-Based Ranking`, `5. Habermas Machine / Common Ground`, `6. Information Foraging`, `7. Information As Reward`, `8. Self-Disclosure Reward`, `9. Optimal Distinctiveness`, `Prioritization of Features`?**
