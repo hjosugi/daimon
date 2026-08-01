@@ -9,7 +9,7 @@ dependencies = [
     # Heavy ML/runtime packages use bounded ranges where ABI compatibility matters.
     # When updating uv.lock, run `uv sync --locked --no-install-project`,
     # `uv run pytest`, and the import smoke test mirrored in CI.
-    "fastapi==0.140.0",
+    "fastapi==0.140.13",
     "uvicorn[standard]==0.51.0",
     # sentence-transformers stays pinned because the 384-d embedding contract,
     # chunk pooling behavior, and Qdrant index compatibility depend on this stack.
