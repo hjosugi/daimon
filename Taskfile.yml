@@ -40,6 +40,16 @@ vars:
     sh: command -v uv >/dev/null 2>&1 && echo uv || echo "mise exec -- uv"
 
 tasks:
+  graphify-setup:
+    desc: "Install graphify and register its skill with Claude, Copilot and Codex"
+    cmds:
+      - "sh scripts/graphify.sh setup"
+
+  graphify-update:
+    desc: "Upgrade graphify, refresh the skill, and update the knowledge graph"
+    cmds:
+      - "sh scripts/graphify.sh update"
+
   default:
     desc: Run the default development stack
     cmds:
