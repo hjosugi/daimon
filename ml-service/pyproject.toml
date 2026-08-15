@@ -19,7 +19,7 @@ dependencies = [
     "transformers>=5.5,<6",
     "setuptools>=83",
     "torch>=2.3,<3",
-    "spacy>=3.8.0,<3.9.0",
+    "spacy>=3.8.15,<3.9.0",
     "typer>=0.27.0",
     "numpy<3",
     "ja-core-news-sm @ https://github.com/explosion/spacy-models/releases/download/ja_core_news_sm-3.8.0/ja_core_news_sm-3.8.0-py3-none-any.whl",
