@@ -1,7 +1,7 @@
 [project]
 license = "0BSD"
 name = "daimon-ml-service"
-version = "0.1.1"
+version = "0.1.2"
 description = "Daimon text embedding and POV extraction microservice"
 requires-python = ">=3.12,<3.13"
 dependencies = [
@@ -10,7 +10,7 @@ dependencies = [
     # When updating uv.lock, run `uv sync --locked --no-install-project`,
     # `uv run pytest`, and the import smoke test mirrored in CI.
     "fastapi==0.141.1",
-    "uvicorn[standard]==0.51.0",
+    "uvicorn[standard]==0.52.1",
     # sentence-transformers stays pinned because the 384-d embedding contract,
     # chunk pooling behavior, and Qdrant index compatibility depend on this stack.
     "sentence-transformers==5.6.1",
@@ -19,7 +19,7 @@ dependencies = [
     "transformers>=5.5,<6",
     "setuptools>=83",
     "torch>=2.3,<3",
-    "spacy>=3.8.0,<3.9.0",
+    "spacy>=3.8.15,<3.9.0",
     "typer>=0.27.1",
     "numpy<3",
     "ja-core-news-sm @ https://github.com/explosion/spacy-models/releases/download/ja_core_news_sm-3.8.0/ja_core_news_sm-3.8.0-py3-none-any.whl",

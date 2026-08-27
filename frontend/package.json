@@ -1,7 +1,7 @@
 {
   "name": "daimon-frontend",
   "private": true,
-  "version": "0.1.1",
+  "version": "0.1.2",
   "type": "module",
   "packageManager": "pnpm@9.15.0",
   "engines": {
@@ -20,7 +20,7 @@
     "ky": "^2.0.2",
     "lucide-react": "^1.24.0",
     "react": "^19.2.8",
-    "react-dom": "^19.2.7",
+    "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.1"
   },
   "devDependencies": {
@@ -32,7 +32,7 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^6.0.4",
-    "autoprefixer": "^10.5.0",
+    "autoprefixer": "^10.5.4",
     "jsdom": "^29.1.1",
     "postcss": "^8.5.24",
     "tailwindcss": "^4.3.2",

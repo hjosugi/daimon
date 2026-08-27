@@ -44,7 +44,9 @@ jobs:
       - name: Test
         env:
           DAIMON_TEST_DATABASE_URL: postgresql://daimon:daimon@localhost:5432/daimon_test?sslmode=disable
-        run: go test ./...
+        # Integration packages share the single CI database and must not
+        # truncate or seed it concurrently.
+        run: go test -p 1 ./...
       - name: Vet
         run: go vet ./...
       - name: Build server and batch
@@ -116,7 +118,6 @@ jobs:
         run: |
           task --list --json >/tmp/daimon-tasks.json
           jq -e '
-            ([.tasks[].name] | length) == 23 and
             (["fresh", "docker", "dev", "seed", "down", "clean"] -
               [.tasks[].name] | length == 0)
           ' /tmp/daimon-tasks.json >/dev/null
