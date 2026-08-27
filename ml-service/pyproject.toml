@@ -47,5 +47,5 @@ dev = [
     # Keep TestClient on the httpx line validated with the pinned FastAPI stack.
     "httpx<0.29",
     "pytest>=9.1.1",
-    "ruff>=0.16.0",
+    "ruff>=0.16.2",
 ]
