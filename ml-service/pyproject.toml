@@ -10,7 +10,7 @@ dependencies = [
     # When updating uv.lock, run `uv sync --locked --no-install-project`,
     # `uv run pytest`, and the import smoke test mirrored in CI.
     "fastapi==0.141.1",
-    "uvicorn[standard]==0.52.1",
+    "uvicorn[standard]==0.52.4",
     # sentence-transformers stays pinned because the 384-d embedding contract,
     # chunk pooling behavior, and Qdrant index compatibility depend on this stack.
     "sentence-transformers==5.6.1",
