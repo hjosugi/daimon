@@ -13,7 +13,7 @@ dependencies = [
     "uvicorn[standard]==0.52.1",
     # sentence-transformers stays pinned because the 384-d embedding contract,
     # chunk pooling behavior, and Qdrant index compatibility depend on this stack.
-    "sentence-transformers==5.6.1",
+    "sentence-transformers==6.0.0",
     # Security floors for transitive ML/build dependencies. Transformers 5.5+
     # closes unsafe model-loading paths; setuptools 83 normalizes manifest paths.
     "transformers>=5.5,<6",
