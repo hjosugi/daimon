@@ -1,5 +1,5 @@
 # Multi-stage build: tiny static Go binary on a distroless runtime.
-FROM golang:1.26.6-bookworm AS build
+FROM golang:1.27.1-bookworm AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
