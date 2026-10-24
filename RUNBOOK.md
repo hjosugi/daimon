@@ -142,6 +142,26 @@ gcloud builds submit \
 
 Cloud Build は `daimon-api` / `daimon-ml` を `$SHORT_SHA` と `latest` の両方で push します。次回 build は `latest` を pull し、`--cache-from` で Docker layer cache を再利用します。
 
+### Cost Guardrails
+
+2026-10 時点で、費用の 95% は Artifact Registry に溜まった古い image（約 247 GB）でした。
+同じ状態に戻さないため、以下を GCP 側に設定しています。
+
+- Artifact Registry `cloud-run-source-deploy` の cleanup policy: `latest` tag と各 package の
+  直近 6 version を保持し、それ以外で 3 日より古い version を自動削除します。
+  これより古い revision への rollback は image がないため使えません。
+- Cloud Build trigger `build-daimon` は `api/**`, `ml-service/**`, `cloudbuild.yaml`
+  の変更時だけ動きます。frontend だけの変更は Vercel が deploy します。
+- Cloud Build はデフォルトの e2-standard-2 worker を使います。月 2,500 build-minutes の
+  無料枠はこの machine type だけが対象です。
+
+確認コマンド:
+
+```bash
+gcloud artifacts repositories describe cloud-run-source-deploy --location=asia-northeast1 --format='yaml(cleanupPolicies)'
+gcloud builds triggers describe build-daimon --format='value(includedFiles)'
+```
+
 2026-07-05 の local Podman/Docker 互換 build では、`daimon-ml` の model-bake layer は warm build で cache hit し、`docker build --cache-from daimon-ml-ci -t daimon-ml-ci-warm ./ml-service` は 27.35 秒で完了しました。同じ context での image size は、旧 single-stage baseline が 4.35 GB、新 multi-stage runtime image が 2.42 GB でした。
 
 Deploy 後の確認:

@@ -8,10 +8,11 @@
 #
 # Expected Artifact Registry repo:
 #   ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}
+#   It has a cleanup policy that keeps `latest` and the 6 newest versions.
 
 substitutions:
   _REGION: asia-northeast1
-  _AR_REPO: daimon
+  _AR_REPO: cloud-run-source-deploy
   _API_SERVICE: daimon-api
   _ML_SERVICE: daimon-ml
   _CORS_ORIGINS: https://daimon-sandy.vercel.app
@@ -25,9 +26,10 @@ substitutions:
   _ML_MAX_INSTANCES: "1"
   _ML_INGRESS: all
 
+# Keep the default e2-standard-2 worker: only it is covered by the
+# 2,500 free build-minutes per month. E2_MEDIUM is billed from the first minute.
 options:
   logging: CLOUD_LOGGING_ONLY
-  machineType: E2_MEDIUM
 
 steps:
   - id: validate-config
