@@ -48,6 +48,15 @@ updates:
     commit-message:
       prefix: "chore(ml)"
       include: "scope"
+    # The two spaCy models are pinned by URL to their GitHub release assets and
+    # are not published on PyPI. Dependabot looks the names up on PyPI anyway and
+    # finds only a dependency-confusion stub for ja-core-news-sm (999.9.9), which
+    # it proposes as a major update that `uv lock` cannot satisfy. Bump the models
+    # by hand together with spaCy, and keep their dependency-metadata in
+    # ml-service/pyproject.toml in step.
+    ignore:
+      - dependency-name: "ja-core-news-sm"
+      - dependency-name: "en-core-web-sm"
     groups:
       minor-and-patch:
         update-types:
