@@ -6,6 +6,15 @@ resolution-markers = [
     "sys_platform == 'darwin'",
 ]
 
+[[manifest.dependency-metadata]]
+name = "en-core-web-sm"
+version = "3.8.0"
+
+[[manifest.dependency-metadata]]
+name = "ja-core-news-sm"
+version = "3.8.0"
+requires-dist = ["sudachipy>=0.5.2,!=0.6.1", "sudachidict-core>=20211220"]
+
 [[package]]
 name = "annotated-doc"
 version = "0.0.4"

@@ -34,6 +34,9 @@ updates:
           - "minor"
           - "patch"
 
+  # Every uv update re-locks the spaCy model wheels pinned by URL in
+  # ml-service/pyproject.toml; see the [[tool.uv.dependency-metadata]] note
+  # there for why they carry static metadata.
   - package-ecosystem: "uv"
     directory: "/ml-service"
     schedule:

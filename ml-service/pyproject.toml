@@ -42,6 +42,29 @@ name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
 explicit = true
 
+# Static metadata for the two spaCy model wheels pinned by URL above.
+#
+# Dependabot runs `uv lock` behind a proxy that adds the job's GitHub credential
+# to every github.com request. For a direct-URL wheel uv first sends a HEAD
+# request to read the wheel metadata over HTTP range requests; with that
+# credential GitHub redirects the HEAD to a signed URL that answers 401, and uv
+# does not fall back to a plain download on 401. Every Dependabot update for this
+# directory then fails with private_source_authentication_failure
+# (dependabot/dependabot-core#16790). Declaring the metadata here means uv never
+# probes the wheels. The URLs, versions and hashes in uv.lock are unchanged.
+#
+# Keep each entry identical to the wheel's own METADATA (Requires-Dist) and
+# change it together with the URL and version in `dependencies`.
+[[tool.uv.dependency-metadata]]
+name = "ja-core-news-sm"
+version = "3.8.0"
+requires-dist = ["sudachipy>=0.5.2,!=0.6.1", "sudachidict-core>=20211220"]
+
+[[tool.uv.dependency-metadata]]
+name = "en-core-web-sm"
+version = "3.8.0"
+requires-dist = []
+
 [dependency-groups]
 dev = [
     # Keep TestClient on the httpx line validated with the pinned FastAPI stack.
