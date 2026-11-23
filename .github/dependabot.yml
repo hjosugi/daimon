@@ -11,6 +11,11 @@ updates:
     commit-message:
       prefix: "chore(frontend)"
       include: "scope"
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: "gomod"
     directory: "/api"
@@ -23,6 +28,11 @@ updates:
     commit-message:
       prefix: "chore(api)"
       include: "scope"
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: "uv"
     directory: "/ml-service"
@@ -35,6 +45,11 @@ updates:
     commit-message:
       prefix: "chore(ml)"
       include: "scope"
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -45,6 +60,10 @@ updates:
       - "ci/cd"
     commit-message:
       prefix: "chore(ci)"
+    groups:
+      actions:
+        patterns:
+          - "*"
 
   - package-ecosystem: "docker"
     directory: "/api"
@@ -56,6 +75,11 @@ updates:
       - "api"
     commit-message:
       prefix: "chore(api-docker)"
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: "docker"
     directory: "/ml-service"
@@ -67,3 +91,8 @@ updates:
       - "ml"
     commit-message:
       prefix: "chore(ml-docker)"
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
